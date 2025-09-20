@@ -22,6 +22,6 @@ setupSwagger(app);
 app.listen(PORT, async () => {
   await testConnection();
 
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server pham gia lac, pham vu gia kiet running on http://localhost:${PORT}`);
   console.log(`📄 Swagger UI available at http://localhost:${PORT}/api-docs`);
 });
