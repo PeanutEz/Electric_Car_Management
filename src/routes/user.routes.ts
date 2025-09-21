@@ -1,32 +1,39 @@
-import { Router } from "express";
-import { register, login, listUsers, userDetail, logout } from "../controllers/user.controller";
-import { ping } from "../controllers/ping.controller";
+import { Router } from 'express';
+import {
+	register,
+	login,
+	listUsers,
+	userDetail,
+	logout,
+} from '../controllers/user.controller';
+import { ping } from '../controllers/ping.controller';
+import { authenticateToken } from '../middleware/AuthMiddleware';
 
 const router = Router();
 
 /**
  * @swagger
-   * /users/register:
-   *   post:
-   *     summary: Register a new user
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               full_name:
-   *                 type: string
-   *               email:
-   *                 type: string
-   *               password:
-   *                 type: string
-   *     responses:
-   *       201:
-   *         description: User registered successfully
-   */
-router.post("/register", register);
+ * /users/register:
+ *   post:
+ *     summary: Register a new user
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               full_name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ */
+router.post('/register', register);
 
 /**
  * @swagger
@@ -48,10 +55,9 @@ router.post("/register", register);
  *       200:
  *         description: Login successful
  */
-router.post("/login", login);
+router.post('/login', login);
 
-
-router.post("/logout", logout);
+router.post('/logout', authenticateToken, logout);
 
 /**
  * @swagger
@@ -92,7 +98,7 @@ router.post("/logout", logout);
  *                       Role_Id:
  *                         type: integer
  */
-router.get("/all", listUsers);
+router.get('/all', listUsers);
 
 /**
  * @swagger
@@ -115,8 +121,8 @@ router.get("/all", listUsers);
  *       500:
  *         description: Lỗi server
  */
-router.get("/:id", userDetail);
+router.get('/:id', userDetail);
 
-router.get("/ping", ping);
+router.get('/ping', ping);
 
 export default router;

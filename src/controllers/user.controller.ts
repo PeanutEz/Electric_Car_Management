@@ -4,6 +4,7 @@ import {
 	loginUser,
 	getAllUsers,
 	getUserById,
+	logoutUser,
 } from '../services/user.service';
 import { get } from 'http';
 
@@ -21,7 +22,9 @@ export async function userDetail(req: Request, res: Response) {
 			return res.status(404).json({ message: 'User not found' });
 		}
 
-		return res.status(200).json(user);
+		return res.status(200).json({
+			success: true, data: { user },
+		});
 	} catch {
 		return res.status(500).json({ message: 'Internal Server Error' });
 	}
@@ -32,7 +35,7 @@ export async function listUsers(req: Request, res: Response) {
 		const users = await getAllUsers();
 		res.status(200).json({
 			success: true,
-			users,
+			data: { users },
 		});
 	} catch (error: any) {
 		res.status(500).json({
@@ -66,10 +69,9 @@ export async function login(req: Request, res: Response) {
 		res.status(200).json({
 			success: true,
 			message: 'Login successful',
-			data : {
+			data: {
 				user,
-
-			}
+			},
 		});
 	} catch (error: any) {
 		res.status(401).json({
@@ -80,6 +82,22 @@ export async function login(req: Request, res: Response) {
 }
 
 export async function logout(req: Request, res: Response) {
-	// Xử lý đăng xuất (nếu cần)
-	res.status(200).json({ message: 'Logout successful' });
+	try {
+		// Assuming user ID is available from authentication middleware
+		const userId = (req as any).user?.id;
+		if (!userId) {
+			return res.status(401).json({ message: 'User not authenticated' });
+		}
+
+		await logoutUser(userId);
+		res.status(200).json({
+			success: true,
+			message: 'Logout successful',
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			success: false,
+			message: error.message,
+		});
+	}
 }

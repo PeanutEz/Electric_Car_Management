@@ -5,15 +5,16 @@ import {
 	generateAccessToken,
 	generateRefreshToken,
 } from '../middleware/AuthMiddleware';
+import e from 'express';
 
 export async function getUserById(id: number): Promise<User | null> {
-	const [rows] = await pool.query('select * from users where id = ?', [id]);
+	const [rows] = await pool.query('select id, status, full_name, email, phone, reputation, total_credit, created_at from users where id = ?', [id]);
 	const users = rows as User[];
 	return users.length > 0 ? users[0] : null;
 }
 
 export async function getAllUsers(): Promise<User[]> {
-	const [rows] = await pool.query('select * from users');
+	const [rows] = await pool.query('select id, status, full_name, email, phone, reputation, total_credit, created_at from users');
 	return rows as User[];
 }
 
@@ -69,6 +70,7 @@ export async function loginUser(email: string, password: string) {
 		'SELECT u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,r.name AS role FROM users u INNER JOIN roles r ON u.role_id = r.id WHERE u.email = ?',
 		[email],
 	);
+
 	const user = rows[0];
 	console.log(user);
 	if (!user) {
@@ -93,22 +95,35 @@ export async function loginUser(email: string, password: string) {
 		role: user.Role_Id,
 	});
 
+	// Calculate expiration times
+	const accessTokenExpires = new Date(Date.now() + 30 * 1000); // 30 seconds
+	const refreshTokenExpires = new Date(Date.now() + 60 * 1000); // 60 seconds
+
+	// Store tokens and expiration times in database
+	await pool.query(
+		'UPDATE users SET access_token = ?, refresh_token = ?, expired_access_token = ?, expired_refresh_token = ? WHERE id = ?',
+		[token, refreshToken, accessTokenExpires, refreshTokenExpires, user.id],
+	);
+
 	return {
 		id: user.id,
-        status: user.status,
-        full_name: user.full_name,
-        email: user.email,
-        phone: user.phone,
-        reputation: user.reputation,
-        total_credit: user.total_credit,
-        role: user.role,
+		status: user.status,
+		full_name: user.full_name,
+		email: user.email,
+		phone: user.phone,
+		reputation: user.reputation,
+		total_credit: user.total_credit,
+		role: user.role,
 		accessToken: 'Bearer ' + token,
 		refreshToken: 'Bearer ' + refreshToken,
 	};
 }
 
 export async function logoutUser(userId: number) {
-	// Invalidate the user's token (implementation depends on your token management strategy)
-	// For example, you might want to store tokens in a database and mark them as invalidated.
+	// Clear tokens and expiration times from database
+	await pool.query(
+		'UPDATE users SET access_token = NULL, refresh_token = NULL, access_token_expires = NULL, refresh_token_expires = NULL WHERE id = ?',
+		[userId],
+	);
 	return true;
 }
