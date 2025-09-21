@@ -1,5 +1,31 @@
+<<<<<<< HEAD
 import { Request, Response } from 'express';
 import { registerUser, loginUser, getAllUsers } from '../services/user.service';
+=======
+import { Request, Response } from "express";
+import { registerUser, loginUser, getAllUsers, getUserById } from "../services/user.service";
+import { get } from "http";
+
+export async function userDetail(req: Request, res: Response) {
+    try{
+        const id = parseInt(req.params.id, 10);
+        
+        if (isNaN(id)) {
+            return res.status(400).json({ message: "Invalid user id"});
+        }
+
+        const user = await getUserById(id);
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found"});
+        }
+
+        return res.status(200).json(user);
+    } catch {
+        return res.status(500).json({ message: "Internal Server Error"});
+    }
+}
+>>>>>>> 26baa9940e23dc56aed6501186b46a3537ec7110
 
 export async function listUsers(req: Request, res: Response) {
 	try {

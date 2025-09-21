@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { register, login, listUsers } from "../controllers/user.controller";
+import { register, login, listUsers, userDetail } from "../controllers/user.controller";
 import { ping } from "../controllers/ping.controller";
 
 const router = Router();
@@ -100,6 +100,29 @@ router.post("/login", login);
  *                         type: integer
  */
 router.get("/all", listUsers);
+
+/**
+ * @swagger
+ * /users/{id}:
+ *   get:
+ *     summary: Get user by ID
+ *     description: Lấy thông tin một user theo ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID của user
+ *     responses:
+ *       200:
+ *         description: Thành công, trả về user
+ *       404:
+ *         description: Không tìm thấy user
+ *       500:
+ *         description: Lỗi server
+ */
+router.get("/:id", userDetail);
 
 router.get("/ping", ping);
 
