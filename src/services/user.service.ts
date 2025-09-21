@@ -2,9 +2,16 @@ import pool from "../config/db";
 import bcrypt from "bcryptjs";
 import { User } from "../models/user.model";
 
-export async function getAllUsers(){
-    const [rows] = await pool.query('SELECT * FROM Users');
-    return rows;
+
+export async function getUserById(Id: number): Promise<User | null> {
+    const [rows] = await pool.query('select * from Users where Id = ?', [Id]);
+    const users = rows as User[];
+    return users.length > 0 ? users[0] : null;
+}
+
+export async function getAllUsers(): Promise<User[]> {
+    const [rows] = await pool.query('select * from Users');
+    return rows as User[];
 }
 
 export async function registerUser(userData: User) {
@@ -13,8 +20,8 @@ export async function registerUser(userData: User) {
     const hashedPassword = await bcrypt.hash(Password, 10);
 
     const [result]: any = await pool.query(
-        `INSERT INTO Users (Status, First_Name, Middle_Name, Last_Name, Email, Phone, Password, Role_Id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `insert into Users (Status, First_Name, Middle_Name, Last_Name, Email, Phone, Password, Role_Id)
+         values (?, ?, ?, ?, ?, ?, ?, ?)`,
         [Status, First_Name, Middle_Name, Last_Name, Email, Phone, hashedPassword, Role_Id]
     );
 
