@@ -6,8 +6,8 @@ import {
 	generateRefreshToken,
 } from '../middleware/AuthMiddleware';
 
-export async function getUserById(Id: number): Promise<User | null> {
-	const [rows] = await pool.query('select * from Users where Id = ?', [Id]);
+export async function getUserById(id: number): Promise<User | null> {
+	const [rows] = await pool.query('select * from users where id = ?', [id]);
 	const users = rows as User[];
 	return users.length > 0 ? users[0] : null;
 }
