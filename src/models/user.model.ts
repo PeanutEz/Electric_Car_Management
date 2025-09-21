@@ -1,18 +1,27 @@
 export interface User {
-  Id?: number;
-  Status: string;
-  First_Name?: string;
-  Middle_Name?: string;
-  Last_Name?: string;
-  Date_Of_Birth?: Date;
-  Email: string;
-  Phone: string;
-  Address?: string;
-  CCCD?: string;
-  Reputation?: number;
-  Total_Credit?: number;
-  Password: string;
-  Is_New?: number;
-  Role_Id: number;
-  Created_At?: Date;
+	id?: number;
+	status?: string;
+	full_name?: string;
+	email: string;
+	phone: string;
+	password: string;
+	reputation?: number;
+	total_credit?: number;
+	is_new?: number;
+	role_id?: number;
+  access_token?: string;
+  refresh_token?: string;
+	created_at?: Date;
 }
+
+// Default values
+const defaultUser: User = {
+	status: 'active',
+	reputation: 0,
+	total_credit: 0,
+	is_new: 0,
+	role_id: 1,
+	email: '', // để satisfy type (vì email bắt buộc)
+	phone: '', // để satisfy type
+	password: '', // để satisfy type
+};

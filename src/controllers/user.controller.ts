@@ -1,31 +1,31 @@
-<<<<<<< HEAD
 import { Request, Response } from 'express';
-import { registerUser, loginUser, getAllUsers } from '../services/user.service';
-=======
-import { Request, Response } from "express";
-import { registerUser, loginUser, getAllUsers, getUserById } from "../services/user.service";
-import { get } from "http";
+import {
+	registerUser,
+	loginUser,
+	getAllUsers,
+	getUserById,
+} from '../services/user.service';
+import { get } from 'http';
 
 export async function userDetail(req: Request, res: Response) {
-    try{
-        const id = parseInt(req.params.id, 10);
-        
-        if (isNaN(id)) {
-            return res.status(400).json({ message: "Invalid user id"});
-        }
+	try {
+		const id = parseInt(req.params.id, 10);
 
-        const user = await getUserById(id);
+		if (isNaN(id)) {
+			return res.status(400).json({ message: 'Invalid user id' });
+		}
 
-        if (!user) {
-            return res.status(404).json({ message: "User not found"});
-        }
+		const user = await getUserById(id);
 
-        return res.status(200).json(user);
-    } catch {
-        return res.status(500).json({ message: "Internal Server Error"});
-    }
+		if (!user) {
+			return res.status(404).json({ message: 'User not found' });
+		}
+
+		return res.status(200).json(user);
+	} catch {
+		return res.status(500).json({ message: 'Internal Server Error' });
+	}
 }
->>>>>>> 26baa9940e23dc56aed6501186b46a3537ec7110
 
 export async function listUsers(req: Request, res: Response) {
 	try {
@@ -66,7 +66,10 @@ export async function login(req: Request, res: Response) {
 		res.status(200).json({
 			success: true,
 			message: 'Login successful',
-			user,
+			data : {
+				user,
+
+			}
 		});
 	} catch (error: any) {
 		res.status(401).json({
@@ -74,4 +77,9 @@ export async function login(req: Request, res: Response) {
 			message: error.message,
 		});
 	}
+}
+
+export async function logout(req: Request, res: Response) {
+	// Xử lý đăng xuất (nếu cần)
+	res.status(200).json({ message: 'Logout successful' });
 }

@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 
 dotenv.config();
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
+const JWT_SECRET = "Bearer " + (process.env.JWT_SECRET || 'your_jwt_secret_key');
 
 export interface AuthenticatedRequest extends Request {
 	user?: any; // Thêm thuộc tính user để lưu thông tin người dùng đã xác thực
@@ -30,8 +30,13 @@ export function authenticateToken(
 }
 
 export function generateAccessToken(user: any) {
-	return jwt.sign(user, JWT_SECRET, { expiresIn: '1h' });
+	return jwt.sign(user, JWT_SECRET, { expiresIn: '30s' });
 }
+
+export function generateRefreshToken(user: any) {
+	return jwt.sign(user, JWT_SECRET, { expiresIn: '60s' });
+}
+
 export function authorizeRoles(allowedRoles: number[]) {
 	return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
 		if (!req.user || !allowedRoles.includes(req.user.role)) {

@@ -1,41 +1,31 @@
 import { Router } from "express";
-import { register, login, listUsers, userDetail } from "../controllers/user.controller";
+import { register, login, listUsers, userDetail, logout } from "../controllers/user.controller";
 import { ping } from "../controllers/ping.controller";
 
 const router = Router();
 
 /**
  * @swagger
- * /users/register:
- *   post:
- *     summary: Register a new user
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               Email:
- *                 type: string
- *               Password:
- *                 type: string
- *               Status:
- *                 type: string
- *               Role_Id:
- *                 type: integer
- *               First_Name:
- *                 type: string
- *               Middle_Name:
- *                 type: string
- *               Last_Name:
- *                 type: string
- *               Phone:
- *                 type: string
- *     responses:
- *       201:
- *         description: User registered successfully
- */
+   * /users/register:
+   *   post:
+   *     summary: Register a new user
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               full_name:
+   *                 type: string
+   *               email:
+   *                 type: string
+   *               password:
+   *                 type: string
+   *     responses:
+   *       201:
+   *         description: User registered successfully
+   */
 router.post("/register", register);
 
 /**
@@ -59,6 +49,9 @@ router.post("/register", register);
  *         description: Login successful
  */
 router.post("/login", login);
+
+
+router.post("/logout", logout);
 
 /**
  * @swagger
