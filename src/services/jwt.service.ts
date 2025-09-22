@@ -16,11 +16,31 @@ export interface TokenResponse {
 
 export class JWTService {
 	private static readonly ACCESS_TOKEN_SECRET = process.env
-		.ACCESS_TOKEN as string;
+		.ACCESS_TOKEN_SECRET as string;
 	private static readonly REFRESH_TOKEN_SECRET = process.env
-		.REFRESH_TOKEN as string;
-	private static readonly ACCESS_TOKEN_EXPIRY = '30s'; // 30 giây
+		.REFRESH_TOKEN_SECRET as string;
+	private static readonly ACCESS_TOKEN_EXPIRY = '15m'; // 15 phút
 	private static readonly REFRESH_TOKEN_EXPIRY = '7d'; // 7 ngày
+
+	// Validate that secrets are configured
+	static {
+		if (
+			!this.ACCESS_TOKEN_SECRET ||
+			this.ACCESS_TOKEN_SECRET === 'access_token'
+		) {
+			throw new Error(
+				'ACCESS_TOKEN_SECRET phải được cấu hình với một giá trị bảo mật mạnh',
+			);
+		}
+		if (
+			!this.REFRESH_TOKEN_SECRET ||
+			this.REFRESH_TOKEN_SECRET === 'refresh_token'
+		) {
+			throw new Error(
+				'REFRESH_TOKEN_SECRET phải được cấu hình với một giá trị bảo mật mạnh',
+			);
+		}
+	}
 
 	/**
 	 * Tạo access token
