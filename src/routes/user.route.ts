@@ -12,6 +12,8 @@ import { authenticateToken } from '../middleware/AuthMiddleware';
 
 const router = Router();
 
+router.get('/ping', ping);
+
 /**
  * @swagger
  * /api/user/register:
@@ -422,6 +424,6 @@ router.get('/get-user', listUsers);
  */
 router.get('/:id', userDetail);
 
-router.get('/ping', ping);
+
 
 export default router;
