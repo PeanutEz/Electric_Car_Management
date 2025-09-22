@@ -10,12 +10,16 @@ const options = {
 			version: '1.0.0',
 			description: 'API documentation for Electric Car Management System',
 		},
-		// servers: [
-		// 	{
-		// 		url: 'http://localhost:3000',
-		// 		description: 'Development server',
-		// 	},
-		// ],
+		servers: [
+			{
+				url: 'http://localhost:3000',
+				description: 'Development server',
+			},
+			{
+				url: 'https://electriccarmanagement-swp.up.railway.app',
+				description: 'Production server',
+			}
+		],
 		components: {
 			securitySchemes: {
 				bearerAuth: {

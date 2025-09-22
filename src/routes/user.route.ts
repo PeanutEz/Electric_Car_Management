@@ -422,24 +422,6 @@ router.get('/get-user', authenticateToken, listUsers);
  */
 router.get('/:id', userDetail);
 
-/**
- * @swagger
- * /api/user/ping:
- *   get:
- *     summary: Health check endpoint
- *     tags: [Health]
- *     responses:
- *       200:
- *         description: Service is healthy
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "pong"
- */
 router.get('/ping', ping);
 
 export default router;
