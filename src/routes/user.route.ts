@@ -340,7 +340,7 @@ router.post('/logout', authenticateToken, logout);
  *                   type: string
  *                   example: "Internal server error"
  */
-router.get('/get-user', authenticateToken, listUsers);
+router.get('/get-user', listUsers);
 
 /**
  * @swagger

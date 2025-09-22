@@ -14,7 +14,7 @@ export async function getUserById(id: number): Promise<User | null> {
 
 export async function getAllUsers(): Promise<User[]> {
 	const [rows] = await pool.query(
-		'select id, status, full_name, email, phone, reputation, total_credit, created_at, role_id, access_token, refresh_token from users',
+		'select id, status, full_name, email, phone, reputation, total_credit, created_at, role_id from users',
 	);
 	return rows as User[];
 }
@@ -58,8 +58,7 @@ export async function registerUser(userData: User) {
 
 export async function loginUser(email: string, password: string) {
 	const [rows]: any = await pool.query(
-		'select * from users where email = ?',
-		//'SELECT u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,r.name AS role FROM users u INNER JOIN roles r ON u.role_id = r.id WHERE u.email = ?',
+		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?',
 		[email],
 	);
 
@@ -90,7 +89,7 @@ export async function loginUser(email: string, password: string) {
 		phone: user.phone,
 		reputation: user.reputation,
 		total_credit: user.total_credit,
-		role_id: user.role_id,
+		role: user.role,
 		access_token: 'Bearer ' + tokens.accessToken,
 		expired_access_token: "10 minutes",
 		refresh_token: 'Bearer ' + tokens.refreshToken,
