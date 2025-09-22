@@ -5,16 +5,20 @@ import {
 	generateAccessToken,
 	generateRefreshToken,
 } from '../middleware/AuthMiddleware';
-import e from 'express';
 
 export async function getUserById(id: number): Promise<User | null> {
-	const [rows] = await pool.query('select id, status, full_name, email, phone, reputation, total_credit, created_at from users where id = ?', [id]);
+	const [rows] = await pool.query(
+		'select id, status, full_name, email, phone, reputation, total_credit, created_at from users where id = ?',
+		[id], 
+	);
 	const users = rows as User[];
 	return users.length > 0 ? users[0] : null;
 }
 
 export async function getAllUsers(): Promise<User[]> {
-	const [rows] = await pool.query('select id, status, full_name, email, phone, reputation, total_credit, created_at from users');
+	const [rows] = await pool.query(
+		'select id, status, full_name, email, phone, reputation, total_credit, created_at from users',
+	);
 	return rows as User[];
 }
 
@@ -52,8 +56,7 @@ export async function registerUser(userData: User) {
 	const hashedPassword = await bcrypt.hash(password, 10);
 
 	const [result]: any = await pool.query(
-		`insert into users (full_name, email, password)
-        VALUES (?, ?, ?)`,
+		`insert into users (full_name, email, password) VALUES (?, ?, ?)`,
 		[full_name, email, hashedPassword],
 	);
 
