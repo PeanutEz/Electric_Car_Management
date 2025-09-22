@@ -92,7 +92,9 @@ export async function loginUser(email: string, password: string) {
 		total_credit: user.total_credit,
 		role_id: user.role_id,
 		access_token: 'Bearer ' + tokens.accessToken,
+		expired_access_token: "10 minutes",
 		refresh_token: 'Bearer ' + tokens.refreshToken,
+		expired_refresh_token: "7 days",
 	};
 }
 
