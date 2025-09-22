@@ -178,6 +178,7 @@ router.post('/register', register);
  *                   example: "Invalid password"
  */
 router.post('/login', login);
+
 /**
  * @swagger
  * /api/user/refresh-token:
