@@ -4,6 +4,7 @@ import {
 	login,
 	listUsers,
 	userDetail,
+	refreshTokenHandler,
 	logout,
 } from '../controllers/user.controller';
 import { ping } from '../controllers/ping.controller';
@@ -175,6 +176,73 @@ router.post('/register', register);
  *                   example: "Invalid password"
  */
 router.post('/login', login);
+/**
+ * @swagger
+ * /api/user/refresh-token:
+ *   post:
+ *     summary: Refresh access token using refresh token
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refresh_token
+ *             properties:
+ *               refresh_token:
+ *                 type: string
+ *                 example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                 description: "The refresh token received during login"
+ *     responses:
+ *       200:
+ *         description: Access token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Access token refreshed successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     access_token:
+ *                       type: string
+ *                       example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *       400:
+ *         description: Bad request - refresh token is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Refresh token is required"
+ *       401:
+ *         description: Unauthorized - invalid or expired refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid or expired refresh token"
+ */
+router.post('/refresh-token', refreshTokenHandler);
 
 /**
  * @swagger
@@ -272,7 +340,7 @@ router.post('/logout', authenticateToken, logout);
  *                   type: string
  *                   example: "Internal server error"
  */
-router.get('/get-user', listUsers);
+router.get('/get-user', authenticateToken, listUsers);
 
 /**
  * @swagger

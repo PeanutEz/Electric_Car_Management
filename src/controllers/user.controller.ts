@@ -5,28 +5,33 @@ import {
 	getAllUsers,
 	getUserById,
 	logoutUser,
+	refreshToken as refreshUserToken,
 } from '../services/user.service';
-import { get } from 'http';
 
 export async function userDetail(req: Request, res: Response) {
 	try {
 		const id = parseInt(req.params.id, 10);
 
 		if (isNaN(id)) {
-			return res.status(400).json({ message: 'Invalid user id' });
+			return res
+				.status(400)
+				.json({ message: 'ID người dùng không hợp lệ' });
 		}
 
 		const user = await getUserById(id);
 
 		if (!user) {
-			return res.status(404).json({ message: 'User not found' });
+			return res
+				.status(404)
+				.json({ message: 'Không tìm thấy người dùng' });
 		}
 
 		return res.status(200).json({
-			success: true, data: { user },
+			message: 'Lấy thông tin người dùng thành công',
+			data: user,
 		});
 	} catch {
-		return res.status(500).json({ message: 'Internal Server Error' });
+		return res.status(500).json({ message: 'Lỗi máy chủ nội bộ' });
 	}
 }
 
@@ -34,12 +39,11 @@ export async function listUsers(req: Request, res: Response) {
 	try {
 		const users = await getAllUsers();
 		res.status(200).json({
-			success: true,
-			data: { users },
+			message: 'Lấy danh sách người dùng thành công',
+			data: users,
 		});
 	} catch (error: any) {
 		res.status(500).json({
-			success: false,
 			message: error.message,
 		});
 	}
@@ -51,7 +55,7 @@ export async function register(req: Request, res: Response) {
 		const newUser = await registerUser(userData);
 		res.status(201).json({
 			success: true,
-			message: 'User registered successfully',
+			message: 'Đăng ký người dùng thành công',
 			user: newUser,
 		});
 	} catch (error: any) {
@@ -68,7 +72,7 @@ export async function login(req: Request, res: Response) {
 		const user = await loginUser(email, password);
 		res.status(200).json({
 			success: true,
-			message: 'Login successful',
+			message: 'Đăng nhập thành công',
 			data: {
 				user,
 			},
@@ -81,21 +85,53 @@ export async function login(req: Request, res: Response) {
 	}
 }
 
+export async function refreshToken(req: Request, res: Response) {}
+
 export async function logout(req: Request, res: Response) {
 	try {
 		// Assuming user ID is available from authentication middleware
 		const userId = (req as any).user?.id;
 		if (!userId) {
-			return res.status(401).json({ message: 'User not authenticated' });
+			return res
+				.status(401)
+				.json({ message: 'Người dùng chưa xác thực' });
 		}
 
 		await logoutUser(userId);
 		res.status(200).json({
 			success: true,
-			message: 'Logout successful',
+			message: 'Đăng xuất thành công',
 		});
 	} catch (error: any) {
 		res.status(500).json({
+			success: false,
+			message: error.message,
+		});
+	}
+}
+
+export async function refreshTokenHandler(req: Request, res: Response) {
+	try {
+		const { refresh_token } = req.body;
+
+		if (!refresh_token) {
+			return res.status(400).json({
+				success: false,
+				message: 'Refresh token là bắt buộc',
+			});
+		}
+
+		const result = await refreshUserToken(refresh_token);
+
+		res.status(200).json({
+			success: true,
+			message: result.message,
+			data: {
+				access_token: result.access_token,
+			},
+		});
+	} catch (error: any) {
+		res.status(401).json({
 			success: false,
 			message: error.message,
 		});

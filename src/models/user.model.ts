@@ -12,7 +12,7 @@ export interface User {
 	access_token?: string;
 	refresh_token?: string;
 	access_token_expires?: Date;
-	refresh_token_expires?: Date;
+	expired_refresh_token?: Date;
 	created_at?: Date;
 }
 
