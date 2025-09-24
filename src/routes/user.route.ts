@@ -284,7 +284,7 @@ router.post('/logout', authenticateToken, logout);
 
 /**
  * @swagger
- * /api/user/get-user:
+ * /api/user/get-all-user:
  *   get:
  *     summary: Get all users
  *     tags: [Users]
@@ -343,7 +343,7 @@ router.post('/logout', authenticateToken, logout);
  *                   type: string
  *                   example: "Internal server error"
  */
-router.get('/get-user', listUsers);
+router.get('/get-all-user', listUsers);
 
 /**
  * @swagger
