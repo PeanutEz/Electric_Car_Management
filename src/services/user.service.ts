@@ -2,7 +2,6 @@ import pool from '../config/db';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/user.model';
 import { JWTService } from './jwt.service';
-import { error } from 'console';
 
 export async function getUserById(id: number): Promise<User | null> {
 	const [rows] = await pool.query(
@@ -15,7 +14,7 @@ export async function getUserById(id: number): Promise<User | null> {
 
 export async function getAllUsers(): Promise<User[]> {
 	const [rows] = await pool.query(
-		'select id, status, full_name, email, phone, reputation, total_credit, created_at, role_id from users',
+		'select id, status, full_name, email, phone, reputation, total_credit, created_at, role_id, access_token, refresh_token from users',
 	);
 	return rows as User[];
 }
@@ -70,6 +69,7 @@ export async function registerUser(userData: User) {
 	};
 }
 
+// 
 export async function loginUser(email: string, password: string) {
 	const [rows]: any = await pool.query(
 		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?',

@@ -55,7 +55,6 @@ export async function register(req: Request, res: Response) {
 		const userData = req.body; // dữ liệu từ client gửi lên
 		const newUser = await registerUser(userData);
 		res.status(201).json({
-			success: true,
 			message: 'Đăng ký người dùng thành công',
 			user: newUser,
 		});
@@ -64,14 +63,12 @@ export async function register(req: Request, res: Response) {
 
 		if (error.errors) {
 			return res.status(status).json({
-				success: false,
 				message: error.message || 'Validation failed',
-				errors: error.errors,
+				data: error.errors,
 			});
 		}
 
 		res.status(status).json({
-			success: false,
 			message: error.message || 'Bad request',
 		});
 	}
@@ -82,9 +79,12 @@ export async function login(req: Request, res: Response) {
 		const { email, password } = req.body;
 		const user = await loginUser(email, password);
 		res.status(200).json({
-			success: true,
 			message: 'Đăng nhập thành công',
 			data: {
+				access_token: user.access_token,
+				expired_access_token: user.expired_access_token,
+				refresh_token: user.refresh_token,
+				expired_refresh_token: user.expired_refresh_token,
 				user: {
 					id: user.id,
 					status: user.status,
@@ -95,16 +95,14 @@ export async function login(req: Request, res: Response) {
 					total_credit: user.total_credit,
 					role: user.role,
 				},
-				access_token: user.access_token,
-				expired_access_token: user.expired_access_token,
-				refresh_token: user.refresh_token,
-				expired_refresh_token: user.expired_refresh_token,
 			},
 		});
 	} catch (error: any) {
-		res.status(401).json({
-			success: false,
-			message: error.message,
+		res.status(422).json({
+			message: 'lỗi',
+			data: {
+				password: 'email hoặc mật khẩu không đúng',
+			},
 		});
 	}
 }
