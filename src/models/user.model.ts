@@ -9,9 +9,10 @@ export interface User {
 	total_credit?: number;
 	is_new?: number;
 	role_id?: number;
-	access_token?: string;
+	//access_token?: string;
 	refresh_token?: string;
-	access_token_expires?: Date;
+	//access_token_expires?: Date;
+	// tính bằng giây
 	expired_refresh_token?: Date;
 	created_at?: Date;
 }

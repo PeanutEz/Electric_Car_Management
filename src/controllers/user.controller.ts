@@ -45,7 +45,7 @@ export async function listUsers(req: Request, res: Response) {
 	} catch (error: any) {
 		res.status(500).json({
 			success: false,
-		    message: error.message,
+			message: error.message,
 		});
 	}
 }
@@ -62,13 +62,13 @@ export async function register(req: Request, res: Response) {
 	} catch (error: any) {
 		const status = error.statusCode || 400;
 
-        if (error.errors) {
+		if (error.errors) {
 			return res.status(status).json({
 				success: false,
-				message: error.message || "Validation failed",
+				message: error.message || 'Validation failed',
 				errors: error.errors,
 			});
-		}	
+		}
 
 		res.status(status).json({
 			success: false,
@@ -85,7 +85,20 @@ export async function login(req: Request, res: Response) {
 			success: true,
 			message: 'Đăng nhập thành công',
 			data: {
-				user,
+				user: {
+					id: user.id,
+					status: user.status,
+					full_name: user.full_name,
+					email: user.email,
+					phone: user.phone,
+					reputation: user.reputation,
+					total_credit: user.total_credit,
+					role: user.role,
+				},
+				access_token: user.access_token,
+				expired_access_token: user.expired_access_token,
+				refresh_token: user.refresh_token,
+				expired_refresh_token: user.expired_refresh_token,
 			},
 		});
 	} catch (error: any) {

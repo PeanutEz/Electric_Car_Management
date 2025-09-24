@@ -39,7 +39,7 @@ export async function registerUser(userData: User) {
 		errors.full_name = 'Họ tên phải từ 6 đến 160 ký tự';
 	}
 
-    if (Object.keys(errors).length > 0) {
+	if (Object.keys(errors).length > 0) {
 		err.message = 'Dữ liệu không hợp lệ';
 		err.statusCode = 422;
 		err.errors = errors;
@@ -72,7 +72,7 @@ export async function registerUser(userData: User) {
 
 export async function loginUser(email: string, password: string) {
 	const [rows]: any = await pool.query(
-		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.expired_access_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?',
+		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?',
 		[email],
 	);
 
@@ -96,20 +96,18 @@ export async function loginUser(email: string, password: string) {
 	await JWTService.saveRefreshToken(user.id, tokens.refreshToken);
 
 	return {
-		user: {
-			id: user.id,
-			status: user.status,
-			full_name: user.full_name,
-			email: user.email,
-			phone: user.phone,
-			reputation: user.reputation,
-			total_credit: user.total_credit,
-			role: user.role,
-		},
+		id: user.id,
+		status: user.status,
+		full_name: user.full_name,
+		email: user.email,
+		phone: user.phone,
+		reputation: user.reputation,
+		total_credit: user.total_credit,
+		role: user.role,
 		access_token: 'Bearer ' + tokens.accessToken,
-		expired_access_token: user.expired_access_token,
+		expired_access_token: 3600, // 1 hour in seconds
 		refresh_token: 'Bearer ' + tokens.refreshToken,
-		expired_refresh_token: user.expired_refresh_token,
+		expired_refresh_token: 7 * 24 * 3600, // 7 days in seconds
 	};
 }
 
