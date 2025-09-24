@@ -71,8 +71,8 @@ router.get('/ping', ping);
  *                     email:
  *                       type: string
  *                       example: "john.doe@example.com"
- *       400:
- *         description: Bad request - validation error
+ *       422:
+ *         description: Unprocessable Entity - validation error
  *         content:
  *           application/json:
  *             schema:

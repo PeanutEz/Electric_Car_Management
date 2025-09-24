@@ -1,5 +1,6 @@
 import pool from '../config/db';
 import bcrypt from 'bcryptjs';
+import { AppError } from '../utils/AppError';
 import { User } from '../models/user.model';
 import { JWTService } from './jwt.service';
 
@@ -23,24 +24,24 @@ export async function registerUser(userData: User) {
 	const { full_name, email, password } = userData;
 	const reg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 	if (!reg.test(email)) {
-		throw new Error('Định dạng email không hợp lệ');
+		throw new AppError ('Định dạng email không hợp lệ', 422);
 	}
 	if (!email || email.length < 5 || email.length > 160) {
-		throw new Error('Email phải từ 5 đến 160 ký tự');
+		throw new AppError('Email phải từ 5 đến 160 ký tự', 422);
 	}
 	if (!password || password.length < 6 || password.length > 160) {
-		throw new Error('Mật khẩu phải từ 6 đến 160 ký tự');
+		throw new AppError('Mật khẩu phải từ 6 đến 160 ký tự', 422);
 	}
 	if (!full_name || full_name.length < 6 || full_name.length > 160) {
-		throw new Error('Họ tên phải từ 6 đến 160 ký tự');
+		throw new AppError('Họ tên phải từ 6 đến 160 ký tự', 422);
 	}
 	// Kiểm tra xem email đã tồn tại chưa
 	const [existingUsers]: any = await pool.query(
-		'select * from users where email = ?',
+		'select id from users where email = ?',
 		[email],
 	);
 	if (existingUsers.length > 0) {
-		throw new Error('Email đã tồn tại');
+		throw new AppError('Email đã tồn tại', 422);
 	}
 	const hashedPassword = await bcrypt.hash(password, 10);
 

@@ -59,9 +59,10 @@ export async function register(req: Request, res: Response) {
 			user: newUser,
 		});
 	} catch (error: any) {
-		res.status(400).json({
+		const statusCode = error.statusCode || 400;
+		res.status(statusCode).json({
 			success: false,
-			message: error.message,
+			message: error.message || 'Error',
 		});
 	}
 }
