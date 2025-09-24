@@ -1,8 +1,8 @@
 import pool from '../config/db';
 import bcrypt from 'bcryptjs';
-import { AppError } from '../utils/AppError';
 import { User } from '../models/user.model';
 import { JWTService } from './jwt.service';
+import { error } from 'console';
 
 export async function getUserById(id: number): Promise<User | null> {
 	const [rows] = await pool.query(
@@ -22,26 +22,39 @@ export async function getAllUsers(): Promise<User[]> {
 
 export async function registerUser(userData: User) {
 	const { full_name, email, password } = userData;
+	const errors: Record<string, string> = {};
+	const err: any = new Error();
+
 	const reg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 	if (!reg.test(email)) {
-		throw new AppError ('Định dạng email không hợp lệ', 422);
+		errors.email = 'Định dạng email không hợp lệ';
 	}
 	if (!email || email.length < 5 || email.length > 160) {
-		throw new AppError('Email phải từ 5 đến 160 ký tự', 422);
+		errors.email = 'Email phải từ 5 đến 160 ký tự';
 	}
 	if (!password || password.length < 6 || password.length > 160) {
-		throw new AppError('Mật khẩu phải từ 6 đến 160 ký tự', 422);
+		errors.password = 'Mật khẩu phải từ 6 đến 160 ký tự';
 	}
 	if (!full_name || full_name.length < 6 || full_name.length > 160) {
-		throw new AppError('Họ tên phải từ 6 đến 160 ký tự', 422);
+		errors.full_name = 'Họ tên phải từ 6 đến 160 ký tự';
 	}
+
+    if (Object.keys(errors).length > 0) {
+		err.message = 'Dữ liệu không hợp lệ';
+		err.statusCode = 422;
+		err.errors = errors;
+		throw err;
+	}
+
 	// Kiểm tra xem email đã tồn tại chưa
 	const [existingUsers]: any = await pool.query(
 		'select id from users where email = ?',
 		[email],
 	);
 	if (existingUsers.length > 0) {
-		throw new AppError('Email đã tồn tại', 422);
+		err.message = 'Email đã tồn tại';
+		err.statusCode = 422;
+		throw err;
 	}
 	const hashedPassword = await bcrypt.hash(password, 10);
 

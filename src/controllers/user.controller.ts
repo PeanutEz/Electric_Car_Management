@@ -44,7 +44,8 @@ export async function listUsers(req: Request, res: Response) {
 		});
 	} catch (error: any) {
 		res.status(500).json({
-			message: error.message,
+			success: false,
+		    message: error.message,
 		});
 	}
 }
@@ -59,10 +60,19 @@ export async function register(req: Request, res: Response) {
 			user: newUser,
 		});
 	} catch (error: any) {
-		const statusCode = error.statusCode || 400;
-		res.status(statusCode).json({
+		const status = error.statusCode || 400;
+
+        if (error.errors) {
+			return res.status(status).json({
+				success: false,
+				message: error.message || "Validation failed",
+				errors: error.errors,
+			});
+		}	
+
+		res.status(status).json({
 			success: false,
-			message: error.message || 'Error',
+			message: error.message || 'Bad request',
 		});
 	}
 }
