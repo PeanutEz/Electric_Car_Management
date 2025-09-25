@@ -20,7 +20,15 @@ export async function getAllUsers(): Promise<User[]> {
 }
 
 export async function registerUser(userData: User) {
-	const { full_name, email, password } = userData;
+	const {
+		full_name,
+		email,
+		password,
+		phone,
+		reputation,
+		total_credit,
+		role_id
+	} = userData;
 	const errors: Record<string, string> = {};
 	const err: any = new Error();
 
@@ -31,14 +39,13 @@ export async function registerUser(userData: User) {
 	if (!email || email.length < 5 || email.length > 160) {
 		errors.email = 'Email phải từ 5 đến 160 ký tự';
 	}
-	if (!password || password.length < 6 || password.length > 160) {
-		errors.password = 'Mật khẩu phải từ 6 đến 160 ký tự';
+	if (!password || password.length < 6 || password.length > 50) {
+		errors.password = 'Mật khẩu phải từ 6 đến 50 ký tự';
 	}
 	if (!full_name || full_name.length < 6 || full_name.length > 160) {
 		errors.full_name = 'Họ tên phải từ 6 đến 160 ký tự';
 	}
 
-	
 	// Kiểm tra xem email đã tồn tại chưa
 	const [existingUsers]: any = await pool.query(
 		'select id from users where email = ?',
@@ -55,19 +62,39 @@ export async function registerUser(userData: User) {
 	}
 	const hashedPassword = await bcrypt.hash(password, 10);
 
-	const [result]: any = await pool.query(
-		`insert into users (full_name, email, password) VALUES (?, ?, ?)`,
-		[full_name, email, hashedPassword],
+	const [result]: any = await pool.query(`insert into users (full_name, email, password, phone, reputation, total_credit, role_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		[
+			full_name,
+			email,
+			hashedPassword,
+			phone,
+			reputation,
+			total_credit,
+			role_id
+		],
 	);
+	
+	const insertId = result.insertId;
+	const [roleName]:any = await pool.query(
+		`select r.name as role
+		from users u inner join roles r on u.role_id = r.id 
+		where u.id = ?`,
+		[insertId],
+	);
+	
 
 	return {
 		id: result.insertId,
 		full_name: full_name,
 		email: email,
+		phone: phone,
+		reputation: reputation,
+		total_credit: total_credit,
+		role: roleName[0].role,
 	};
 }
 
-// 
+///
 export async function loginUser(email: string, password: string) {
 	const [rows]: any = await pool.query(
 		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?',

@@ -56,7 +56,13 @@ export async function register(req: Request, res: Response) {
 		const newUser = await registerUser(userData);
 		res.status(201).json({
 			message: 'Đăng ký người dùng thành công',
-			user: newUser,
+			id: newUser.id,
+			full_name: newUser.full_name,
+			email: newUser.email,
+			phone: newUser.phone,
+			reputation: newUser.reputation,
+			total_credit: newUser.total_credit,
+			role: newUser.role,
 		});
 	} catch (error: any) {
 		const status = error.statusCode || 400;
@@ -69,9 +75,8 @@ export async function register(req: Request, res: Response) {
 		}
 
 		res.status(status).json({
-			message: "Đăng ký không thành công",
-			data:{}
-			
+			message: 'Đăng ký không thành công',
+			data: {},
 		});
 	}
 }
@@ -83,10 +88,6 @@ export async function login(req: Request, res: Response) {
 		res.status(200).json({
 			message: 'Đăng nhập thành công',
 			data: {
-				access_token: user.access_token,
-				expired_access_token: user.expired_access_token,
-				refresh_token: user.refresh_token,
-				expired_refresh_token: user.expired_refresh_token,
 				user: {
 					id: user.id,
 					status: user.status,
@@ -97,6 +98,10 @@ export async function login(req: Request, res: Response) {
 					total_credit: user.total_credit,
 					role: user.role,
 				},
+				access_token: user.access_token,
+				expired_access_token: user.expired_access_token,
+				refresh_token: user.refresh_token,
+				expired_refresh_token: user.expired_refresh_token,
 			},
 		});
 	} catch (error: any) {
