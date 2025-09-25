@@ -69,7 +69,9 @@ export async function register(req: Request, res: Response) {
 		}
 
 		res.status(status).json({
-			message: error.message || 'Bad request',
+			message: "Đăng ký không thành công",
+			data:{}
+			
 		});
 	}
 }

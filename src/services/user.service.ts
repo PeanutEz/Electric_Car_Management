@@ -38,21 +38,19 @@ export async function registerUser(userData: User) {
 		errors.full_name = 'Họ tên phải từ 6 đến 160 ký tự';
 	}
 
-	if (Object.keys(errors).length > 0) {
-		err.message = 'Dữ liệu không hợp lệ';
-		err.statusCode = 422;
-		err.errors = errors;
-		throw err;
-	}
-
+	
 	// Kiểm tra xem email đã tồn tại chưa
 	const [existingUsers]: any = await pool.query(
 		'select id from users where email = ?',
 		[email],
 	);
 	if (existingUsers.length > 0) {
-		err.message = 'Email đã tồn tại';
+		errors.email = 'Email đã tồn tại';
+	}
+	if (Object.keys(errors).length > 0) {
+		err.message = 'Dữ liệu không hợp lệ';
 		err.statusCode = 422;
+		err.errors = errors;
 		throw err;
 	}
 	const hashedPassword = await bcrypt.hash(password, 10);
