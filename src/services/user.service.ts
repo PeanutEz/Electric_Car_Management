@@ -2,6 +2,7 @@ import pool from '../config/db';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/user.model';
 import { JWTService } from './jwt.service';
+import { access } from 'fs';
 
 export async function getUserById(id: number): Promise<User | null> {
 	const [rows] = await pool.query(
@@ -27,23 +28,21 @@ export async function registerUser(userData: User) {
 		phone,
 		reputation,
 		total_credit,
-		role_id
+		role_id,
 	} = userData;
-	const errors: Record<string, string> = {};
-	const err: any = new Error();
 
 	const reg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 	if (!reg.test(email)) {
-		errors.email = 'Định dạng email không hợp lệ';
+		throw new Error('Định dạng email không hợp lệ');
 	}
 	if (!email || email.length < 5 || email.length > 160) {
-		errors.email = 'Email phải từ 5 đến 160 ký tự';
+		throw new Error('Email phải từ 5 đến 160 ký tự');
 	}
 	if (!password || password.length < 6 || password.length > 50) {
-		errors.password = 'Mật khẩu phải từ 6 đến 50 ký tự';
+		throw new Error('Mật khẩu phải từ 6 đến 50 ký tự');
 	}
 	if (!full_name || full_name.length < 6 || full_name.length > 160) {
-		errors.full_name = 'Họ tên phải từ 6 đến 160 ký tự';
+		throw new Error('Họ tên phải từ 6 đến 160 ký tự');
 	}
 
 	// Kiểm tra xem email đã tồn tại chưa
@@ -52,17 +51,13 @@ export async function registerUser(userData: User) {
 		[email],
 	);
 	if (existingUsers.length > 0) {
-		errors.email = 'Email đã tồn tại';
+		throw new Error('Email đã tồn tại');
 	}
-	if (Object.keys(errors).length > 0) {
-		err.message = 'Dữ liệu không hợp lệ';
-		err.statusCode = 422;
-		err.errors = errors;
-		throw err;
-	}
+
 	const hashedPassword = await bcrypt.hash(password, 10);
 
-	const [result]: any = await pool.query(`insert into users (full_name, email, password, phone, reputation, total_credit, role_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+	const [result]: any = await pool.query(
+		`insert into users (full_name, email, password, phone, reputation, total_credit, role_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		[
 			full_name,
 			email,
@@ -70,34 +65,53 @@ export async function registerUser(userData: User) {
 			phone,
 			reputation,
 			total_credit,
-			role_id
+			role_id,
 		],
 	);
-	
+
+	const [rows]: any = await pool.query(
+		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?',
+		[email],
+	);
+
+	const user = rows[0];
+
 	const insertId = result.insertId;
-	const [roleName]:any = await pool.query(
+	const [roleName]: any = await pool.query(
 		`select r.name as role
 		from users u inner join roles r on u.role_id = r.id 
 		where u.id = ?`,
 		[insertId],
 	);
-	
+
+	// Generate tokens using JWT service
+	const tokens = JWTService.generateTokens({
+		id: result.insertId,
+		email: email,
+	});
+
+	// Lưu refresh token vào database
+	await JWTService.saveRefreshToken(result.insertId, tokens.refreshToken);
 
 	return {
 		id: result.insertId,
+		status: user.status || 'active',
 		full_name: full_name,
 		email: email,
-		phone: phone,
-		reputation: reputation,
-		total_credit: total_credit,
+		phone: user.phone,
+		reputation: user.reputation,
+		total_credit: user.total_credit,
 		role: roleName[0].role,
+		access_token: 'Bearer ' + tokens.accessToken,
+		expired_access_token: 3600, // 1 hour in seconds
+		refresh_token: 'Bearer ' + tokens.refreshToken,
+		expired_refresh_token: 604800, // 7 days in seconds
 	};
 }
 
-///
 export async function loginUser(email: string, password: string) {
 	const [rows]: any = await pool.query(
-		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?',
+		'select * from users WHERE email = ?',
 		[email],
 	);
 
@@ -107,6 +121,8 @@ export async function loginUser(email: string, password: string) {
 	}
 
 	const isPasswordValid = await bcrypt.compare(password, user.password);
+	console.log(password);
+	console.log(user.password);
 	if (!isPasswordValid) {
 		throw new Error('Mật khẩu không đúng');
 	}
@@ -133,6 +149,69 @@ export async function loginUser(email: string, password: string) {
 		expired_access_token: 3600, // 1 hour in seconds
 		refresh_token: 'Bearer ' + tokens.refreshToken,
 		expired_refresh_token: 7 * 24 * 3600, // 7 days in seconds
+	};
+}
+
+export async function registerUserTest(userData: User) {
+	const { full_name, email, password, phone, reputation, total_credit, status } = userData;
+	const reg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+	if (!reg.test(email)) {
+		throw new Error('Định dạng email không hợp lệ');
+	}
+	if (!email || email.length < 5 || email.length > 160) {
+		throw new Error('Email phải từ 5 đến 160 ký tự');
+	}
+	if (!password || password.length < 6 || password.length > 160) {
+		throw new Error('Mật khẩu phải từ 6 đến 160 ký tự');
+	}
+	if (!full_name || full_name.length < 6 || full_name.length > 160) {
+		throw new Error('Họ tên phải từ 6 đến 160 ký tự');
+	}
+	// Kiểm tra xem email đã tồn tại chưa
+	const [existingUsers]: any = await pool.query(
+		'select * from users where email = ?',
+		[email],
+	);
+	if (existingUsers.length > 0) {
+		throw new Error('Email đã tồn tại');
+	}
+	const hashedPassword = await bcrypt.hash(password, 10);
+
+	const [result]: any = await pool.query(
+		`insert into users (full_name, email, password) VALUES (?, ?, ?)`,
+		[full_name, email, hashedPassword],
+	);
+	const insertedId = result.insertId;
+
+	const [selectUser]: any = await pool.query(
+		'select * from users WHERE id = ?',
+		insertedId,
+	);
+	const [rows]: any = await pool.query(
+		'select * from users WHERE email = ?',
+		[email],
+	);
+	const user = rows[0];
+	const tokens = JWTService.generateTokens({
+		id: user.id,
+		email: user.email,
+	});
+
+	// Lưu refresh token vào database
+	await JWTService.saveRefreshToken(user.id, tokens.refreshToken);
+
+	return {
+		id: result.insertId,
+		status: status,
+		full_name: full_name,
+		email: email,
+		phone: user.phone,
+		reputation: user.reputation,
+		total_credit: user.total_credit,
+		access_token: 'Bearer ' +tokens.accessToken,
+		expired_access_token: 3600, // 1 hour in seconds
+		refresh_token:'Bearer ' + tokens.refreshToken,
+		expired_refresh_token: 604800, // 7 days in seconds
 	};
 }
 

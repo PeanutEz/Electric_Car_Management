@@ -6,6 +6,7 @@ import {
 	getUserById,
 	logoutUser,
 	refreshToken as refreshUserToken,
+	registerUserTest,
 } from '../services/user.service';
 
 export async function userDetail(req: Request, res: Response) {
@@ -53,30 +54,29 @@ export async function listUsers(req: Request, res: Response) {
 export async function register(req: Request, res: Response) {
 	try {
 		const userData = req.body; // dữ liệu từ client gửi lên
-		const newUser = await registerUser(userData);
+		const user = await registerUserTest(userData);
 		res.status(201).json({
 			message: 'Đăng ký người dùng thành công',
-			id: newUser.id,
-			full_name: newUser.full_name,
-			email: newUser.email,
-			phone: newUser.phone,
-			reputation: newUser.reputation,
-			total_credit: newUser.total_credit,
-			role: newUser.role,
+			data: {
+				user: {
+					id: user.id,
+					status: user.status,
+					full_name: user.full_name,
+					email: user.email,
+					phone: user.phone,
+					reputation: user.reputation,
+					total_credit: user.total_credit
+				},
+				access_token: user.access_token,
+				expired_access_token: user.expired_access_token,
+				refresh_token: user.refresh_token,
+				expired_refresh_token: user.expired_refresh_token,
+			},
 		});
 	} catch (error: any) {
-		const status = error.statusCode || 400;
-
-		if (error.errors) {
-			return res.status(status).json({
-				message: error.message || 'Validation failed',
-				data: error.errors,
-			});
-		}
-
-		res.status(status).json({
-			message: 'Đăng ký không thành công',
-			data: {},
+		res.status(error.statusCode || 500).json({
+			message: error.message || 'Lỗi máy chủ nội bộ',
+			errors: error.errors || {},
 		});
 	}
 }

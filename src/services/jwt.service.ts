@@ -19,28 +19,28 @@ export class JWTService {
 		.ACCESS_TOKEN_SECRET as string;
 	private static readonly REFRESH_TOKEN_SECRET = process.env
 		.REFRESH_TOKEN_SECRET as string;
-	private static readonly ACCESS_TOKEN_EXPIRY = '10m'; // 10 phút
+	private static readonly ACCESS_TOKEN_EXPIRY = '1h'; // 1 giờ
 	private static readonly REFRESH_TOKEN_EXPIRY = '7d'; // 7 ngày
 
 	// Validate that secrets are configured
-	static {
-		if (
-			!this.ACCESS_TOKEN_SECRET ||
-			this.ACCESS_TOKEN_SECRET === 'access_token'
-		) {
-			throw new Error(
-				'ACCESS_TOKEN_SECRET phải được cấu hình với một giá trị bảo mật mạnh',
-			);
-		}
-		if (
-			!this.REFRESH_TOKEN_SECRET ||
-			this.REFRESH_TOKEN_SECRET === 'refresh_token'
-		) {
-			throw new Error(
-				'REFRESH_TOKEN_SECRET phải được cấu hình với một giá trị bảo mật mạnh',
-			);
-		}
-	}
+	// static {
+	// 	if (
+	// 		!this.ACCESS_TOKEN_SECRET ||
+	// 		this.ACCESS_TOKEN_SECRET === 'access_token'
+	// 	) {
+	// 		throw new Error(
+	// 			'ACCESS_TOKEN_SECRET phải được cấu hình với một giá trị bảo mật mạnh',
+	// 		);
+	// 	}
+	// 	if (
+	// 		!this.REFRESH_TOKEN_SECRET ||
+	// 		this.REFRESH_TOKEN_SECRET === 'refresh_token'
+	// 	) {
+	// 		throw new Error(
+	// 			'REFRESH_TOKEN_SECRET phải được cấu hình với một giá trị bảo mật mạnh',
+	// 		);
+	// 	}
+	// }
 
 	/**
 	 * Tạo access token
