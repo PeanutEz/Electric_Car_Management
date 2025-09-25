@@ -31,18 +31,20 @@ export async function registerUser(userData: User) {
 		role_id,
 	} = userData;
 
+	const errors: { [key: string]: string } = {};
+
 	const reg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 	if (!reg.test(email)) {
-		throw new Error('Định dạng email không hợp lệ');
+		errors.email = 'Định dạng email không hợp lệ';
 	}
 	if (!email || email.length < 5 || email.length > 160) {
-		throw new Error('Email phải từ 5 đến 160 ký tự');
+		errors.email = 'Email phải từ 5 đến 160 ký tự';
 	}
 	if (!password || password.length < 6 || password.length > 50) {
-		throw new Error('Mật khẩu phải từ 6 đến 50 ký tự');
+		errors.password = 'Mật khẩu phải từ 6 đến 50 ký tự';
 	}
 	if (!full_name || full_name.length < 6 || full_name.length > 160) {
-		throw new Error('Họ tên phải từ 6 đến 160 ký tự');
+		errors.full_name = 'Họ tên phải từ 6 đến 160 ký tự';
 	}
 
 	// Kiểm tra xem email đã tồn tại chưa
@@ -51,7 +53,14 @@ export async function registerUser(userData: User) {
 		[email],
 	);
 	if (existingUsers.length > 0) {
-		throw new Error('Email đã tồn tại');
+		errors.email = 'Email đã tồn tại';
+	}
+
+	// Nếu có lỗi, throw error với format yêu cầu
+	if (Object.keys(errors).length > 0) {
+		const error = new Error('Dữ liệu không hợp lệ');
+		(error as any).data = errors;
+		throw error;
 	}
 
 	const hashedPassword = await bcrypt.hash(password, 10);
@@ -121,8 +130,7 @@ export async function loginUser(email: string, password: string) {
 	}
 
 	const isPasswordValid = await bcrypt.compare(password, user.password);
-	console.log(password);
-	console.log(user.password);
+
 	if (!isPasswordValid) {
 		throw new Error('Mật khẩu không đúng');
 	}
@@ -144,7 +152,7 @@ export async function loginUser(email: string, password: string) {
 		phone: user.phone,
 		reputation: user.reputation,
 		total_credit: user.total_credit,
-		role: user.role,
+		role: user.role_id,
 		access_token: 'Bearer ' + tokens.accessToken,
 		expired_access_token: 3600, // 1 hour in seconds
 		refresh_token: 'Bearer ' + tokens.refreshToken,
@@ -153,27 +161,38 @@ export async function loginUser(email: string, password: string) {
 }
 
 export async function registerUserTest(userData: User) {
-	const { full_name, email, password, phone, reputation, total_credit, status } = userData;
+	const { full_name, email, password, status } = userData;
+
+	const errors: { [key: string]: string } = {};
+
 	const reg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 	if (!reg.test(email)) {
-		throw new Error('Định dạng email không hợp lệ');
+		errors.email = 'Định dạng email không hợp lệ';
 	}
 	if (!email || email.length < 5 || email.length > 160) {
-		throw new Error('Email phải từ 5 đến 160 ký tự');
+		errors.email = 'Email phải từ 5 đến 160 ký tự';
 	}
 	if (!password || password.length < 6 || password.length > 160) {
-		throw new Error('Mật khẩu phải từ 6 đến 160 ký tự');
+		errors.password = 'Mật khẩu phải từ 6 đến 160 ký tự';
 	}
 	if (!full_name || full_name.length < 6 || full_name.length > 160) {
-		throw new Error('Họ tên phải từ 6 đến 160 ký tự');
+		errors.full_name = 'Họ tên phải từ 6 đến 160 ký tự';
 	}
+
 	// Kiểm tra xem email đã tồn tại chưa
 	const [existingUsers]: any = await pool.query(
 		'select * from users where email = ?',
 		[email],
 	);
 	if (existingUsers.length > 0) {
-		throw new Error('Email đã tồn tại');
+		errors.email = 'Email đã tồn tại';
+	}
+
+	// Nếu có lỗi, throw error với format yêu cầu
+	if (Object.keys(errors).length > 0) {
+		const error = new Error('Dữ liệu không hợp lệ');
+		(error as any).data = errors;
+		throw error;
 	}
 	const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -208,9 +227,10 @@ export async function registerUserTest(userData: User) {
 		phone: user.phone,
 		reputation: user.reputation,
 		total_credit: user.total_credit,
-		access_token: 'Bearer ' +tokens.accessToken,
+		role: user.role_id,
+		access_token: 'Bearer ' + tokens.accessToken,
 		expired_access_token: 3600, // 1 hour in seconds
-		refresh_token:'Bearer ' + tokens.refreshToken,
+		refresh_token: 'Bearer ' + tokens.refreshToken,
 		expired_refresh_token: 604800, // 7 days in seconds
 	};
 }

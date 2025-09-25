@@ -65,7 +65,8 @@ export async function register(req: Request, res: Response) {
 					email: user.email,
 					phone: user.phone,
 					reputation: user.reputation,
-					total_credit: user.total_credit
+					total_credit: user.total_credit,
+					role: user.role,
 				},
 				access_token: user.access_token,
 				expired_access_token: user.expired_access_token,
@@ -74,9 +75,9 @@ export async function register(req: Request, res: Response) {
 			},
 		});
 	} catch (error: any) {
-		res.status(error.statusCode || 500).json({
-			message: error.message || 'Lỗi máy chủ nội bộ',
-			errors: error.errors || {},
+		res.status(422).json({
+			message: error.message,
+			data: error.data || {},
 		});
 	}
 }
@@ -106,9 +107,9 @@ export async function login(req: Request, res: Response) {
 		});
 	} catch (error: any) {
 		res.status(422).json({
-			message: 'lỗi',
+			message: 'Dữ liệu không hợp lệ',
 			data: {
-				password: 'email hoặc mật khẩu không đúng',
+				password: 'Email hoặc mật khẩu không đúng',
 			},
 		});
 	}

@@ -88,6 +88,32 @@ Hệ thống đã được cập nhật để hỗ trợ refresh token khi acces
 }
 ```
 
+## Error Response Format
+
+### Validation Errors (422)
+
+```json
+{
+	"message": "Dữ liệu không hợp lệ",
+	"data": {
+		"email": "Định dạng email không hợp lệ",
+		"password": "Mật khẩu phải từ 6 đến 50 ký tự",
+		"full_name": "Họ tên phải từ 6 đến 160 ký tự"
+	}
+}
+```
+
+### Login Errors (422)
+
+```json
+{
+	"message": "Dữ liệu không hợp lệ",
+	"data": {
+		"password": "Email hoặc mật khẩu không đúng"
+	}
+}
+```
+
 ## Database Schema
 
 Bảng `users` cần có các cột sau:
