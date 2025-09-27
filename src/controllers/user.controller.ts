@@ -6,7 +6,6 @@ import {
 	getUserById,
 	logoutUser,
 	refreshToken as refreshUserToken,
-	registerUserTest,
 } from '../services/user.service';
 import { ref } from 'process';
 
@@ -55,7 +54,7 @@ export async function listUsers(req: Request, res: Response) {
 export async function register(req: Request, res: Response) {
 	try {
 		const userData = req.body; // dữ liệu từ client gửi lên
-		const user = await registerUserTest(userData);
+		const user = await registerUser(userData);
 		res.status(201).json({
 			message: 'Đăng ký người dùng thành công',
 			data: {
