@@ -43,11 +43,14 @@ Content-Type: application/json
 
 ```http
 POST /api/user/refresh-token
-Content-Type: application/json
+refresh-token: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
 
-{
-    "refresh_token": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
+**Hoặc sử dụng header `x-refresh-token`:**
+
+```http
+POST /api/user/refresh-token
+x-refresh-token: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 **Response:**
@@ -107,8 +110,11 @@ axios.interceptors.response.use(
 				const tokens = JSON.parse(localStorage.getItem('tokens'));
 				const refreshResponse = await axios.post(
 					'/api/user/refresh-token',
+					{}, // Empty body
 					{
-						refresh_token: tokens.refreshToken,
+						headers: {
+							'refresh-token': tokens.refreshToken,
+						},
 					},
 				);
 

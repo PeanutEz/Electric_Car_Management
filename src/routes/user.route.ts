@@ -4,15 +4,12 @@ import {
 	login,
 	listUsers,
 	userDetail,
-	refreshTokenHandler,
+	refreshToken,
 	logout,
 } from '../controllers/user.controller';
-import { ping } from '../controllers/ping.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 
 const router = Router();
-
-router.get('/ping', ping);
 
 /**
  * @swagger
@@ -71,8 +68,8 @@ router.get('/ping', ping);
  *                     email:
  *                       type: string
  *                       example: "john.doe@example.com"
- *       422:
- *         description: Unprocessable Entity - validation error
+ *       400:
+ *         description: Bad request - validation error
  *         content:
  *           application/json:
  *             schema:
@@ -178,7 +175,6 @@ router.post('/register', register);
  *                   example: "Invalid password"
  */
 router.post('/login', login);
-
 /**
  * @swagger
  * /api/user/refresh-token:
@@ -245,7 +241,7 @@ router.post('/login', login);
  *                   type: string
  *                   example: "Invalid or expired refresh token"
  */
-router.post('/refresh-token', refreshTokenHandler);
+router.post('/refresh-token', refreshToken);
 
 /**
  * @swagger
@@ -284,7 +280,7 @@ router.post('/logout', authenticateToken, logout);
 
 /**
  * @swagger
- * /api/user/get-all-user:
+ * /api/user/get-user:
  *   get:
  *     summary: Get all users
  *     tags: [Users]
@@ -343,7 +339,7 @@ router.post('/logout', authenticateToken, logout);
  *                   type: string
  *                   example: "Internal server error"
  */
-router.get('/get-all-user', listUsers);
+router.get('/get-user', authenticateToken, listUsers);
 
 /**
  * @swagger
@@ -424,7 +420,5 @@ router.get('/get-all-user', listUsers);
  *                   example: "Internal Server Error"
  */
 router.get('/:id', userDetail);
-
-
 
 export default router;

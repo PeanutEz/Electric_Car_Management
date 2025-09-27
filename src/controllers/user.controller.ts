@@ -8,6 +8,7 @@ import {
 	refreshToken as refreshUserToken,
 	registerUserTest,
 } from '../services/user.service';
+import { ref } from 'process';
 
 export async function userDetail(req: Request, res: Response) {
 	try {
@@ -107,15 +108,38 @@ export async function login(req: Request, res: Response) {
 		});
 	} catch (error: any) {
 		res.status(422).json({
-			message: 'Dữ liệu không hợp lệ',
-			data: {
-				password: 'Email hoặc mật khẩu không đúng',
-			},
+			message: error.message,
+			data: error.data || {},
 		});
 	}
 }
+//truyền refresh token lên header
+export async function refreshToken(req: any, res: Response) {
+	try {
+		const authHeader = req.headers.token || req.headers.authorization;
+		const refreshToken = authHeader
+			? authHeader.startsWith('Bearer ')
+				? authHeader.split(' ')[1]
+				: authHeader.split(' ')[1]
+			: null;
 
-export async function refreshToken(req: Request, res: Response) {}
+		if (!refreshToken) {
+			return res.status(401).json({ message: 'Refresh token không hợp lệ' });
+		}
+		const newAccessToken = await refreshUserToken(refreshToken as string);
+		res.status(200).json({
+			message: 'Làm mới token thành công',
+			data: {
+				access_token: newAccessToken,
+			},
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			success: false,
+			message: error.message,
+		});
+	}
+}
 
 export async function logout(req: Request, res: Response) {
 	try {
@@ -134,34 +158,6 @@ export async function logout(req: Request, res: Response) {
 		});
 	} catch (error: any) {
 		res.status(500).json({
-			success: false,
-			message: error.message,
-		});
-	}
-}
-
-export async function refreshTokenHandler(req: Request, res: Response) {
-	try {
-		const { refresh_token } = req.body;
-
-		if (!refresh_token) {
-			return res.status(400).json({
-				success: false,
-				message: 'Refresh token là bắt buộc',
-			});
-		}
-
-		const result = await refreshUserToken(refresh_token);
-
-		res.status(200).json({
-			success: true,
-			message: result.message,
-			data: {
-				access_token: result.access_token,
-			},
-		});
-	} catch (error: any) {
-		res.status(401).json({
 			success: false,
 			message: error.message,
 		});

@@ -114,7 +114,30 @@ Hệ thống đã được cập nhật để hỗ trợ refresh token khi acces
 }
 ```
 
-## Database Schema
+## Refresh Token API
+
+Refresh token bây giờ được truyền qua header thay vì body:
+
+### Headers được hỗ trợ:
+
+-   `refresh-token`: Header chính
+-   `x-refresh-token`: Header thay thế
+
+### Ví dụ request:
+
+```http
+POST /api/user/refresh-token
+refresh-token: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Error khi thiếu header:
+
+```json
+{
+	"success": false,
+	"message": "Refresh token là bắt buộc"
+}
+```
 
 Bảng `users` cần có các cột sau:
 
