@@ -44,7 +44,7 @@ const router = Router();
  *                 example: "password123"
  *     responses:
  *       201:
- *         description: User registered successfully
+ *         description: Đăng ký người dùng thành công
  *         content:
  *           application/json:
  *             schema:
@@ -55,7 +55,7 @@ const router = Router();
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "User registered successfully"
+ *                   example: "Đăng ký người dùng thành công"
  *                 user:
  *                   type: object
  *                   properties:
@@ -80,7 +80,7 @@ const router = Router();
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Email already exists"
+ *                   example: "Email đã tồn tại"
  */
 router.post('/register', register);
 
@@ -111,7 +111,7 @@ router.post('/register', register);
  *                 example: "password123"
  *     responses:
  *       200:
- *         description: Login successful
+ *         description: Đăng nhập thành công
  *         content:
  *           application/json:
  *             schema:
@@ -122,7 +122,7 @@ router.post('/register', register);
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Login successful"
+ *                   example: "Đăng nhập thành công"
  *                 data:
  *                   type: object
  *                   properties:
@@ -161,7 +161,7 @@ router.post('/register', register);
  *                       type: string
  *                       example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *       401:
- *         description: Invalid credentials
+ *         description: Thông tin đăng nhập không hợp lệ
  *         content:
  *           application/json:
  *             schema:
@@ -172,7 +172,7 @@ router.post('/register', register);
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Invalid password"
+ *                   example: "Mật khẩu không đúng"
  */
 router.post('/login', login);
 /**
@@ -181,19 +181,14 @@ router.post('/login', login);
  *   post:
  *     summary: Refresh access token using refresh token
  *     tags: [Users]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - refresh_token
- *             properties:
- *               refresh_token:
- *                 type: string
- *                 example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
- *                 description: "The refresh token received during login"
+ *     parameters:
+ *       - in: header
+ *         name: refresh-token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: "The refresh token received during login (can also use x-refresh-token)"
+ *         example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *     responses:
  *       200:
  *         description: Access token refreshed successfully
@@ -207,7 +202,7 @@ router.post('/login', login);
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Access token refreshed successfully"
+ *                   example: "Làm mới token thành công"
  *                 data:
  *                   type: object
  *                   properties:
@@ -215,7 +210,7 @@ router.post('/login', login);
  *                       type: string
  *                       example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *       400:
- *         description: Bad request - refresh token is required
+ *         description: Yêu cầu không hợp lệ - refresh token là bắt buộc
  *         content:
  *           application/json:
  *             schema:
@@ -226,9 +221,9 @@ router.post('/login', login);
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Refresh token is required"
+ *                   example: "Refresh token là bắt buộc"
  *       401:
- *         description: Unauthorized - invalid or expired refresh token
+ *         description: Không được phép - refresh token không hợp lệ hoặc đã hết hạn
  *         content:
  *           application/json:
  *             schema:
@@ -239,7 +234,7 @@ router.post('/login', login);
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Invalid or expired refresh token"
+ *                   example: "Token làm mới không hợp lệ hoặc đã hết hạn"
  */
 router.post('/refresh-token', refreshToken);
 
@@ -264,9 +259,9 @@ router.post('/refresh-token', refreshToken);
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Logout successful"
+ *                   example: "Đăng xuất thành công"
  *       401:
- *         description: Unauthorized - invalid or missing token
+ *         description: Không được phép - token không hợp lệ hoặc thiếu
  *         content:
  *           application/json:
  *             schema:
@@ -274,7 +269,7 @@ router.post('/refresh-token', refreshToken);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Unauthorized"
+ *                   example: "Không được phép"
  */
 router.post('/logout', authenticateToken, logout);
 
@@ -286,7 +281,7 @@ router.post('/logout', authenticateToken, logout);
  *     tags: [Users]
  *     responses:
  *       200:
- *         description: List of all users
+ *         description: Danh sách tất cả người dùng
  *         content:
  *           application/json:
  *             schema:
@@ -337,7 +332,7 @@ router.post('/logout', authenticateToken, logout);
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Internal server error"
+ *                   example: "Lỗi máy chủ nội bộ"
  */
 router.get('/get-user', authenticateToken, listUsers);
 
@@ -357,7 +352,7 @@ router.get('/get-user', authenticateToken, listUsers);
  *         example: 1
  *     responses:
  *       200:
- *         description: User found successfully
+ *         description: Tìm thấy người dùng thành công
  *         content:
  *           application/json:
  *             schema:
@@ -389,7 +384,7 @@ router.get('/get-user', authenticateToken, listUsers);
  *                   type: string
  *                   example: "staff"
  *       400:
- *         description: Invalid user ID
+ *         description: ID người dùng không hợp lệ
  *         content:
  *           application/json:
  *             schema:
@@ -397,9 +392,9 @@ router.get('/get-user', authenticateToken, listUsers);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Invalid user id"
+ *                   example: "ID người dùng không hợp lệ"
  *       404:
- *         description: User not found
+ *         description: Không tìm thấy người dùng
  *         content:
  *           application/json:
  *             schema:
@@ -407,7 +402,7 @@ router.get('/get-user', authenticateToken, listUsers);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "User not found"
+ *                   example: "Không tìm thấy người dùng"
  *       500:
  *         description: Internal server error
  *         content:
@@ -417,7 +412,7 @@ router.get('/get-user', authenticateToken, listUsers);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Internal Server Error"
+ *                   example: "Lỗi máy chủ nội bộ"
  */
 router.get('/:id', userDetail);
 

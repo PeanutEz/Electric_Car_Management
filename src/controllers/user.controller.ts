@@ -116,16 +116,16 @@ export async function login(req: Request, res: Response) {
 //truyền refresh token lên header
 export async function refreshToken(req: any, res: Response) {
 	try {
-		const authHeader = req.headers.token || req.headers.authorization;
-		const refreshToken = authHeader
-			? authHeader.startsWith('Bearer ')
-				? authHeader.split(' ')[1]
-				: authHeader.split(' ')[1]
-			: null;
+		const refreshToken =
+			req.headers['refresh-token'] || req.headers['x-refresh-token'];
 
-		if (!refreshToken) {
-			return res.status(401).json({ message: 'Refresh token không hợp lệ' });
+		if (!refreshToken || Array.isArray(refreshToken)) {
+			return res.status(400).json({
+				success: false,
+				message: 'Refresh token là bắt buộc',
+			});
 		}
+
 		const newAccessToken = await refreshUserToken(refreshToken as string);
 		res.status(200).json({
 			message: 'Làm mới token thành công',

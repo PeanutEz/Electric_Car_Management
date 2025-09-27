@@ -126,6 +126,12 @@ export async function loginUser(email: string, password: string) {
 	const errors: { [key: string]: string } = {};
 	const user = rows[0];
 	const reg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+	console.log(user);
+	if (user === undefined) {
+		const error = new Error('Dữ liệu không hợp lệ');
+		(error as any).data = { email: 'Email không tồn tại' };
+		throw error;
+	}
 	if (!reg.test(email)) {
 		errors.email = 'Định dạng email không hợp lệ';
 	}
@@ -136,18 +142,16 @@ export async function loginUser(email: string, password: string) {
 		errors.password = 'Mật khẩu phải từ 6 đến 50 ký tự';
 	}
 
+	const isPasswordValid = await bcrypt.compare(password, user.password);
+	if (!isPasswordValid) {
+		errors.password = 'Mật khẩu không đúng';
+	}
+
 	if (Object.keys(errors).length > 0) {
 		const error = new Error('Dữ liệu không hợp lệ');
 		(error as any).data = errors;
 		throw error;
 	}
-
-	const isPasswordValid = await bcrypt.compare(password, user.password);
-
-	if (!isPasswordValid) {
-		errors.password = 'Mật khẩu không đúng';
-	}
-
 	// Generate tokens using JWT service
 	const tokens = JWTService.generateTokens({
 		id: user.id,
@@ -157,7 +161,6 @@ export async function loginUser(email: string, password: string) {
 	// Lưu refresh token vào database
 	await JWTService.saveRefreshToken(user.id, tokens.refreshToken);
 
-	
 	return {
 		id: user.id,
 		status: user.status,
