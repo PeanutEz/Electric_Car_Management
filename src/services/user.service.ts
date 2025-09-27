@@ -85,14 +85,6 @@ export async function registerUser(userData: User) {
 
 	const user = rows[0];
 
-	const insertId = result.insertId;
-	const [roleName]: any = await pool.query(
-		`select r.name as role
-		from users u inner join roles r on u.role_id = r.id 
-		where u.id = ?`,
-		[insertId],
-	);
-
 	// Generate tokens using JWT service
 	const tokens = JWTService.generateTokens({
 		id: result.insertId,
@@ -110,7 +102,7 @@ export async function registerUser(userData: User) {
 		phone: user.phone,
 		reputation: user.reputation,
 		total_credit: user.total_credit,
-		role: roleName[0].role,
+		role: user.role,
 		access_token: 'Bearer ' + tokens.accessToken,
 		expired_access_token: 3600, // 1 hour in seconds
 		refresh_token: 'Bearer ' + tokens.refreshToken,
@@ -137,7 +129,6 @@ export async function loginUser(email: string, password: string) {
 		throw error;
 	}
 
-
 	// Generate tokens using JWT service
 	const tokens = JWTService.generateTokens({
 		id: user.id,
@@ -147,7 +138,22 @@ export async function loginUser(email: string, password: string) {
 	// Lưu refresh token vào database
 	await JWTService.saveRefreshToken(user.id, tokens.refreshToken);
 
-	return {
+	if(user.phone === null) {
+		return {
+			id: user.id,
+		status: user.status,
+		full_name: user.full_name,
+		email: user.email,
+		reputation: user.reputation,
+		total_credit: user.total_credit,
+		role: user.role,
+		access_token: 'Bearer ' + tokens.accessToken,
+		expired_access_token: 3600, // 1 hour in seconds
+		refresh_token: 'Bearer ' + tokens.refreshToken,
+		expired_refresh_token: 7 * 24 * 3600, // 7 days in seconds
+	};
+	} else {
+		return {
 		id: user.id,
 		status: user.status,
 		full_name: user.full_name,
@@ -161,6 +167,7 @@ export async function loginUser(email: string, password: string) {
 		refresh_token: 'Bearer ' + tokens.refreshToken,
 		expired_refresh_token: 7 * 24 * 3600, // 7 days in seconds
 	};
+	}
 }
 
 export async function registerUserTest(userData: User) {
