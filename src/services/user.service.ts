@@ -120,38 +120,20 @@ export async function registerUser(userData: User) {
 
 export async function loginUser(email: string, password: string) {
 	const [rows]: any = await pool.query(
-		'select * from users WHERE email = ?',
+		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?',
 		[email],
 	);
-	const errors: { [key: string]: string } = {};
+
 	const user = rows[0];
-	const reg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-	console.log(user);
-	if (user === undefined) {
-		const error = new Error('Dữ liệu không hợp lệ');
-		(error as any).data = { email: 'Email không tồn tại' };
-		throw error;
-	}
-	if (!reg.test(email)) {
-		errors.email = 'Định dạng email không hợp lệ';
-	}
-	if (!email || email.length < 5 || email.length > 160) {
-		errors.email = 'Email phải từ 5 đến 160 ký tự';
-	}
-	if (!password || password.length < 6 || password.length > 50) {
-		errors.password = 'Mật khẩu phải từ 6 đến 50 ký tự';
+	if (!user) {
+		throw new Error('Không tìm thấy người dùng');
 	}
 
 	const isPasswordValid = await bcrypt.compare(password, user.password);
 	if (!isPasswordValid) {
-		errors.password = 'Mật khẩu không đúng';
+		throw new Error('Mật khẩu không đúng');
 	}
 
-	if (Object.keys(errors).length > 0) {
-		const error = new Error('Dữ liệu không hợp lệ');
-		(error as any).data = errors;
-		throw error;
-	}
 	// Generate tokens using JWT service
 	const tokens = JWTService.generateTokens({
 		id: user.id,
@@ -169,7 +151,7 @@ export async function loginUser(email: string, password: string) {
 		phone: user.phone,
 		reputation: user.reputation,
 		total_credit: user.total_credit,
-		role: user.role_id,
+		role: user.role,
 		access_token: 'Bearer ' + tokens.accessToken,
 		expired_access_token: 3600, // 1 hour in seconds
 		refresh_token: 'Bearer ' + tokens.refreshToken,
