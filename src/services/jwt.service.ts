@@ -19,8 +19,8 @@ export class JWTService {
 		.ACCESS_TOKEN_SECRET as string;
 	private static readonly REFRESH_TOKEN_SECRET = process.env
 		.REFRESH_TOKEN_SECRET as string;
-	private static readonly ACCESS_TOKEN_EXPIRY = '30s'; // 30 giây
-	private static readonly REFRESH_TOKEN_EXPIRY = '7d'; // 7 ngày
+	private static readonly ACCESS_TOKEN_EXPIRY = '1h'; // 1 hour
+	private static readonly REFRESH_TOKEN_EXPIRY = '7d'; // 7 days
 
 	// Validate that secrets are configured
 	// static {
