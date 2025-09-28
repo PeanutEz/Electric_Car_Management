@@ -125,13 +125,23 @@ export async function loginUser(email: string, password: string) {
 	);
 
 	const user = rows[0];
-	if (!user) {
-		throw new Error('Không tìm thấy người dùng');
+	/*
+	message: 'lỗi',
+	{
+		password: 'Email hoặc mật khẩu không đúng',
+	} 
+	*/
+	if (user === undefined) {
+		const error = new Error('Lỗi');
+		(error as any).data = { password: 'Email hoặc mật khẩu không đúng' };
+		throw error;
 	}
 
 	const isPasswordValid = await bcrypt.compare(password, user.password);
 	if (!isPasswordValid) {
-		throw new Error('Mật khẩu không đúng');
+		const error = new Error('Lỗi');
+		(error as any).data = { password: 'Email hoặc mật khẩu không đúng' };
+		throw error;
 	}
 
 	// Generate tokens using JWT service
