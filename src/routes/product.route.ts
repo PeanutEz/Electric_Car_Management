@@ -2,6 +2,7 @@ import Router from 'express';
 import { 
    listProducts, listCategories, listBrands
 } from '../controllers/product.controller';
+import swaggerUi from "swagger-ui-express";
 const router = Router();
 
 /**
