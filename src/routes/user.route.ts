@@ -275,7 +275,7 @@ router.post('/logout', authenticateToken, logout);
 
 /**
  * @swagger
- * /api/user/get-user:
+ * /api/user/get-all-users:
  *   get:
  *     summary: Get all users
  *     tags: [Users]
@@ -334,7 +334,7 @@ router.post('/logout', authenticateToken, logout);
  *                   type: string
  *                   example: "Lỗi máy chủ nội bộ"
  */
-router.get('/get-user', authenticateToken, listUsers);
+router.get('/get-all-users', authenticateToken, listUsers);
 
 /**
  * @swagger

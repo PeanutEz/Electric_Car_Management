@@ -100,7 +100,7 @@ export class JWTService {
 		refreshToken: string,
 	): Promise<void> {
 		const expiresAt = 7 * 24 * 3600; // 7 ngày tính bằng giây từ bây giờ
-		console.log(expiresAt);
+	
 		await pool.query(
 			'UPDATE users SET refresh_token = ?, expired_refresh_token = ? WHERE id = ?',
 			[refreshToken, expiresAt, userId],
