@@ -59,10 +59,24 @@ router.get('/get-all-products', listProducts);
  *                 data:
  *                   type: array
  *                   items:
- *                   
+ *                     type: object
+ *                     properties:
+ *                       type:
+ *                         type: string
+ *                         example: vehicle
+ *                       slug:
+ *                         type: string
+ *                         example: vehicle
+ *                       count:
+ *                         type: integer
+ *                         example: 3
+ *                       has_children:
+ *                         type: boolean
+ *                         example: true
  *       500:
  *         description: Lỗi server
  */
+
 router.get('/get-all-categories', listCategories);
 
 /**
