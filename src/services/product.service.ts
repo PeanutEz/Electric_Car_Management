@@ -71,13 +71,47 @@ export async function getAllProducts(): Promise<(Vehicle | Battery)[]> {
 		}
 	});
 }
-
-export async function getAllCategories(): Promise<Category[]> {
-	const [rows] = await pool.query('select * from product_categories');
-	return rows as Category[];
+// {
+//     "message": "Lấy categories thành công",
+//     "data": [
+//         {
+//             "type": "vehicle",
+//             "slug": "vehicle",
+//             "count": 128,
+//             "has_chidren": true
+//         },
+//         {
+//             "type": "battery",
+//             "slug": "battery",
+//             "count": 86,
+//             "has_children": true
+//         }
+//     ]
+// }
+export async function getAllCategories(status: string): Promise<Category[]> {
+	const [rows] = await pool.query(
+		`SELECT pc.type, pc.slug, COUNT(po.id) as count
+     FROM product_categories pc
+     INNER JOIN products p ON p.product_category_id = pc.id
+     INNER JOIN posts po ON po.product_id = p.id
+     WHERE po.status = ?
+     GROUP BY pc.type, pc.slug`,
+		[status],
+	);
+	return (rows as any).map((r: any) => ({
+		type: r.type,
+		slug: r.slug,
+		count: r.count,
+		has_children: true, // Giả sử tất cả đều có con, bạn có thể điều chỉnh logic này nếu cần
+	}));
 }
 
 export async function getAllBrands(): Promise<Brand[]> {
 	const [rows] = await pool.query('select * from brands');
 	return rows as Brand[];
+}
+
+export async function createProduct(product: Vehicle | Battery) {
+	const [result] = await pool.query('INSERT INTO products SET ?', product);
+	return null; // Cần trả về sản phẩm đã tạo với ID mới (nếu cần)
 }

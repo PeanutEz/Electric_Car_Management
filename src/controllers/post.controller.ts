@@ -8,7 +8,15 @@ export async function listPosts(req: Request, res: Response) {
       const posts = await paginatePosts(page, limit);
       res.status(200).json({
          message: 'Lấy danh sách bài viết thành công',
-         data: posts,
+         data: {
+            post: posts,
+            pagination: {
+               page: page,
+               limit: limit,
+               page_size: posts.length,
+               
+            },
+         },
       });
    } catch (error: any) {
       res.status(500).json({

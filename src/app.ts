@@ -1,6 +1,5 @@
 import express from 'express';
 import dotenv from 'dotenv';
-const cors = require('cors');
 import bodyParser from 'body-parser';
 import { testConnection } from './config/db';
 import routes from './routes/index.route';
@@ -17,7 +16,7 @@ app.use(express.json());
 
 app.use(routes);
 
-app.use(cors());
+//app.use(cors());
 
 setupSwagger(app); 
 

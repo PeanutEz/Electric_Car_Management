@@ -7,14 +7,17 @@ export async function paginatePosts(
 ): Promise<Post[]> {
 	const offset = (page - 1) * limit;
 	const [rows] = await pool.query(
-		'SELECT po.id, po.product_id, po.title, po.status, po.end_date, po.reviewed_by, po.created_by, po.created_at, po.pushed_at, po.priority, ' +
-			'p.model, p.price, p.description, p.image, b.name as brand ' +
-			'FROM posts po ' +
-			'INNER JOIN products p ON po.product_id = p.id ' +
-			'INNER JOIN brands b ON p.brand_id = b.id ' +
-			'ORDER BY priority DESC ' +
-			'LIMIT ? ' +
-			'OFFSET ?',
+		`SELECT po.id, po.product_id, po.title, po.status, po.end_date, 
+            po.reviewed_by, po.created_by, po.created_at, po.pushed_at, po.priority,
+            p.model, p.price, p.description, p.image, 
+            b.name as brand, 
+            pc.type as category_type, pc.name as category_name
+     FROM posts po
+     INNER JOIN products p ON po.product_id = p.id 
+     INNER JOIN brands b ON p.brand_id = b.id
+     INNER JOIN product_categories pc ON pc.id = p.product_category_id
+     ORDER BY po.priority DESC
+     LIMIT ? OFFSET ?`,
 		[limit, offset],
 	);
 	return (rows as any).map((r: any) => ({
@@ -34,6 +37,10 @@ export async function paginatePosts(
 			description: r.description,
 			image: r.image,
 			brand: r.brand,
+			category: {
+				type: r.category_type,
+				name: r.category_name,
+			},
 		},
 	}));
 }

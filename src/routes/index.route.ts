@@ -1,7 +1,8 @@
-import {Router} from "express";
-import UserRouter from "./user.route";
-import ProductRouter from "./product.route";
-import PostRouter from "./post.route";
+import { Router } from 'express';
+import UserRouter from './user.route';
+import ProductRouter from './product.route';
+import PostRouter from './post.route';
+
 
 const routes = Router();
 

@@ -17,7 +17,7 @@ export async function listProducts(req: Request, res: Response) {
 
 export async function listCategories(req: Request, res: Response) {
 	try {
-		const categories = await getAllCategories();
+		const categories = await getAllCategories('approved');
 		res.status(200).json({
 			message: 'Lấy danh sách danh mục thành công',
 			data: categories,
