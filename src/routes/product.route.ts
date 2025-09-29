@@ -1,8 +1,7 @@
 import Router from 'express';
 import { 
-   listProducts, listCategories, listBrands
+   listProducts, listCategories, listBrands, listCategoryBySlug
 } from '../controllers/product.controller';
-import swaggerUi from "swagger-ui-express";
 const router = Router();
 
 /**
@@ -78,6 +77,8 @@ router.get('/get-all-products', listProducts);
  */
 
 router.get('/get-all-categories', listCategories);
+
+router.get('/categories/:slug', listCategoryBySlug);
 
 /**
  * @swagger

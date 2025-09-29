@@ -106,6 +106,69 @@ export async function getAllCategories(status: string): Promise<Category[]> {
 	}));
 }
 
+// query param : slug
+// ```
+// {
+//     "message": "Lấy category vehicle thành công",
+//     "data": {
+//         "type": "vehicle",
+//         "slug": "vehicle",
+//         "count": 128,
+//         "children": [
+//             {
+//                 "id": 1,
+//                 "typeSlug": "vehicle",
+//                 "name": "Xe hơi điện",
+//                 "count": 70
+//             },
+//             {
+//                 "id": 2,
+//                 "typeSlug": "vehicle",
+//                 "name": "Xe máy điện",
+//                 "count": 58
+//             }
+//         ]
+//     }
+// }
+export async function getCategoryBySlug(slug: any): Promise<Category[]> {
+	const [rows] = await pool.query(
+		`SELECT pc.type, pc.slug, COUNT(po.id) as count
+      FROM product_categories pc
+      INNER JOIN products p ON p.product_category_id = pc.id
+      INNER JOIN posts po ON po.product_id = p.id
+      WHERE po.status = ?
+      GROUP BY pc.type, pc.slug`,
+		['approved'],
+	);
+	const [rows1] = await pool.query(
+		`SELECT pc.type, pc.slug, pc.id, pc.name, COUNT(po.id) as count
+	    FROM product_categories pc
+	    left JOIN products p ON p.product_category_id = pc.id
+	    left JOIN posts po ON po.product_id = p.id
+	    WHERE pc.slug = ? and po.status = 'approved'
+	    GROUP BY pc.type, pc.slug, pc.id, pc.name`,
+		[slug],
+	);
+	const parent = (rows as any).map((r: any) => ({
+		type: r.type,
+		slug: r.slug,
+		count: r.count,
+		has_children: true, // Giả sử tất cả đều có con, bạn có thể điều chỉnh logic này nếu cần
+	}))[0];
+	const children = rows1 as any;
+	return [
+		{
+			...parent,
+			children: children.map((c: any) => ({
+				id: c.id,
+				typeSlug: c.slug,
+				name: c.name,
+				count: c.count
+			})),
+		},
+	];
+}
+
 export async function getAllBrands(): Promise<Brand[]> {
 	const [rows] = await pool.query('select * from brands');
 	return rows as Brand[];

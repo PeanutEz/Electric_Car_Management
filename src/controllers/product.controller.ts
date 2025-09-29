@@ -1,5 +1,10 @@
 import { Request, Response } from 'express';
-import { getAllProducts, getAllCategories, getAllBrands } from '../services/product.service';
+import {
+	getAllProducts,
+	getAllCategories,
+	getAllBrands,
+	getCategoryBySlug,
+} from '../services/product.service';
 
 export async function listProducts(req: Request, res: Response) {
 	try {
@@ -43,4 +48,18 @@ export async function listBrands(req: Request, res: Response) {
 	}
 }
 
+export async function listCategoryBySlug(req: Request, res: Response) {
+	const slug = req.params.slug;
 
+	try {
+		const category = await getCategoryBySlug(slug);
+		res.status(200).json({
+			message: 'Lấy danh mục theo slug thành công',
+			data: category,
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
+		});
+	}
+}
