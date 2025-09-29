@@ -83,7 +83,7 @@ const router = Router();
  *       500:
  *         description: Lỗi server
  */
-router.get('/paginate', listPosts);
+router.get('/get-all-posts', listPosts);
 
 /**
  * @swagger

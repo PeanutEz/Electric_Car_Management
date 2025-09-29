@@ -4,7 +4,22 @@ import {
 	getAllCategories,
 	getAllBrands,
 	getCategoryBySlug,
+	getAllCategoryDetail,
 } from '../services/product.service';
+
+export async function listCategoryDetails(req: Request, res: Response) {
+	try {
+		const categoryDetails = await getAllCategoryDetail();
+		res.status(201).json({
+			message: 'Lấy danh sách chi tiết danh mục thành công',
+			data: categoryDetails,
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
+		});
+	}
+}
 
 export async function listProducts(req: Request, res: Response) {
 	try {
@@ -63,3 +78,5 @@ export async function listCategoryBySlug(req: Request, res: Response) {
 		});
 	}
 }
+
+

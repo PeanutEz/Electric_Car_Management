@@ -163,10 +163,50 @@ export async function getCategoryBySlug(slug: any): Promise<Category[]> {
 				id: c.id,
 				typeSlug: c.slug,
 				name: c.name,
-				count: c.count
+				count: c.count,
 			})),
 		},
 	];
+}
+
+export async function getAllCategoryDetail(): Promise<any> {
+	// Lấy danh sách cha (type)
+	const [parentRows] = await pool.query(
+		`SELECT pc.type, pc.slug, COUNT(po.id) as count
+     FROM product_categories pc
+     INNER JOIN products p ON p.product_category_id = pc.id
+     INNER JOIN posts po ON po.product_id = p.id
+     WHERE po.status = 'approved'
+     GROUP BY pc.type, pc.slug`,
+	);
+
+	// Lấy danh sách con (categories chi tiết)
+	const [childRows] = await pool.query(
+		`SELECT pc.id, pc.name, pc.type, pc.slug, COUNT(po.id) as count
+     FROM product_categories pc
+     LEFT JOIN products p ON p.product_category_id = pc.id
+     LEFT JOIN posts po ON po.product_id = p.id AND po.status = 'approved'
+     GROUP BY pc.id, pc.name, pc.type, pc.slug`,
+	);
+	const parents: any = (parentRows as any).map((r: any) => ({
+		type: r.type,
+		slug: r.slug,
+		count: r.count,
+		has_children: true,
+	}));
+	const children = childRows as any;
+
+	return parents.map((parent: any) => ({
+		...parent,
+		children: children
+			.filter((child: any) => child.type === parent.type)
+			.map((child: any) => ({
+				id: child.id,
+				typeSlug: child.slug,
+				name: child.name,
+				count: child.count,
+			})),
+	}));
 }
 
 export async function getAllBrands(): Promise<Brand[]> {

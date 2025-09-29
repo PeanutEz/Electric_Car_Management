@@ -1,6 +1,6 @@
 import Router from 'express';
 import { 
-   listProducts, listCategories, listBrands, listCategoryBySlug
+   listProducts, listCategories, listBrands, listCategoryBySlug, listCategoryDetails
 } from '../controllers/product.controller';
 const router = Router();
 
@@ -74,9 +74,10 @@ router.get('/get-all-products', listProducts);
  *                         example: true
  *       500:
  *         description: Lỗi server
- */
-
+*/
 router.get('/get-all-categories', listCategories);
+
+router.get('/categories/detail-all', listCategoryDetails);
 
 router.get('/categories/:slug', listCategoryBySlug);
 
@@ -103,7 +104,9 @@ router.get('/categories/:slug', listCategoryBySlug);
  *                     
  *       500:
  *         description: Lỗi server
- */
+*/
 router.get('/get-all-brands', listBrands);
+
+
 
 export default router;
