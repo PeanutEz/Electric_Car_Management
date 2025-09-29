@@ -6,6 +6,7 @@ import {
 	userDetail,
 	refreshToken,
 	logout,
+	updateUserInfo,
 } from '../controllers/user.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 
@@ -415,5 +416,8 @@ router.get('/get-all-users', authenticateToken, listUsers);
  *                   example: "Lỗi máy chủ nội bộ"
  */
 router.get('/:id', userDetail);
+
+router.put('/update-user/:id', updateUserInfo);
+
 
 export default router;

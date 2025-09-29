@@ -267,3 +267,31 @@ export async function refreshToken(refreshToken: string) {
 		throw new Error('Refresh token không hợp lệ hoặc đã hết hạn');
 	}
 }
+
+export async function updateUser(userId: number, userData: Partial<User>) {
+	const { full_name, phone, email, avatar } = userData;
+	const reg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+	const errors: { [key: string]: string } = {};
+	if (!reg.test(email as string)) {
+		errors.email = 'Định dạng email không hợp lệ';
+	}
+	if (!email || email.length < 5 || email.length > 160) {
+		errors.email = 'Email phải từ 5 đến 160 ký tự';
+	}
+	if (!full_name || full_name.length < 6 || full_name.length > 160) {
+		errors.full_name = 'Họ tên phải từ 6 đến 160 ký tự';
+	}
+	if (!phone || phone.length !== 10) {
+		errors.phone = 'Số điện thoại phải 10 ký tự';
+	}
+	await pool.query(
+		'UPDATE users SET full_name = ?, phone = ?, email = ?, avatar = ? WHERE id = ?',
+		[full_name, phone, email, avatar, userId],
+	);
+	if (Object.keys(errors).length > 0) {
+		const error = new Error('Dữ liệu không hợp lệ');
+		(error as any).data = errors;
+		throw error;
+	}
+	return getUserById(userId);
+}

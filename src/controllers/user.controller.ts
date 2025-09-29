@@ -7,8 +7,9 @@ import {
 	logoutUser,
 	refreshToken as refreshUserToken,
 	registerUserTest,
+	updateUser,
 } from '../services/user.service';
-import { ref } from 'process';
+import * as uploadService from "../services/upload.service";
 
 export async function userDetail(req: Request, res: Response) {
 	try {
@@ -163,3 +164,36 @@ export async function logout(req: Request, res: Response) {
 		});
 	}
 }
+
+export async function updateUserInfo(req: Request, res: Response) {
+	try {
+		const id = parseInt(req.params.id, 10);
+		const userData = req.body;
+		if (isNaN(id)) {
+			return res
+				.status(400)
+				.json({ message: 'ID người dùng không hợp lệ' });
+		}
+		const user = await updateUser(id, userData);
+		res.status(200).json({
+			message: 'Cập nhật thông tin người dùng thành công',
+			data: {
+				user: {
+					id: user?.id,
+					email: user?.email,
+					phone: user?.phone,
+					full_name: user?.full_name,
+					avatar: user?.avatar,
+				},
+			},
+		});
+	} catch (error: any) {
+		res.status(422).json({
+			message: error.message,
+			data: error.data,
+		});
+	}
+}
+
+
+
