@@ -3,7 +3,7 @@ import {
    getAllCategories,
    getCategoryBySlug,
    getAllCategoryDetail,
-} from '../services/product.service';
+} from '../services/category.service';
 
 
 export async function listCategoryDetails(req: Request, res: Response) {

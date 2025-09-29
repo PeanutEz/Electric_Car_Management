@@ -1,9 +1,6 @@
 import { Request, Response } from 'express';
 import {
 	getAllProducts,
-	getAllCategories,
-	getCategoryBySlug,
-	getAllCategoryDetail,
 } from '../services/product.service';
 
 export async function listProducts(req: Request, res: Response) {

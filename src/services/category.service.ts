@@ -64,8 +64,8 @@ export async function getCategoryBySlug(slug: any): Promise<Category[]> {
 	const [rows] = await pool.query(
 		`SELECT pc.type, pc.slug, COUNT(po.id) as count
       FROM product_categories pc
-      right JOIN products p ON p.product_category_id = pc.id
-      right JOIN posts po ON po.product_id = p.id
+      inner JOIN products p ON p.product_category_id = pc.id
+      inner JOIN posts po ON po.product_id = p.id
       WHERE pc.slug = ? and po.status = 'approved'
       GROUP BY pc.type, pc.slug`,
 		[slug],
@@ -98,6 +98,27 @@ export async function getCategoryBySlug(slug: any): Promise<Category[]> {
 		},
 	];
 }
+
+// export async function getCategoryBySlug(slug: any): Promise<Category[]> {
+// 	const [rows] = await pool.query('SELECT pc.type, pc.slug, pc.id, pc.name, COUNT(po.id) as count' +
+//       ' FROM product_categories pc' +
+//       ' left JOIN products p ON p.product_category_id = pc.id' +
+//       ' left JOIN posts po ON po.product_id = p.id' +
+//       ' WHERE pc.slug = ? and po.status = "approved"' +
+//       ' GROUP BY pc.type, pc.slug, pc.id, pc.name', [slug]);
+//    return (rows as any).map((r: any) => ({
+//       type: r.type,
+//       slug: r.slug,
+//       count: r.count,
+//       has_children: true, // Giả sử tất cả đều có con, bạn có thể điều chỉnh logic này nếu cần
+//       children: [{
+//          id: r.id,
+//          typeSlug: r.slug,
+//          name: r.name,
+//          count: r.count,
+//       }],
+//    }));
+// }
 
 export async function getAllCategoryDetail(): Promise<any> {
 	// Lấy danh sách cha (type)
