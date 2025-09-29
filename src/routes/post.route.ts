@@ -12,7 +12,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/post/paginate:
+ * /api/post/get-all-posts:
  *   get:
  *     summary: Lấy danh sách bài viết (có phân trang)
  *     tags: [Posts]
