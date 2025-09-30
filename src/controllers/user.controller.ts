@@ -9,7 +9,6 @@ import {
 	registerUserTest,
 	updateUser,
 } from '../services/user.service';
-import * as uploadService from '../services/upload.service';
 
 export async function userDetail(req: Request, res: Response) {
 	try {

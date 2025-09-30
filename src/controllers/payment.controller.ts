@@ -11,8 +11,8 @@ export const createPaymentLink = async (req: Request, res: Response) => {
       orderCode,
       amount,
       description: description || "Thanh toán đơn hàng",
-      returnUrl: "http://localhost:3000/payment-success",
-      cancelUrl: "http://localhost:3000/payment-cancel",
+      returnUrl: "http://localhost:4000/payment-success",
+      cancelUrl: "http://localhost:4000/payment-cancel",
     });
 
     return res.json(paymentLink);

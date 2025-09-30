@@ -2,7 +2,7 @@ import pool from '../config/db';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/user.model';
 import { JWTService } from './jwt.service';
-import { access } from 'fs';
+
 
 export async function getUserById(id: number): Promise<User | null> {
 	const [rows] = await pool.query(
