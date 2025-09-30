@@ -1,5 +1,9 @@
 import Router from 'express';
-import { listPosts,postDetail } from '../controllers/post.controller';
+import {
+	listPosts,
+	postDetail,
+   getPosts,
+} from '../controllers/post.controller';
 
 const router = Router();
 
@@ -83,7 +87,10 @@ const router = Router();
  *       500:
  *         description: Lỗi server
  */
-router.get('/get-all-posts', listPosts);
+router.get('/get-posts-by-page', listPosts);
+
+// Returns the exact sample JSON provided by the user
+router.get('/get-all-posts-for-admin', getPosts);
 
 /**
  * @swagger

@@ -9,7 +9,7 @@ import {
 	registerUserTest,
 	updateUser,
 } from '../services/user.service';
-import * as uploadService from "../services/upload.service";
+import * as uploadService from '../services/upload.service';
 
 export async function userDetail(req: Request, res: Response) {
 	try {
@@ -115,30 +115,36 @@ export async function login(req: Request, res: Response) {
 	}
 }
 //truyền refresh token lên header
+// Refresh token via Authorization header
 export async function refreshToken(req: any, res: Response) {
 	try {
-		const refreshToken =
-			req.headers['refresh-token'] || req.headers['x-refresh-token'];
-
-		if (!refreshToken || Array.isArray(refreshToken)) {
-			return res.status(400).json({
-				success: false,
-				message: 'Refresh token là bắt buộc',
-			});
+		const authHeader =
+			req.headers['authorization'] || req.headers['Authorization'];
+		if (!authHeader || Array.isArray(authHeader)) {
+			return res
+				.status(400)
+				.json({ message: 'Authorization header is required' });
 		}
 
-		const newAccessToken = await refreshUserToken(refreshToken as string);
-		res.status(200).json({
+		const tokenStr = (authHeader as string).trim();
+		if (!tokenStr) {
+			return res
+				.status(400)
+				.json({ message: 'Authorization header is empty' });
+		}
+
+		// Pass the whole header value to service; service will strip Bearer if present
+		const result = await refreshUserToken(tokenStr);
+
+		return res.status(200).json({
 			message: 'Làm mới token thành công',
 			data: {
-				access_token: newAccessToken,
+				access_token: result.access_token,
 			},
 		});
 	} catch (error: any) {
-		res.status(500).json({
-			success: false,
-			message: error.message,
-		});
+		const msg = error?.message || 'Không thể làm mới token';
+		return res.status(401).json({ message: msg });
 	}
 }
 
@@ -194,6 +200,3 @@ export async function updateUserInfo(req: Request, res: Response) {
 		});
 	}
 }
-
-
-

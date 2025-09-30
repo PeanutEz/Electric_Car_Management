@@ -1,10 +1,7 @@
 import pool from '../config/db';
 import { Post } from '../models/post.model';
 
-export async function paginatePosts(
-	page: number,
-	limit: number,
-): Promise<Post[]> {
+export async function paginatePosts(page: number, limit: number): Promise<Post[]> {
 	const offset = (page - 1) * limit;
 	const [rows] = await pool.query(
 		`SELECT po.id, po.product_id, po.title, po.status, po.end_date, 
@@ -110,5 +107,27 @@ export async function getPostsById(id: number): Promise<Post[]> {
 						image: r.image,
 						images: r.images ? JSON.parse(r.images) : [], // nếu lưu dạng JSON string
 				  },
+	}));
+}
+
+export async function getAllPostsForAdmin(): Promise<Post[]> {
+	const [rows] = await pool.query(
+		`SELECT po.id, po.product_id, po.title, po.status, po.created_at, po.priority,
+		  p.model,p.year, p.price, b.name as brand
+ FROM posts po
+ INNER JOIN products p ON po.product_id = p.id 
+ INNER JOIN brands b ON p.brand_id = b.id
+ ORDER BY po.priority DESC`
+	);
+	return (rows as any).map((r: any) => ({
+		id: r.id,
+		title: r.title,
+		brand: r.brand,
+		model: r.model,
+		price: r.price,
+		year: r.year,
+		created_at: r.created_at,
+		status: r.status,
+		priority: r.priority,
 	}));
 }

@@ -184,11 +184,11 @@ router.post('/login', login);
  *     tags: [Users]
  *     parameters:
  *       - in: header
- *         name: refresh-token
+ *         name: Authorization
  *         required: true
  *         schema:
  *           type: string
- *         description: "The refresh token received during login (can also use x-refresh-token)"
+ *         description: "Refresh token in Authorization header (use 'Bearer <token>' or just the token)"
  *         example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *     responses:
  *       200:
@@ -418,6 +418,5 @@ router.get('/get-all-users', authenticateToken, listUsers);
 router.get('/:id', userDetail);
 
 router.put('/update-user/:id', updateUserInfo);
-
 
 export default router;

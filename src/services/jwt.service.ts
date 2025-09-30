@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import pool from '../config/db';
+import e from 'express';
 
 dotenv.config();
 
@@ -21,26 +22,6 @@ export class JWTService {
 		.REFRESH_TOKEN_SECRET as string;
 	private static readonly ACCESS_TOKEN_EXPIRY = '1h'; // 1 hour
 	private static readonly REFRESH_TOKEN_EXPIRY = '7d'; // 7 days
-
-	// Validate that secrets are configured
-	// static {
-	// 	if (
-	// 		!this.ACCESS_TOKEN_SECRET ||
-	// 		this.ACCESS_TOKEN_SECRET === 'access_token'
-	// 	) {
-	// 		throw new Error(
-	// 			'ACCESS_TOKEN_SECRET phải được cấu hình với một giá trị bảo mật mạnh',
-	// 		);
-	// 	}
-	// 	if (
-	// 		!this.REFRESH_TOKEN_SECRET ||
-	// 		this.REFRESH_TOKEN_SECRET === 'refresh_token'
-	// 	) {
-	// 		throw new Error(
-	// 			'REFRESH_TOKEN_SECRET phải được cấu hình với một giá trị bảo mật mạnh',
-	// 		);
-	// 	}
-	// }
 
 	/**
 	 * Tạo access token
@@ -99,11 +80,11 @@ export class JWTService {
 		userId: number,
 		refreshToken: string,
 	): Promise<void> {
-		const expiresAt = 7 * 24 * 3600; // 7 ngày tính bằng giây từ bây giờ
-	
+		// Lưu refresh token và đặt expired_refresh_token là epoch seconds (giây) kể từ 1970
+		const expiresAtSec = 7 * 24 * 3600; // now + 7 days
 		await pool.query(
 			'UPDATE users SET refresh_token = ?, expired_refresh_token = ? WHERE id = ?',
-			[refreshToken, expiresAt, userId],
+			[refreshToken, expiresAtSec, userId],
 		);
 	}
 
@@ -124,13 +105,10 @@ export class JWTService {
 		}
 
 		const user = rows[0];
-		const now = new Date();
+		const nowSec = Math.floor(Date.now() / 1000);
+		const expiredAtSec = Number(user.expired_refresh_token) || 0;
 
-		return (
-			user.refresh_token === refreshToken &&
-			user.expired_refresh_token &&
-			new Date(user.expired_refresh_token) > now
-		);
+		return user.refresh_token === refreshToken && expiredAtSec > nowSec;
 	}
 
 	/**
