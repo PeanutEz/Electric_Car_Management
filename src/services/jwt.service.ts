@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import pool from '../config/db';
-import e from 'express';
 
 dotenv.config();
 
@@ -108,7 +107,10 @@ export class JWTService {
 		const nowSec = Math.floor(Date.now() / 1000);
 		const expiredAtSec = Number(user.expired_refresh_token) || 0;
 
-		return user.refresh_token === refreshToken && expiredAtSec > nowSec;
+		return (
+			user.refresh_token === refreshToken &&
+			expiredAtSec > nowSec
+		);
 	}
 
 	/**

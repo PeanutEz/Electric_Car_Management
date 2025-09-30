@@ -102,20 +102,36 @@ export async function registerUser(userData: User) {
 	// Lưu refresh token vào database
 	await JWTService.saveRefreshToken(result.insertId, tokens.refreshToken);
 
-	return {
-		id: result.insertId,
-		status: user.status || 'active',
-		full_name: full_name,
-		email: email,
-		phone: user.phone,
-		reputation: user.reputation,
-		total_credit: user.total_credit,
-		role: roleName[0].role,
-		access_token: 'Bearer ' + tokens.accessToken,
-		expired_access_token: 3600, // 1 hour in seconds
-		refresh_token: 'Bearer ' + tokens.refreshToken,
-		expired_refresh_token: 604800, // 7 days in seconds
-	};
+	if (user.phone === null) {
+		return {
+			id: result.insertId,
+			status: user.status || 'active',
+			full_name: full_name,
+			email: email,
+			reputation: user.reputation,
+			total_credit: user.total_credit,
+			role: roleName[0].role,
+			access_token: 'Bearer ' + tokens.accessToken,
+			expired_access_token: 3600, // 1 hour in seconds
+			refresh_token: 'Bearer ' + tokens.refreshToken,
+			expired_refresh_token: 604800, // 7 days in seconds
+		};
+	} else {
+		return {
+			id: result.insertId,
+			status: user.status || 'active',
+			full_name: full_name,
+			email: email,
+			phone: user.phone,
+			reputation: user.reputation,
+			total_credit: user.total_credit,
+			role: roleName[0].role,
+			access_token: 'Bearer ' + tokens.accessToken,
+			expired_access_token: 3600, // 1 hour in seconds
+			refresh_token: 'Bearer ' + tokens.refreshToken,
+			expired_refresh_token: 604800, // 7 days in seconds
+		};
+	}
 }
 
 export async function loginUser(email: string, password: string) {
@@ -153,20 +169,36 @@ export async function loginUser(email: string, password: string) {
 	// Lưu refresh token vào database
 	await JWTService.saveRefreshToken(user.id, tokens.refreshToken);
 
-	return {
-		id: user.id,
-		status: user.status,
-		full_name: user.full_name,
-		email: user.email,
-		phone: user.phone,
-		reputation: user.reputation,
-		total_credit: user.total_credit,
-		role: user.role,
-		access_token: 'Bearer ' + tokens.accessToken,
-		expired_access_token: 3600, // 1 hour in seconds
-		refresh_token: 'Bearer ' + tokens.refreshToken,
-		expired_refresh_token: 7 * 24 * 3600, // 7 days in seconds
-	};
+	if (user.phone === null) {
+		return {
+			id: user.id,
+			status: user.status,
+			full_name: user.full_name,
+			email: user.email,
+			reputation: user.reputation,
+			total_credit: user.total_credit,
+			role: user.role,
+			access_token: 'Bearer ' + tokens.accessToken,
+			expired_access_token: 3600, // 1 hour in seconds
+			refresh_token: 'Bearer ' + tokens.refreshToken,
+			expired_refresh_token: 7 * 24 * 3600, // 7 days in seconds
+		};
+	} else {
+		return {
+			id: user.id,
+			status: user.status,
+			full_name: user.full_name,
+			email: user.email,
+			phone: user.phone,
+			reputation: user.reputation,
+			total_credit: user.total_credit,
+			role: user.role,
+			access_token: 'Bearer ' + tokens.accessToken,
+			expired_access_token: 3600, // 1 hour in seconds
+			refresh_token: 'Bearer ' + tokens.refreshToken,
+			expired_refresh_token: 7 * 24 * 3600, // 7 days in seconds
+		};
+	}
 }
 
 export async function registerUserTest(userData: User) {
