@@ -6,7 +6,10 @@ dotenv.config();
 
 export interface TokenPayload {
 	id: number;
+	full_name?: string;
 	email: string;
+	phone?: string;
+	role?: string;
 }
 
 export interface TokenResponse {

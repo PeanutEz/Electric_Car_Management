@@ -141,12 +141,6 @@ export async function loginUser(email: string, password: string) {
 	);
 
 	const user = rows[0];
-	/*
-	message: 'lỗi',
-	{
-		password: 'Email hoặc mật khẩu không đúng',
-	} 
-	*/
 	if (user === undefined) {
 		const error = new Error('Lỗi');
 		(error as any).data = { password: 'Email hoặc mật khẩu không đúng' };
@@ -163,7 +157,10 @@ export async function loginUser(email: string, password: string) {
 	// Generate tokens using JWT service
 	const tokens = JWTService.generateTokens({
 		id: user.id,
+		full_name: user.full_name,
 		email: user.email,
+		phone: user.phone,
+		role: user.role,
 	});
 
 	// Lưu refresh token vào database

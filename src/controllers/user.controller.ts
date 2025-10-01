@@ -9,6 +9,7 @@ import {
 	registerUserTest,
 	updateUser,
 } from '../services/user.service';
+import * as uploadService from '../services/upload.service';
 
 export async function userDetail(req: Request, res: Response) {
 	try {
@@ -179,6 +180,22 @@ export async function updateUserInfo(req: Request, res: Response) {
 				.status(400)
 				.json({ message: 'ID người dùng không hợp lệ' });
 		}
+
+		// Handle avatar upload if file is provided
+		if (req.file) {
+			try {
+				const uploadResult = await uploadService.uploadImage(
+					req.file.buffer,
+				);
+				userData.avatar = uploadResult.url;
+			} catch (uploadError: any) {
+				return res.status(500).json({
+					success: false,
+					message: 'Lỗi khi tải lên avatar: ' + uploadError.message,
+				});
+			}
+		}
+
 		const user = await updateUser(id, userData);
 		res.status(200).json({
 			message: 'Cập nhật thông tin người dùng thành công',

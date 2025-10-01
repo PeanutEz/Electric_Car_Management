@@ -1,4 +1,5 @@
 import Router from 'express';
+import multer from 'multer';
 import {
 	register,
 	login,
@@ -11,6 +12,8 @@ import {
 import { authenticateToken } from '../middleware/AuthMiddleware';
 
 const router = Router();
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 /**
  * @swagger
@@ -376,9 +379,9 @@ router.get('/get-all-users', authenticateToken, listUsers);
  *                   type: string
  *                   nullable: true
  *                   example: "+1234567890"
- * 			       avartar:
- * 			    	type: string
- * 			    	example: "https://example.com/avatar.jpg"
+ *                   avatar:
+ *                     type: string
+ *                     example: "https://example.com/avatar.jpg"
  *                 reputation:
  *                   type: integer
  *                   example: 0
@@ -435,27 +438,27 @@ router.get('/:id', userDetail);
  *         description: ID của người dùng
  *         schema:
  *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               full_name:
- *                 type: string
- *                 example: "Phạm Lạc"
- *               phone:
- *                 type: string
- *                 example: "0912345678"
- *               email:
- *                 type: string
- *                 format: email
- *                 example: "lacpham@example.com"
- *               avatar:
- *                 type: string
- *                 format: uri
- *                 example: "https://cdn.example.com/avatar.jpg"
+*     requestBody:
+*       required: true
+*       content:
+*         multipart/form-data:
+*           schema:
+*             type: object
+*             properties:
+*               full_name:
+*                 type: string
+*                 example: "Phạm Lạc"
+*               phone:
+*                 type: string
+*                 example: "0912345678"
+*               email:
+*                 type: string
+*                 format: email
+*                 example: "lacpham@example.com"
+*               avatar:
+*                 type: string
+*                 format: binary
+*                 description: Ảnh đại diện (file upload)
  *     responses:
  *       200:
  *         description: Cập nhật thành công
@@ -503,6 +506,8 @@ router.get('/:id', userDetail);
  *                   additionalProperties:
  *                     type: string
  */
-router.put('/update-user/:id', updateUserInfo);
+router.put('/update-user/:id', upload.single('avatar'), updateUserInfo);
+
+
 
 export default router;
