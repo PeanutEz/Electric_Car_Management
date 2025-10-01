@@ -1,32 +1,37 @@
 import axios from 'axios';
 import { Payment } from '../models/payment.model';
+import payos from "../config/payos";
 
-const PAYOS_API_URL = 'https://api.payos.vn/v1/payment';
-const PAYOS_API_KEY = process.env.PAYOS_API_KEY || ''; // Set your API key in environment variables
 
-export async function createPayosPayment(params: Payment) {
+export async function createPayosPayment(payload: Payment) {
    try {
-      const response = await axios.post(
-         PAYOS_API_URL,
-         {
-            id: params.id,
-            amount: params.amount,
-            orderId: params.orderId,
-            description: params.description,
-            returnUrl: params.returnUrl,
-            cancelUrl: params.cancelUrl,
-            customerEmail: params.customerEmail,
-            customerPhone: params.customerPhone,
-         },
-         {
-            headers: {
-               'Authorization': `Bearer ${PAYOS_API_KEY}`,
-               'Content-Type': 'application/json',
-            },
-         }
-      );
-      return response.data;
+      const orderCode = Math.floor(Math.random() * 1000000);
+
+      const response = await payos.paymentRequests.create({
+         orderCode,
+         amount: payload.amount,
+         description: payload.description || "Thanh toán đơn hàng",
+         returnUrl: "http://localhost:4000/payment-success",
+         cancelUrl: "http://localhost:4000/payment-cancel",
+      });
+      return response;
    } catch (error: any) {
       throw new Error(error.response?.data?.message || 'PayOS payment creation failed');
    }
 }
+
+
+export async function getPaymentStatus(paymentId: string) {
+   try {
+      const response = await axios.get(`https://api-merchant.payos.vn/v2/payment-requests/${paymentId}`, {
+         headers: {
+            "x-client-id": "0b879c49-53cb-4ffa-9b0b-2b5ad6da6b81",
+            "x-api-key": "4d166c91-6b6c-43b8-bacb-59b6de3d8c46",
+         }   
+      });
+
+      return response;
+   } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to retrieve payment status');
+   }
+}   
