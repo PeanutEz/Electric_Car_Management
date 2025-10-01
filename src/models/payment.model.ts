@@ -1,5 +1,7 @@
 export interface Payment {
 	id: string;
+	userId: number;
+	serviceId: number;
 	amount: number;
 	orderId: string;
 	description: string;

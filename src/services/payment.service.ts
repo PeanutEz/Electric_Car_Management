@@ -1,11 +1,18 @@
 import axios from 'axios';
 import { Payment } from '../models/payment.model';
 import payos from "../config/payos";
+import pool from '../config/db';
 
 
 export async function createPayosPayment(payload: Payment) {
    try {
       const orderCode = Math.floor(Math.random() * 1000000);
+
+      // const [rows]: any = await pool.query("insert into orders(code, price, service_id, related_id, buyer_id)");
+
+      // if (rows.affectedRows === 0) {
+      //    throw new Error('Failed to create order in database');
+      // }
 
       const response = await payos.paymentRequests.create({
          orderCode,
