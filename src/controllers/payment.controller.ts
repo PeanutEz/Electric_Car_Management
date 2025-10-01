@@ -14,6 +14,7 @@ export const createPaymentLink = async (req: Request, res: Response) => {
   }
 };
 
+
 export const getPaymentInfo = async (req: Request, res: Response) => {
   try {
     const { paymentId } = req.params;

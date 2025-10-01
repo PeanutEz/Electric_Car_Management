@@ -6,7 +6,7 @@ import { JWTService } from './jwt.service';
 
 export async function getUserById(id: number): Promise<User | null> {
 	const [rows] = await pool.query(
-		'select id, status, full_name, email, phone, reputation, total_credit, created_at from users where id = ?',
+		'select id, status, full_name, email, phone, avatar, reputation, total_credit, created_at from users where id = ?',
 		[id],
 	);
 	const users = rows as User[];
@@ -316,14 +316,21 @@ export async function updateUser(userId: number, userData: Partial<User>) {
 	if (!phone || phone.length !== 10) {
 		errors.phone = 'Số điện thoại phải 10 ký tự';
 	}
-	await pool.query(
+
+	const [updateUser] = await pool.query(
 		'UPDATE users SET full_name = ?, phone = ?, email = ?, avatar = ? WHERE id = ?',
 		[full_name, phone, email, avatar, userId],
 	);
+
+	if (updateUser === undefined) {
+		errors.update = 'Cập nhật người dùng thất bại';
+	}
+
 	if (Object.keys(errors).length > 0) {
 		const error = new Error('Dữ liệu không hợp lệ');
 		(error as any).data = errors;
 		throw error;
 	}
+
 	return getUserById(userId);
 }

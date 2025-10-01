@@ -176,6 +176,7 @@ router.post('/register', register);
  *                   example: "Mật khẩu không đúng"
  */
 router.post('/login', login);
+
 /**
  * @swagger
  * /api/user/refresh-token:
@@ -375,6 +376,9 @@ router.get('/get-all-users', authenticateToken, listUsers);
  *                   type: string
  *                   nullable: true
  *                   example: "+1234567890"
+ * 			       avartar:
+ * 			    	type: string
+ * 			    	example: "https://example.com/avatar.jpg"
  *                 reputation:
  *                   type: integer
  *                   example: 0
@@ -417,6 +421,88 @@ router.get('/get-all-users', authenticateToken, listUsers);
  */
 router.get('/:id', userDetail);
 
+/**
+ * @swagger
+ * /api/user/update-user/{id}:
+ *   put:
+ *     summary: Cập nhật thông tin người dùng
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID của người dùng
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               full_name:
+ *                 type: string
+ *                 example: "Phạm Lạc"
+ *               phone:
+ *                 type: string
+ *                 example: "0912345678"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "lacpham@example.com"
+ *               avatar:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://cdn.example.com/avatar.jpg"
+ *     responses:
+ *       200:
+ *         description: Cập nhật thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Cập nhật thông tin người dùng thành công"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                           example: 1
+ *                         full_name:
+ *                           type: string
+ *                           example: "Phạm Lạc"
+ *                         phone:
+ *                           type: string
+ *                           example: "0912345678"
+ *                         email:
+ *                           type: string
+ *                           example: "lacpham@example.com"
+ *                         avatar:
+ *                           type: string
+ *                           example: "https://cdn.example.com/avatar.jpg"
+ *       422:
+ *         description: Dữ liệu không hợp lệ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Dữ liệu không hợp lệ"
+ *                 data:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: string
+ */
 router.put('/update-user/:id', updateUserInfo);
 
 export default router;
