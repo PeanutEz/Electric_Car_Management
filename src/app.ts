@@ -17,9 +17,7 @@ app.use(express.json());
 // Cấu hình CORS cho phép truy cập từ frontend
 app.use(
 	cors({
-		origin: [
-			'http://localhost:4000', // Vite default port
-		],
+		origin: "*",
 		credentials: true,
 	}),
 );

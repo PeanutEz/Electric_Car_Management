@@ -2,11 +2,13 @@ import axios from 'axios';
 import { Payment } from '../models/payment.model';
 import payos from "../config/payos";
 import pool from '../config/db';
+import { detectPaymentMethod } from '../utils/utils';
 
 
 export async function createPayosPayment(payload: Payment) {
    try {
       const orderCode = Math.floor(Math.random() * 1000000);
+ 
       const response = await payos.paymentRequests.create({
          orderCode,
          amount: payload.amount,
@@ -14,6 +16,17 @@ export async function createPayosPayment(payload: Payment) {
          returnUrl: "http://localhost:4000/payment-success",
          cancelUrl: "http://localhost:4000/payment-cancel",
       });
+
+      // const paymentMethod = detectPaymentMethod(response.description || "");
+
+      const [rows]: any = await pool.query(
+         "INSERT INTO orders (code, price, service_id, related_id, buyer_id, payment_method) VALUES (?, ?, ?, ?, ?, ?)",
+         [response.orderCode, payload.amount, null, null, null, null]
+      );
+
+      if (rows.affectedRows === 0) {
+         throw new Error('Failed to create order in database');
+      }
 
       return response;
    } catch (error: any) {
@@ -30,7 +43,6 @@ export async function getPaymentStatus(paymentId: string) {
             "x-api-key": "4d166c91-6b6c-43b8-bacb-59b6de3d8c46",
          }   
       });
-      
 
       return response;
    } catch (error: any) {
