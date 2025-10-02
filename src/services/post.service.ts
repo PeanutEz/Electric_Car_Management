@@ -1,7 +1,10 @@
 import pool from '../config/db';
 import { Post } from '../models/post.model';
 
-export async function paginatePosts(page: number, limit: number): Promise<Post[]> {
+export async function paginatePosts(
+	page: number,
+	limit: number,
+): Promise<Post[]> {
 	const offset = (page - 1) * limit;
 	const [rows] = await pool.query(
 		`SELECT po.id, po.product_id, po.title, po.status, po.end_date, 
@@ -117,7 +120,7 @@ export async function getAllPostsForAdmin(): Promise<Post[]> {
  FROM posts po
  INNER JOIN products p ON po.product_id = p.id 
  INNER JOIN brands b ON p.brand_id = b.id
- ORDER BY po.priority DESC`
+ ORDER BY po.priority DESC`,
 	);
 	return (rows as any).map((r: any) => ({
 		id: r.id,
@@ -130,4 +133,9 @@ export async function getAllPostsForAdmin(): Promise<Post[]> {
 		status: r.status,
 		priority: r.priority,
 	}));
+}
+
+export async function createNewPost(postData: any, productData: any): Promise<void> {
+	const { product_category_id, brand_id, model, price, description, year,address} = productData;
+	const { title, end_date, created_by, priority } = postData;
 }

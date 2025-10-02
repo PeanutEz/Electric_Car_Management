@@ -199,4 +199,6 @@ router.get('/get-all-posts-for-admin', getPosts);
  */
 router.get('/:id', postDetail);
 
+//router.post('/create', createPost);
+
 export default router;

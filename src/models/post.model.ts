@@ -11,4 +11,7 @@ export interface Post {
    priority: number;
    pushed_at: Date;
    product: Vehicle | Battery;
+   category: Category;
+   brand: Brand;
+   
 }

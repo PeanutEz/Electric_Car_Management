@@ -1,6 +1,3 @@
-
-
-
 export async function detectPaymentMethod(description: string): Promise<string> {
   const desc = description.toUpperCase();
 
@@ -20,5 +17,5 @@ export async function detectPaymentMethod(description: string): Promise<string> 
     return "BANK_TRANSFER";
   }
 
-  return "UNKNOWN"; 
+  return "PAYOS"; // Mặc định nếu không xác định được
 }
