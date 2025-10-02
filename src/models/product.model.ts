@@ -50,6 +50,7 @@ export interface Battery {
 	description: string;
 	voltage: number;
 	chemistry: string;
+	dimension: string;
 	health: string;
 	price: number;
 	year: number;

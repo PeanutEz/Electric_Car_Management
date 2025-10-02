@@ -149,6 +149,7 @@ export async function createNewPost(postData: Vehicle | Battery | null): Promise
 	if ((category as any).length === 0) {
 		throw Error('Category not found!');
 	}
+	
 	const categoryType = (category as any)[0].type;
 
     if(categoryType === 'vehicle') {
@@ -206,11 +207,12 @@ export async function createNewPost(postData: Vehicle | Battery | null): Promise
 			             [productId,
 						  batteryData.capacity,
 						  batteryData.health, 
-						  batteryData	
+						  batteryData.chemistry,
+						  batteryData.voltage,
+						  batteryData.dimension	
 						 ]);
 	}
 
-
-
+	
 	return null;
 }
