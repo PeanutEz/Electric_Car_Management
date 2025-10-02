@@ -2,7 +2,8 @@ import Router from 'express';
 import {
 	listPosts,
 	postDetail,
-   getPosts,
+    getPosts,
+	updatePost
 } from '../controllers/post.controller';
 
 const router = Router();
@@ -198,6 +199,41 @@ router.get('/get-all-posts-for-admin', getPosts);
  *         description: Lỗi server
  */
 router.get('/:id', postDetail);
+
+/**
+ * @swagger
+ * /api/post/update-post-by-admin/{id}:
+ *   put:
+ *     summary: Cập nhật trạng thái bài viết (chỉ Admin)
+ *     tags: [Posts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID của bài viết
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 example: approved
+ *     responses:
+ *       200:
+ *         description: Cập nhật thành công
+ *       400:
+ *         description: ID không hợp lệ
+ *       404:
+ *         description: Không tìm thấy bài viết
+ *       500:
+ *         description: Lỗi server
+ */
+router.put('/update-post-by-admin/:id', updatePost);
 
 //router.post('/create', createPost);
 

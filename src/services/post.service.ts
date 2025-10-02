@@ -1,5 +1,6 @@
 import pool from '../config/db';
 import { Post } from '../models/post.model';
+import { Battery, Vehicle } from '../models/product.model';
 
 export async function paginatePosts(
 	page: number,
@@ -43,10 +44,10 @@ export async function paginatePosts(
 
 export async function getPostsById(id: number): Promise<Post[]> {
 	const [rows] = await pool.query(
-		'SELECT p.id, p.brand, p.model, p.price, p.address, p.description, p.year, ' +
+		'SELECT p.id, p.status, p.brand, p.model, p.price, p.address, p.description, p.year, p.address,' +
 			'p.image, pc.name AS category_name, pc.id AS category_id, ' +
 			'pc.type AS category_type, v.mileage_km, v.seats, v.color, bat.capacity, bat.voltage, bat.health, ' +
-			'p.status AS post_status, p.end_date, p.title, p.pushed_at, p.priority ' +
+			'p.end_date, p.title, p.pushed_at, p.priority ' +
 			'FROM products p ' +
 			'LEFT JOIN product_categories pc ON p.product_category_id = pc.id ' +
 			'LEFT JOIN vehicles v ON v.product_id = p.id ' +
@@ -57,13 +58,14 @@ export async function getPostsById(id: number): Promise<Post[]> {
 	return (rows as any).map((r: any) => ({
 		id: r.id,
 		title: r.title,
-		status: r.post_status,
+		status: r.status,
 		end_date: r.end_date,
 		reviewed_by: r.reviewed_by,
 		created_by: r.created_by,
 		created_at: r.created_at,
 		priority: r.priority,
 		pushed_at: r.pushed_at,
+		address: r.address,
 		product:
 			r.category_type === 'car'
 				? {
@@ -71,7 +73,6 @@ export async function getPostsById(id: number): Promise<Post[]> {
 						brand: r.brand_name,
 						model: r.model,
 						//power: number;
-						//address: string;
 						description: r.description,
 						seats: r.seats,
 						mileage: r.mileage_km,
@@ -90,7 +91,6 @@ export async function getPostsById(id: number): Promise<Post[]> {
 						brand: r.brand_name,
 						model: r.model,
 						capacity: r.capacity,
-						//address: string;
 						description: r.description,
 						voltage: r.voltage,
 						health: r.health,
@@ -125,6 +125,17 @@ export async function getAllPostsForAdmin(): Promise<Post[]> {
 		status: r.status,
 		priority: r.priority,
 	}));
+}
+
+export async function updatePostByAdmin(id: number, status: string): Promise<Vehicle | Battery | null> {
+	const [result] = await pool.query(
+		'UPDATE products SET status = ? WHERE id = ?',
+		[status, id],
+	);
+	if ((result as any).affectedRows === 0) {
+		return null;
+	}
+	return getPostsById(id) as unknown as Vehicle | Battery;
 }
 
 export async function createNewPost(
