@@ -14,20 +14,25 @@ export interface Brand {
 
 export interface Vehicle {
 	id: number;
+	product_category_id?: number;
+	status?: string;
 	brand: string;
 	model: string;
-	power: number;
 	address: string;
 	title?: string;
 	description: string;
-	status?: string;
 	end_date?: Date;
+	power: number;
+	color: string;
 	seats: number;
 	mileage: number;
+	battery_capacity: number;
+	license_plate: string;
+	engine_number: number;
 	price: number;
 	year: number;
 	priority: number;
-   pushed_at: Date;
+    pushed_at: Date;
 	category: Category;
 	image: string;
 	images: string[];
@@ -35,6 +40,7 @@ export interface Vehicle {
 
 export interface Battery {
 	id: number;
+	product_category_id?: number;
 	status?: string;
 	brand: string;
 	model: string;
@@ -43,6 +49,7 @@ export interface Battery {
 	title?: string;
 	description: string;
 	voltage: number;
+	chemistry: string;
 	health: string;
 	price: number;
 	year: number;
