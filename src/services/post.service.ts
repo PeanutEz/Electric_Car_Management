@@ -110,7 +110,7 @@ export async function getPostsById(id: number): Promise<Post[]> {
 export async function getAllPostsForAdmin(): Promise<Post[]> {
 	const [rows] = await pool.query(
 		`SELECT p.id, p.title, p.status, p.priority,
-		  p.model,p.year, p.price, p.brand
+	   p.model,p.year, p.price, p.brand
  		FROM products p
  		ORDER BY p.priority DESC`,
 	);

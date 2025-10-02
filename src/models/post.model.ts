@@ -13,5 +13,4 @@ export interface Post {
    product: Vehicle | Battery;
    category: Category;
    brand: Brand;
-   
 }

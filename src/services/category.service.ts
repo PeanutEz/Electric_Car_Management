@@ -20,11 +20,10 @@ import { Category } from '../models/product.model';
 // }
 export async function getAllCategories(status: string): Promise<Category[]> {
 	const [rows] = await pool.query(
-		`SELECT pc.type, pc.slug, COUNT(po.id) as count
+		`SELECT pc.type, pc.slug, COUNT(p.id) as count
      FROM product_categories pc
      INNER JOIN products p ON p.product_category_id = pc.id
-     INNER JOIN posts po ON po.product_id = p.id
-     WHERE po.status = ?
+     WHERE p.status = ?
      GROUP BY pc.type, pc.slug`,
 		[status],
 	);
@@ -62,21 +61,19 @@ export async function getAllCategories(status: string): Promise<Category[]> {
 // }
 export async function getCategoryBySlug(slug: any): Promise<Category[]> {
 	const [rows] = await pool.query(
-		`SELECT pc.type, pc.slug, COUNT(po.id) as count
+		`SELECT pc.type, pc.slug, COUNT(p.id) as count
       FROM product_categories pc
       inner JOIN products p ON p.product_category_id = pc.id
-      inner JOIN posts po ON po.product_id = p.id
-      WHERE pc.slug = ? and po.status = 'approved'
+      WHERE pc.slug = ? and p.status = 'approved'
       GROUP BY pc.type, pc.slug`,
 		[slug],
 	);
 	const [rows1] = await pool.query(
-		`SELECT pc.type, pc.slug, pc.id, pc.name, COUNT(po.id) as count
-	   FROM product_categories pc
-	   left JOIN products p ON p.product_category_id = pc.id
-	   left JOIN posts po ON po.product_id = p.id
-	   WHERE pc.slug = ? and po.status = 'approved'
-	   GROUP BY pc.type, pc.slug, pc.id, pc.name`,
+		`SELECT pc.type, pc.slug, pc.id, pc.name, COUNT(p.id) as count
+	    FROM product_categories pc
+	    left JOIN products p ON p.product_category_id = pc.id
+	    WHERE pc.slug = ? and p.status = 'approved'
+	    GROUP BY pc.type, pc.slug, pc.id, pc.name`,
 		[slug],
 	);
 	const parent = (rows as any).map((r: any) => ({
@@ -123,21 +120,20 @@ export async function getCategoryBySlug(slug: any): Promise<Category[]> {
 export async function getAllCategoryDetail(): Promise<any> {
 	// Lấy danh sách cha (type)
 	const [parentRows] = await pool.query(
-		`SELECT pc.type, pc.slug, COUNT(po.id) as count
+		`SELECT pc.type, pc.slug, COUNT(p.id) as count
      FROM product_categories pc
      INNER JOIN products p ON p.product_category_id = pc.id
-     INNER JOIN posts po ON po.product_id = p.id
-     WHERE po.status = 'approved'
+     WHERE p.status = 'approved'
      GROUP BY pc.type, pc.slug`,
 	);
 
 	// Lấy danh sách con (categories chi tiết)
 	const [childRows] = await pool.query(
-		`SELECT pc.id, pc.name, pc.type, pc.slug, COUNT(po.id) as count
-     FROM product_categories pc
-     LEFT JOIN products p ON p.product_category_id = pc.id
-     LEFT JOIN posts po ON po.product_id = p.id AND po.status = 'approved'
-     GROUP BY pc.id, pc.name, pc.type, pc.slug`,
+		`SELECT pc.id, pc.name, pc.type, pc.slug, COUNT(p.id) as count
+      FROM product_categories pc
+      LEFT JOIN products p ON p.product_category_id = pc.id
+      WHERE p.status = 'approved'
+      GROUP BY pc.id, pc.name, pc.type, pc.slug`,
 	);
 	const parents: any = (parentRows as any).map((r: any) => ({
 		type: r.type,
