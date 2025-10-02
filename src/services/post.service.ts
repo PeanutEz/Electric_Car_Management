@@ -7,17 +7,13 @@ export async function paginatePosts(
 ): Promise<Post[]> {
 	const offset = (page - 1) * limit;
 	const [rows] = await pool.query(
-		`SELECT po.id, po.product_id, po.title, po.status, po.end_date, 
-            po.reviewed_by, po.created_by, po.created_at, po.pushed_at, po.priority,
-            p.model, p.price, p.description, p.image, 
-            b.name as brand, 
-            pc.type as category_type, pc.name as category_name
-     FROM posts po
-     INNER JOIN products p ON po.product_id = p.id 
-     INNER JOIN brands b ON p.brand_id = b.id
-     INNER JOIN product_categories pc ON pc.id = p.product_category_id
-     ORDER BY po.priority DESC
-     LIMIT ? OFFSET ?`,
+		`SELECT p.id, p.title, p.status, p.end_date, p.pushed_at, p.priority,
+      p.model, p.price, p.description, p.image, p.brand, 
+      pc.type as category_type, pc.name as category_name
+		FROM products p
+      INNER JOIN product_categories pc ON pc.id = p.product_category_id
+      ORDER BY p.priority DESC
+      LIMIT ? OFFSET ?`,
 		[limit, offset],
 	);
 	return (rows as any).map((r: any) => ({
@@ -47,17 +43,15 @@ export async function paginatePosts(
 
 export async function getPostsById(id: number): Promise<Post[]> {
 	const [rows] = await pool.query(
-		'SELECT p.id as product_id, p.brand_id, p.model, p.price, p.address, p.description, p.year, ' +
-			'p.image, b.name AS brand_name, pc.name AS category_name, pc.id AS category_id, ' +
+		'SELECT p.id, p.brand, p.model, p.price, p.address, p.description, p.year, ' +
+			'p.image, pc.name AS category_name, pc.id AS category_id, ' +
 			'pc.type AS category_type, v.mileage_km, v.seats, v.color, bat.capacity, bat.voltage, bat.health, ' +
-			'po.status AS post_status, po.product_id, po.end_date, po.title, po.reviewed_by, po.created_by, po.created_at, po.pushed_at, po.priority ' +
+			'p.status AS post_status, p.end_date, p.title, p.pushed_at, p.priority ' +
 			'FROM products p ' +
-			'LEFT JOIN posts po ON po.product_id = p.id ' +
-			'LEFT JOIN brands b ON p.brand_id = b.id ' +
 			'LEFT JOIN product_categories pc ON p.product_category_id = pc.id ' +
 			'LEFT JOIN vehicles v ON v.product_id = p.id ' +
 			'LEFT JOIN batteries bat ON bat.product_id = p.id ' +
-			'WHERE po.id = ?',
+			'WHERE p.id = ?',
 		[id],
 	);
 	return (rows as any).map((r: any) => ({
@@ -115,12 +109,10 @@ export async function getPostsById(id: number): Promise<Post[]> {
 
 export async function getAllPostsForAdmin(): Promise<Post[]> {
 	const [rows] = await pool.query(
-		`SELECT po.id, po.product_id, po.title, po.status, po.created_at, po.priority,
-		  p.model,p.year, p.price, b.name as brand
- FROM posts po
- INNER JOIN products p ON po.product_id = p.id 
- INNER JOIN brands b ON p.brand_id = b.id
- ORDER BY po.priority DESC`,
+		`SELECT p.id, p.title, p.status, p.priority,
+		  p.model,p.year, p.price, p.brand
+ 		FROM products p
+ 		ORDER BY p.priority DESC`,
 	);
 	return (rows as any).map((r: any) => ({
 		id: r.id,
@@ -135,7 +127,18 @@ export async function getAllPostsForAdmin(): Promise<Post[]> {
 	}));
 }
 
-export async function createNewPost(postData: any, productData: any): Promise<void> {
-	const { product_category_id, brand_id, model, price, description, year,address} = productData;
+export async function createNewPost(
+	postData: any,
+	productData: any,
+): Promise<void> {
+	const {
+		product_category_id,
+		brand_id,
+		model,
+		price,
+		description,
+		year,
+		address,
+	} = productData;
 	const { title, end_date, created_by, priority } = postData;
 }
