@@ -16,7 +16,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/post/get-all-posts:
+ * /api/post/get-posts-by-page:
  *   get:
  *     summary: Lấy danh sách bài viết (có phân trang)
  *     tags: [Posts]
