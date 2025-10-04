@@ -181,7 +181,7 @@ export async function updateUserInfo(req: Request, res: Response) {
 				.json({ message: 'ID người dùng không hợp lệ' });
 		}
 
-		// Handle avatar upload if file is provided
+		// Handle avatar upload if a file is provided
 		if (req.file) {
 			try {
 				const uploadResult = await uploadService.uploadImage(
@@ -191,7 +191,7 @@ export async function updateUserInfo(req: Request, res: Response) {
 			} catch (uploadError: any) {
 				return res.status(500).json({
 					success: false,
-					message: 'Lỗi khi tải lên avatar: ' + uploadError.message,
+					message: 'Lỗi khi tải lên ảnh: ' + uploadError.message,
 				});
 			}
 		}

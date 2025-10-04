@@ -4,9 +4,18 @@ import {
 	postDetail,
 	getPosts,
 	updatePost,
+	createPost,
+	getAllProductImagesController,
+	getProductImagesByProductIdController,
+	getProductImagesWithInfoController,
+	getProductImagesWithFilterController,
+	countImagesByProductController,
+	getProductImageByIdController,
 } from '../controllers/post.controller';
 import { authorizeRoles } from '../middleware/AuthMiddleware';
-
+import multer from 'multer';
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 const router = Router();
 
 /**
@@ -281,39 +290,27 @@ router.get('/:id', postDetail);
  */
 router.put('/update-post-by-admin/:id', updatePost);
 
-//router.get('/filter/:status', getFilteredPosts);
-
 /**
  * @swagger
  * /api/post/create-post:
  *   post:
- *     summary: Tạo bài viết mới
+ *     summary: Tạo bài viết mới với upload ảnh
  *     tags: [Posts]
- *     security:
- *       - bearerAuth: []
+ *     consumes:
+ *       - multipart/form-data
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
- *               - category_id
- *               - category_type
  *               - brand
  *               - model
  *               - price
- *               - year
  *               - title
- *               - description
+ *               - category
  *             properties:
- *               category_id:
- *                 type: integer
- *                 example: 1
- *               category_type:
- *                 type: string
- *                 enum: [car, battery]
- *                 example: car
  *               brand:
  *                 type: string
  *                 example: Tesla
@@ -323,73 +320,62 @@ router.put('/update-post-by-admin/:id', updatePost);
  *               price:
  *                 type: number
  *                 example: 800000000
+ *               title:
+ *                 type: string
+ *                 example: Bán Tesla Model 3 2023 như mới
  *               year:
  *                 type: integer
  *                 example: 2023
- *               warranty:
+ *               description:
  *                 type: string
- *                 example: 3 năm
+ *                 example: Xe mới chạy 5000km, nội thất còn mới
  *               address:
  *                 type: string
  *                 example: Hà Nội
- *               title:
+ *               category:
  *                 type: string
- *                 example: Bán Tesla Model 3 2023
- *               description:
+ *                 example: '{"id": 1, "type": "car"}'
+ *                 description: JSON string chứa thông tin category
+ *               mainImage:
  *                 type: string
- *                 example: Xe mới chạy 5000km, tình trạng tốt
- *               image:
- *                 type: string
- *                 example: https://example.com/image.jpg
+ *                 format: binary
+ *                 description: Ảnh chính của sản phẩm
  *               images:
  *                 type: array
  *                 items:
  *                   type: string
- *                 example: ["https://example.com/1.jpg", "https://example.com/2.jpg"]
+ *                   format: binary
+ *                 description: Các ảnh phụ (tối đa 6 ảnh)
+ *               # ---- Trường cho xe ô tô ----
  *               power:
  *                 type: number
  *                 example: 283
- *                 description: Công suất (kW) - Bắt buộc cho xe
- *               mileage_km:
+ *                 description: Công suất (kW)
+ *               mileage:
  *                 type: number
  *                 example: 5000
- *                 description: Số km đã đi - Bắt buộc cho xe
+ *                 description: Số km đã đi
  *               seats:
  *                 type: integer
  *                 example: 5
- *                 description: Số ghế - Bắt buộc cho xe
+ *                 description: Số ghế
  *               color:
  *                 type: string
  *                 example: Đen
- *                 description: Màu sắc - Bắt buộc cho xe
- *               battery_capacity:
- *                 type: number
- *                 example: 75
- *                 description: Dung lượng pin xe (kWh)
- *               license_plate:
- *                 type: string
- *                 example: 30A-12345
- *                 description: Biển số xe
- *               engine_number:
- *                 type: string
- *                 example: ENG123456
- *                 description: Số máy
+ *                 description: Màu sắc
+ *               # ---- Trường cho pin ----
  *               capacity:
  *                 type: number
  *                 example: 100
- *                 description: Dung lượng pin (Ah) - Bắt buộc cho battery
+ *                 description: Dung lượng (Ah)
  *               voltage:
  *                 type: number
  *                 example: 48
- *                 description: Điện áp (V) - Bắt buộc cho battery
+ *                 description: Điện áp (V)
  *               health:
  *                 type: string
  *                 example: 95%
- *                 description: Tình trạng sức khỏe pin - Bắt buộc cho battery
- *               chemistry:
- *                 type: string
- *                 example: Lithium-ion
- *                 description: Loại hóa chất pin
+ *                 description: Tình trạng sức khỏe pin
  *     responses:
  *       201:
  *         description: Tạo bài viết thành công
@@ -400,21 +386,255 @@ router.put('/update-post-by-admin/:id', updatePost);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Tạo bài viết thành công. Bài viết đang chờ được phê duyệt.
+ *                   example: Tạo bài viết mới thành công
  *                 data:
  *                   type: object
  *                   properties:
- *                     post_id:
+ *                     id:
  *                       type: integer
- *                     product_id:
- *                       type: integer
+ *                       example: 123
+ *                     title:
+ *                       type: string
+ *                       example: Bán Tesla Model 3 2023 như mới
+ *                     status:
+ *                       type: string
+ *                       example: pending
+ *                     product:
+ *                       type: object
+ *                       properties:
+ *                         brand:
+ *                           type: string
+ *                           example: Tesla
+ *                         model:
+ *                           type: string
+ *                           example: Model 3
+ *                         price:
+ *                           type: number
+ *                           example: 800000000
+ *                         image:
+ *                           type: string
+ *                           example: "https://res.cloudinary.com/demo/image/upload/abc123.jpg"
+ *                         images:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/demo/image/upload/xyz789.jpg"
  *       400:
  *         description: Thiếu thông tin bắt buộc hoặc dữ liệu không hợp lệ
- *       401:
- *         description: Người dùng chưa được xác thực
  *       500:
  *         description: Lỗi server
  */
+router.post(
+	'/create-post',
+	upload.fields([
+		{ name: 'mainImage', maxCount: 1 },
+		{ name: 'images', maxCount: 6 },
+	]),
+	createPost,
+);
 
+// ==================== PRODUCT IMAGES ROUTES ====================
+
+/**
+ * @swagger
+ * /api/post/images/all:
+ *   get:
+ *     summary: Lấy tất cả records từ bảng product_imgs
+ *     tags: [Posts]
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách ảnh thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       product_id:
+ *                         type: integer
+ *                       url:
+ *                         type: string
+ *                 count:
+ *                   type: integer
+ *       500:
+ *         description: Lỗi server
+ */
+router.get('/images/all', getAllProductImagesController);
+
+/**
+ * @swagger
+ * /api/post/images/product/{productId}:
+ *   get:
+ *     summary: Lấy ảnh theo product_id
+ *     tags: [Posts]
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID của sản phẩm
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách ảnh thành công
+ *       400:
+ *         description: Product ID không hợp lệ
+ *       500:
+ *         description: Lỗi server
+ */
+router.get('/images/product/:productId', getProductImagesByProductIdController);
+
+/**
+ * @swagger
+ * /api/post/images/with-info:
+ *   get:
+ *     summary: Lấy ảnh với thông tin sản phẩm
+ *     tags: [Posts]
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách ảnh với thông tin sản phẩm thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       image_id:
+ *                         type: integer
+ *                       product_id:
+ *                         type: integer
+ *                       url:
+ *                         type: string
+ *                       product_title:
+ *                         type: string
+ *                       brand:
+ *                         type: string
+ *                       model:
+ *                         type: string
+ *                       price:
+ *                         type: number
+ *                       category_name:
+ *                         type: string
+ *                       category_type:
+ *                         type: string
+ *       500:
+ *         description: Lỗi server
+ */
+router.get('/images/with-info', getProductImagesWithInfoController);
+
+/**
+ * @swagger
+ * /api/post/images/filter:
+ *   get:
+ *     summary: Lấy ảnh với filter
+ *     tags: [Posts]
+ *     parameters:
+ *       - in: query
+ *         name: productId
+ *         schema:
+ *           type: integer
+ *         description: Filter theo product ID
+ *       - in: query
+ *         name: categoryType
+ *         schema:
+ *           type: string
+ *         description: Filter theo loại category (car, battery)
+ *       - in: query
+ *         name: brand
+ *         schema:
+ *           type: string
+ *         description: Filter theo thương hiệu
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Giới hạn số lượng record
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *         description: Bỏ qua số lượng record
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách ảnh với filter thành công
+ *       500:
+ *         description: Lỗi server
+ */
+router.get('/images/filter', getProductImagesWithFilterController);
+
+/**
+ * @swagger
+ * /api/post/images/count-by-product:
+ *   get:
+ *     summary: Đếm số lượng ảnh theo sản phẩm
+ *     tags: [Posts]
+ *     responses:
+ *       200:
+ *         description: Lấy thống kê số lượng ảnh thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       product_id:
+ *                         type: integer
+ *                       title:
+ *                         type: string
+ *                       brand:
+ *                         type: string
+ *                       model:
+ *                         type: string
+ *                       image_count:
+ *                         type: integer
+ *       500:
+ *         description: Lỗi server
+ */
+router.get('/images/count-by-product', countImagesByProductController);
+
+/**
+ * @swagger
+ * /api/post/images/{imageId}:
+ *   get:
+ *     summary: Lấy ảnh theo ID cụ thể
+ *     tags: [Posts]
+ *     parameters:
+ *       - in: path
+ *         name: imageId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID của ảnh
+ *     responses:
+ *       200:
+ *         description: Lấy thông tin ảnh thành công
+ *       400:
+ *         description: Image ID không hợp lệ
+ *       404:
+ *         description: Không tìm thấy ảnh
+ *       500:
+ *         description: Lỗi server
+ */
+router.get('/images/:imageId', getProductImageByIdController);
 
 export default router;

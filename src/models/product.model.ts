@@ -10,7 +10,11 @@ export interface Brand {
 	type: string;
 }
 
-
+export interface ProductImage {
+	id: number;
+	product_id: number;
+	url: string;
+}
 
 export interface Vehicle {
 	id: number;
@@ -21,7 +25,7 @@ export interface Vehicle {
 	address: string;
 	title?: string;
 	description: string;
-	end_date?: Date;
+	end_date?: string;
 	power: number;
 	color: string;
 	seats: number;
@@ -32,7 +36,7 @@ export interface Vehicle {
 	price: number;
 	year: number;
 	priority: number;
-   pushed_at: Date;
+	pushed_at: string;
 	category: Category;
 	image: string;
 	images: string[];
@@ -54,8 +58,8 @@ export interface Battery {
 	price: number;
 	year: number;
 	priority: number;
-	end_date?: Date;
-	pushed_at: Date;
+	end_date?: string;
+	pushed_at: string;
 	category: Category;
 	image: string;
 	images: string[];
