@@ -149,17 +149,3 @@ export async function updatePostByAdmin(
 //tạo bài post gồm các trường sau
 //battery: brand, model, capacity, voltage, health, year, price, warranty, address, title, description, images
 //vehicle: brand, model, power, warranty, mileage_km, seats, year, color, price, address, title, description, images
-
-export async function filterPosts(status: string): Promise<Post[]> {
-	const [rows] = await pool.query(
-		`SELECT p.id, p.title, p.status, p.end_date, p.year, p.priority,
-		p.model, p.price, p.description, p.image, p.brand,
-		pc.type as category_type, pc.name as category_name
-		FROM products p
-		INNER JOIN product_categories pc ON pc.id = p.product_category_id
-		WHERE p.status = ?
-		ORDER BY p.priority DESC`,
-		[status],
-	);
-	return rows as Post[];
-}

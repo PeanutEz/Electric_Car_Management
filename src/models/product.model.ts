@@ -38,5 +38,13 @@ export interface Battery {
 	voltage: number;
 	health: number;
 	chemistry: string;
-	dimensions: string;
+	warranty: string;
+	price: number;
+	year: number;
+	priority: number;
+	end_date?: Date;
+	pushed_at: Date;
+	category: Category;
+	image: string;
+	images: string[];
 }

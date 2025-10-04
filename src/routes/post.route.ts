@@ -4,7 +4,6 @@ import {
 	postDetail,
 	getPosts,
 	updatePost,
-	getFilteredPosts,
 } from '../controllers/post.controller';
 import { authorizeRoles } from '../middleware/AuthMiddleware';
 

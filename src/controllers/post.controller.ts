@@ -4,7 +4,6 @@ import {
 	getPostsById,
 	getAllPostsForAdmin,
 	updatePostByAdmin,
-	filterPosts,
 } from '../services/post.service';
 
 export async function listPosts(req: Request, res: Response) {
@@ -96,25 +95,5 @@ export async function updatePost(req: Request, res: Response) {
 	}
 }
 
-export async function getFilteredPosts(req: Request, res: Response) {
-	try {
-		const status = req.params.status as string;
-		const page = parseInt(req.params.page as string) || 1;
-		const limit = parseInt(req.params.limit as string) || 4;
-		const posts = await filterPosts(status);
-		res.status(200).json({
-			message: 'Lấy danh sách bài viết thành công',
-			data: {
-				post: posts,
-				pagination: {
-					page: page,
-					limit: limit,
-					page_size: posts.length,
-				},
-			},
-		});
-	} catch (error: any) {
-		res.status(500).json({ message: error.message });
-	}
-}
+
 
