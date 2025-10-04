@@ -281,7 +281,7 @@ router.get('/:id', postDetail);
  */
 router.put('/update-post-by-admin/:id', updatePost);
 
-router.get('/filter/:status', getFilteredPosts);
+//router.get('/filter/:status', getFilteredPosts);
 
 /**
  * @swagger
