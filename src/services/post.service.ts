@@ -149,3 +149,80 @@ export async function updatePostByAdmin(
 //tạo bài post gồm các trường sau
 //battery: brand, model, capacity, voltage, health, year, price, warranty, address, title, description, images
 //vehicle: brand, model, power, warranty, mileage_km, seats, year, color, price, address, title, description, images
+
+export async function createNewPost(postData: Vehicle | Battery | null): Promise<Vehicle | Battery | null> {
+    
+    if (postData === null) {
+		throw Error('Error creating new post!');
+	}
+
+	const [category] = await pool.query('select type from product_categories where id = ?', [postData.product_category_id]);
+
+	if ((category as any).length === 0) {
+		throw Error('Category not found!');
+	}
+	const categoryType = (category as any)[0].type;
+
+    if(categoryType === 'vehicle') {
+        const vehicleData  = postData as Vehicle;
+
+		const [result] = await pool.query('insert into products (product_category_id, status, brand, model, price, address, title, description, year, image, end_date, pushed_at, priority) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			             [vehicleData.product_category_id,
+						  vehicleData.status || 'pending',
+						  vehicleData.brand,
+						  vehicleData.model,
+						  vehicleData.price,
+						  vehicleData.address,
+						  vehicleData.title,
+						  vehicleData.description,
+						  vehicleData.year,
+						  vehicleData.image,
+						  vehicleData.end_date,
+						  vehicleData.pushed_at,
+						  vehicleData.priority || 1	
+						 ]);
+		const productId = (result as any).insertId;
+		
+		await pool.query('insert into vehicles(product_id, color, seats, mileage_km, battery_capaity, license_plate, engine_number, power) values(?, ?, ?, ?, ?, ?, ?, ?)', 
+		             	[productId,
+						 vehicleData.color,
+						 vehicleData.seats, 
+						 vehicleData.mileage,
+						 vehicleData.battery_capacity,
+						 vehicleData.license_plate,
+						 vehicleData.engine_number,
+						 vehicleData.power	
+						]);
+
+	} else if (categoryType === 'battery') {
+		const batteryData = postData as Battery;
+
+		const [result] = await pool.query('insert into products (product_category_id, status, brand, model, price, address, title, description, year, image, end_date, pushed_at, priority) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			             [batteryData.product_category_id,
+						  batteryData.status || 'pending',
+						  batteryData.brand,
+						  batteryData.model,
+						  batteryData.price,
+						  batteryData.address,
+						  batteryData.title,
+						  batteryData.description,
+						  batteryData.year,
+						  batteryData.image,
+						  batteryData.end_date,
+						  batteryData.pushed_at,
+						  batteryData.priority || 1	
+						 ]);
+		const productId = (result as any).insertId;
+
+		await pool.query('insert into batteries (product_id, capacity, health, chemistry, voltage, dimension) values(?, ?, ?, ?, ?, ?)',
+			             [productId,
+						  batteryData.capacity,
+						  batteryData.health, 
+						  batteryData	
+						 ]);
+	}
+
+
+
+	return null;
+}
