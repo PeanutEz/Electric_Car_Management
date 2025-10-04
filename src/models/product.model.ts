@@ -2,61 +2,41 @@ export interface Category {
 	id: number;
 	type: string;
 	name: string;
+	slug: string;
 }
 
-export interface Brand {
-	id?: number;
-	name: string;
-	type: string;
-}
-
-
-
-export interface Vehicle {
+export interface Product {
 	id: number;
-	product_category_id?: number;
-	status?: string;
+	title: string;
 	brand: string;
 	model: string;
-	address: string;
-	title?: string;
-	description: string;
-	end_date?: Date;
-	power: number;
-	color: string;
-	seats: number;
-	mileage: number;
-	battery_capacity: number;
-	license_plate: string;
-	engine_number: number;
 	price: number;
 	year: number;
+	status: string;
+	address: string;
+	warranty: string;
+	description: string;
 	priority: number;
-    pushed_at: Date;
-	category: Category;
 	image: string;
-	images: string[];
+	category: Category;
+}
+
+export interface Vehicle {
+	product_id: number;
+	color: string;
+	mileage_km: number;
+	seats: number;
+	power: number;
+	battery_capacity: number;
+	license_plate: string;
+	engine_number: string;
 }
 
 export interface Battery {
-	id: number;
-	product_category_id?: number;
-	status?: string;
-	brand: string;
-	model: string;
+	product_id: number;
 	capacity: number;
-	address: string;
-	title?: string;
-	description: string;
 	voltage: number;
+	health: number;
 	chemistry: string;
-	health: string;
-	price: number;
-	year: number;
-	priority: number;
-	end_date?: Date;
-	pushed_at: Date;
-	category: Category;
-	image: string;
-	images: string[];
+	dimensions: string;
 }

@@ -72,6 +72,6 @@ router.post("/file", upload.single("file"), uploadFile);
  *       200:
  *         description: Upload nhiều file thành công
  */
-router.post("/files", upload.array("file", 5), uploadFiles);
+router.post("/files", upload.array ("file", 5), uploadFiles);
 
 export default router;

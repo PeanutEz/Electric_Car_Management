@@ -1,4 +1,5 @@
-import {Vehicle, Battery, Brand, Category} from './product.model';
+import {Vehicle, Battery, Category} from './product.model';
+import {Brand} from './brand.model';
 
 export interface Post {
    id: number;
