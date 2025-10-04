@@ -9,7 +9,7 @@ import {
 export async function listPosts(req: Request, res: Response) {
 	try {
 		const page = parseInt(req.query.page as string) || 1;
-		const limit = parseInt(req.query.limit as string) || 4;
+		const limit = parseInt(req.query.limit as string) || 10
 		const status = req.query.status as string || '';
 		const year = parseInt(req.query.year as string);
 		const posts = await paginatePosts(page, limit, status, year);
