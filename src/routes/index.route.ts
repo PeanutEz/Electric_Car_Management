@@ -7,6 +7,7 @@ import CategoryRouter from './category.route';
 import PaymentRouter from './payment.route';
 import UploadRouter from './upload.route';
 import  GeminiRouter from './gemini.route';
+import PackageRouter from './package.route';
 
 const routes = Router();
 
@@ -18,5 +19,6 @@ routes.use('/api/category', CategoryRouter);
 routes.use('/api/payment', PaymentRouter);
 routes.use('/api/upload', UploadRouter);
 routes.use('/api/gemini', GeminiRouter); // For multiple uploads
+routes.use('/api/package', PackageRouter);
 
 export default routes;
