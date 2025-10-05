@@ -2,6 +2,8 @@ export interface Payment {
 	id: string;
 	userId: number;
 	serviceId: number;
+	relatedId: number;
+	buyerId: number;	
 	amount: number;
 	orderId: string;
 	description: string;

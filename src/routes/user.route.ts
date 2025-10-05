@@ -339,7 +339,7 @@ router.post('/logout', authenticateToken, logout);
  *                   type: string
  *                   example: "Lỗi máy chủ nội bộ"
  */
-router.get('/get-all-users', authenticateToken, listUsers);
+router.get('/get-all-users', listUsers);
 
 /**
  * @swagger
