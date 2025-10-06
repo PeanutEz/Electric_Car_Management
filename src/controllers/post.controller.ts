@@ -23,6 +23,7 @@ export async function listPosts(req: Request, res: Response) {
 		const status = (req.query.status as string) || '';
 		const year = parseInt(req.query.year as string);
 		const posts = await paginatePosts(page, limit, status, year);
+		const totalPosts = await paginatePosts(1, 10000, status, year); // Lấy tất cả để tính tổng
 		res.status(200).json({
 			message: 'Lấy danh sách bài viết thành công',
 			data: {
@@ -30,7 +31,7 @@ export async function listPosts(req: Request, res: Response) {
 				pagination: {
 					page: page,
 					limit: limit,
-					page_size: posts.length,
+					page_size: Math.ceil(totalPosts.length / limit),
 				},
 			},
 		});
