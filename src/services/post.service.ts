@@ -11,13 +11,13 @@ export async function paginatePosts(
 	const offset = (page - 1) * limit;
 	const [rows] = await pool.query(
 		`SELECT p.id, p.title, p.status, p.end_date, p.pushed_at, p.priority,
-      p.model, p.price, p.description, p.image, p.brand, p.year,
+      p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,
       pc.type as category_type, pc.name as category_name
 		FROM products p
 		INNER JOIN product_categories pc ON pc.id = p.product_category_id
       where p.status like '%${status}%' 
       and (p.year is null or p.year = ${year || 'p.year'})
-      ORDER BY p.priority DESC
+      ORDER BY p.created_at DESC
 		LIMIT ? OFFSET ?`,
 		[limit, offset],
 	);
@@ -42,11 +42,11 @@ export async function paginatePosts(
 		product_id: r.product_id,
 		title: r.title,
 		status: r.status,
-		end_date: r.end_date,
 		year: r.year,
+		created_at: r.created_at,
+		end_date: r.end_date,
 		reviewed_by: r.reviewed_by,
 		created_by: r.created_by,
-		created_at: r.created_at,
 		pushed_at: r.pushed_at,
 		priority: r.priority,
 		product: {
@@ -58,6 +58,44 @@ export async function paginatePosts(
 			images: images
 				.filter((img) => img.product_id === r.id)
 				.map((img) => img.url),
+			category: {
+				type: r.category_type,
+				name: r.category_name,
+			},
+		},
+	}));
+}
+
+export async function searchPosts(title: string): Promise<Post[]> {
+	const searchTerm = `%${title}%`;
+	const [rows] = await pool.query(
+		`SELECT p.id, p.title, p.status, p.end_date, p.pushed_at, p.priority,
+      p.model, p.price, p.description, p.brand, p.year, p.created_at,
+      pc.type as category_type, pc.name as category_name
+		FROM products p
+		INNER JOIN product_categories pc ON pc.id = p.product_category_id
+		WHERE p.title LIKE ?
+		ORDER BY p.created_at DESC`,
+		[searchTerm]
+	);
+
+	return (rows as any).map((r: any) => ({
+		id: r.id,
+		product_id: r.product_id,
+		title: r.title,
+		status: r.status,
+		year: r.year,
+		created_at: r.created_at,
+		end_date: r.end_date,
+		reviewed_by: r.reviewed_by,
+		created_by: r.created_by,
+		pushed_at: r.pushed_at,
+		priority: r.priority,
+		product: {
+			model: r.model,
+			price: r.price,
+			description: r.description,
+			brand: r.brand,
 			category: {
 				type: r.category_type,
 				name: r.category_name,

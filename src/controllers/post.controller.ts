@@ -14,6 +14,7 @@ import {
 	getProductImagesWithFilter,
 	countImagesByProduct,
 	getProductImageById,
+	searchPosts
 } from '../services/post.service';
 
 export async function listPosts(req: Request, res: Response) {
@@ -34,6 +35,21 @@ export async function listPosts(req: Request, res: Response) {
 					page_size: Math.ceil(totalPosts.length / limit),
 				},
 			},
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
+		});
+	}
+}
+
+export async function searchForPosts(req: Request, res: Response) {
+	try {
+		const query = (req.query.title as string);
+		const posts = await searchPosts(query);
+		res.status(200).json({
+			message: 'Tìm kiếm bài viết thành công',
+			data: posts,
 		});
 	} catch (error: any) {
 		res.status(500).json({
@@ -186,6 +202,8 @@ export async function createPost(req: Request, res: Response) {
 		});
 	}
 }
+
+
 
 // ==================== PRODUCT IMAGES CONTROLLERS ====================
 

@@ -11,6 +11,7 @@ import {
 	getProductImagesWithFilterController,
 	countImagesByProductController,
 	getProductImageByIdController,
+	searchForPosts,
 } from '../controllers/post.controller';
 import { authorizeRoles } from '../middleware/AuthMiddleware';
 import multer from 'multer';
@@ -144,6 +145,9 @@ const router = Router();
  *         description: Lỗi server
  */
 router.get('/get-posts', listPosts);
+
+
+router.get('/search', searchForPosts);
 
 // Returns the exact sample JSON provided by the user
 router.get('/get-all-posts-for-admin', getPosts);
