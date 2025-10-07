@@ -20,120 +20,6 @@ export async function getAllUsers(): Promise<User[]> {
 	return rows as User[];
 }
 
-export async function registerUser(userData: User) {
-	const {
-		full_name,
-		email,
-		password,
-		phone,
-		reputation,
-		total_credit,
-		role_id,
-	} = userData;
-
-	const errors: { [key: string]: string } = {};
-
-	const reg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-	if (!reg.test(email)) {
-		errors.email = 'Định dạng email không hợp lệ';
-	}
-	if (!email || email.length < 5 || email.length > 160) {
-		errors.email = 'Email phải từ 5 đến 160 ký tự';
-	}
-	if (!password || password.length < 6 || password.length > 50) {
-		errors.password = 'Mật khẩu phải từ 6 đến 50 ký tự';
-	}
-	if (!full_name || full_name.length < 6 || full_name.length > 160) {
-		errors.full_name = 'Họ tên phải từ 6 đến 160 ký tự';
-	}
-
-	// Kiểm tra xem email đã tồn tại chưa
-	const [existingUsers]: any = await pool.query(
-		'select id from users where email = ?',
-		[email],
-	);
-	if (existingUsers.length > 0) {
-		errors.email = 'Email đã tồn tại';
-	}
-
-	// Nếu có lỗi, throw error với format yêu cầu
-	if (Object.keys(errors).length > 0) {
-		const error = new Error('Dữ liệu không hợp lệ');
-		(error as any).data = errors;
-		throw error;
-	}
-
-	const hashedPassword = await bcrypt.hash(password, 10);
-
-	const [result]: any = await pool.query(
-		`insert into users (full_name, email, password, phone, reputation, total_credit, role_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		[
-			full_name,
-			email,
-			hashedPassword,
-			phone,
-			reputation,
-			total_credit,
-			role_id,
-		],
-	);
-
-	const [rows]: any = await pool.query(
-		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?',
-		[email],
-	);
-
-	const user = rows[0];
-
-	const insertId = result.insertId;
-	const [roleName]: any = await pool.query(
-		`select r.name as role
-		from users u inner join roles r on u.role_id = r.id 
-		where u.id = ?`,
-		[insertId],
-	);
-
-	// Generate tokens using JWT service
-	const tokens = JWTService.generateTokens({
-		id: result.insertId,
-		email: email,
-	});
-
-	// Lưu refresh token vào database
-	await JWTService.saveRefreshToken(result.insertId, tokens.refreshToken);
-
-	if (user.phone === null) {
-		return {
-			id: result.insertId,
-			status: user.status || 'active',
-			full_name: full_name,
-			email: email,
-			reputation: user.reputation,
-			total_credit: user.total_credit,
-			role: roleName[0].role,
-			access_token: 'Bearer ' + tokens.accessToken,
-			expired_access_token: 3600, // 1 hour in seconds
-			refresh_token: 'Bearer ' + tokens.refreshToken,
-			expired_refresh_token: 604800, // 7 days in seconds
-		};
-	} else {
-		return {
-			id: result.insertId,
-			status: user.status || 'active',
-			full_name: full_name,
-			email: email,
-			phone: user.phone,
-			reputation: user.reputation,
-			total_credit: user.total_credit,
-			role: roleName[0].role,
-			access_token: 'Bearer ' + tokens.accessToken,
-			expired_access_token: 3600, // 1 hour in seconds
-			refresh_token: 'Bearer ' + tokens.refreshToken,
-			expired_refresh_token: 604800, // 7 days in seconds
-		};
-	}
-}
-
 export async function loginUser(email: string, password: string) {
 	const [rows]: any = await pool.query(
 		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?',
@@ -198,7 +84,7 @@ export async function loginUser(email: string, password: string) {
 	}
 }
 
-export async function registerUserTest(userData: User) {
+export async function registerUser(userData: User) {
 	const { full_name, email, password, status } = userData;
 
 	const errors: { [key: string]: string } = {};
@@ -248,10 +134,22 @@ export async function registerUserTest(userData: User) {
 		'select * from users WHERE email = ?',
 		[email],
 	);
+
 	const user = rows[0];
+	//get role_name from roles table
+	const [roleRows]: any = await pool.query(
+		'select name from roles WHERE id = ?',
+		[user.role_id],
+	);
+	user.role_name = roleRows[0]?.name || 'unknown';
+
+
 	const tokens = JWTService.generateTokens({
 		id: user.id,
 		email: user.email,
+		full_name: user.full_name,
+		phone: user.phone,
+		role: user.role_name,
 	});
 
 	// Lưu refresh token vào database
@@ -328,6 +226,37 @@ export async function updateUser(userId: number, userData: Partial<User>) {
 		(error as any).data = errors;
 		throw error;
 	}
+
+	return getUserById(userId);
+}
+
+
+export async function updatePhoneUser(userId: number, phone: string) {
+	const [user]: any = await pool.query(
+		'select * from users where id = ?',
+		[userId],
+	);
+	const errors: { [key: string]: string } = {};
+
+
+	if (user.length === 0) {
+		errors.user = 'Người dùng không tồn tại';
+	}
+
+	if (!phone || phone.length !== 10) {
+		errors.phone = 'Số điện thoại phải 10 ký tự';
+	}
+
+	if (Object.keys(errors).length > 0) {
+		const error = new Error('Dữ liệu không hợp lệ');
+		(error as any).data = errors;
+		throw error;
+	}
+
+	await pool.query(
+		'UPDATE users SET phone = ? WHERE id = ?',
+		[phone, userId],
+	);
 
 	return getUserById(userId);
 }

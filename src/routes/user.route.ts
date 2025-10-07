@@ -8,8 +8,9 @@ import {
 	refreshToken,
 	logout,
 	updateUserInfo,
+	updateUserPhone
 } from '../controllers/user.controller';
-import { authenticateToken } from '../middleware/AuthMiddleware';
+import { authenticateToken, authorizeRoles } from '../middleware/AuthMiddleware';
 
 const router = Router();
 const storage = multer.memoryStorage();
@@ -339,7 +340,7 @@ router.post('/logout', authenticateToken, logout);
  *                   type: string
  *                   example: "Lỗi máy chủ nội bộ"
  */
-router.get('/get-all-users', listUsers);
+router.get('/get-all-users', authorizeRoles, listUsers);
 
 /**
  * @swagger
@@ -506,8 +507,71 @@ router.get('/:id', userDetail);
  *                   additionalProperties:
  *                     type: string
  */
-router.put('/update-user/:id', upload.single('avatar'), updateUserInfo);
+router.put('/update-user/:id', authenticateToken, upload.single('avatar'), updateUserInfo);
 
+/** 
+ * @swagger
+ * /api/user/update-phone/{id}:
+ *   put:
+ *     summary: Cập nhật số điện thoại người dùng
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID của người dùng
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 example: "0912345678"
+ *     responses:
+ *       200:
+ *         description: Cập nhật thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Cập nhật số điện thoại thành công"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                           example: 1
+ *                         phone:
+ *                           type: string
+ *                           example: "0912345678"
+ *       422:
+ *         description: Dữ liệu không hợp lệ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Dữ liệu không hợp lệ"
+ *                 data:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: string
+ */
+router.put('/update-phone/:id', authenticateToken, updateUserPhone);
 
 
 export default router;

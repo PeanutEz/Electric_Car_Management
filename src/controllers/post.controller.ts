@@ -45,7 +45,7 @@ export async function listPosts(req: Request, res: Response) {
 
 export async function searchForPosts(req: Request, res: Response) {
 	try {
-		const query = (req.query.title as string);
+		const query = (req.params.title as string);
 		const posts = await searchPosts(query);
 		res.status(200).json({
 			message: 'Tìm kiếm bài viết thành công',

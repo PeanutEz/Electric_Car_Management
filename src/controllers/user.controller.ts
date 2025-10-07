@@ -1,13 +1,13 @@
 import { Request, Response } from 'express';
 import {
-	registerUser,
 	loginUser,
 	getAllUsers,
 	getUserById,
 	logoutUser,
 	refreshToken as refreshUserToken,
-	registerUserTest,
+	registerUser,
 	updateUser,
+	updatePhoneUser,
 } from '../services/user.service';
 import * as uploadService from '../services/upload.service';
 
@@ -56,7 +56,7 @@ export async function listUsers(req: Request, res: Response) {
 export async function register(req: Request, res: Response) {
 	try {
 		const userData = req.body; // dữ liệu từ client gửi lên
-		const user = await registerUserTest(userData);
+		const user = await registerUser(userData);
 		res.status(201).json({
 			message: 'Đăng ký người dùng thành công',
 			data: {
@@ -206,6 +206,33 @@ export async function updateUserInfo(req: Request, res: Response) {
 					phone: user?.phone,
 					full_name: user?.full_name,
 					avatar: user?.avatar,
+				},
+			},
+		});
+	} catch (error: any) {
+		res.status(422).json({
+			message: error.message,
+			data: error.data,
+		});
+	}
+}
+
+export async function updateUserPhone(req: Request, res: Response) {
+	try {
+		const id = parseInt(req.params.id, 10);
+		const phone  = req.body.phone;
+		if (isNaN(id)) {
+			return res
+				.status(400)
+				.json({ message: 'ID người dùng không hợp lệ' });
+		}
+		const user = await updatePhoneUser(id, phone);
+		res.status(200).json({
+			message: 'Cập nhật số điện thoại người dùng thành công',
+			data: {
+				user: {
+					id: user?.id,
+					phone: user?.phone,
 				},
 			},
 		});

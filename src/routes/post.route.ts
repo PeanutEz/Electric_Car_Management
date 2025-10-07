@@ -5,12 +5,6 @@ import {
 	getPosts,
 	updatePost,
 	createPost,
-	getAllProductImagesController,
-	getProductImagesByProductIdController,
-	getProductImagesWithInfoController,
-	getProductImagesWithFilterController,
-	countImagesByProductController,
-	getProductImageByIdController,
 	searchForPosts,
 } from '../controllers/post.controller';
 import { authorizeRoles } from '../middleware/AuthMiddleware';
@@ -146,8 +140,28 @@ const router = Router();
  */
 router.get('/get-posts', listPosts);
 
-
-router.get('/search', searchForPosts);
+/**
+ * @swagger
+ * /api/post/search/{title}:
+ *   get:
+ *     summary: Tìm kiếm bài viết
+ *     tags: [Posts]
+ *     parameters:
+ *       - in: path
+ *         name: title
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Từ khóa tìm kiếm
+ *     responses:
+ *       200:
+ *         description: Kết quả tìm kiếm
+ *       400:
+ *         description: Tham số không hợp lệ
+ *       500:
+ *         description: Lỗi server
+ */
+router.get('/search/:title', searchForPosts);
 
 // Returns the exact sample JSON provided by the user
 router.get('/get-all-posts-for-admin', getPosts);
@@ -439,206 +453,5 @@ router.post(
 
 // ==================== PRODUCT IMAGES ROUTES ====================
 
-/**
- * @swagger
- * /api/post/images/all:
- *   get:
- *     summary: Lấy tất cả records từ bảng product_imgs
- *     tags: [Posts]
- *     responses:
- *       200:
- *         description: Lấy danh sách ảnh thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: integer
- *                       product_id:
- *                         type: integer
- *                       url:
- *                         type: string
- *                 count:
- *                   type: integer
- *       500:
- *         description: Lỗi server
- */
-router.get('/images/all', getAllProductImagesController);
-
-/**
- * @swagger
- * /api/post/images/product/{productId}:
- *   get:
- *     summary: Lấy ảnh theo product_id
- *     tags: [Posts]
- *     parameters:
- *       - in: path
- *         name: productId
- *         required: true
- *         schema:
- *           type: integer
- *         description: ID của sản phẩm
- *     responses:
- *       200:
- *         description: Lấy danh sách ảnh thành công
- *       400:
- *         description: Product ID không hợp lệ
- *       500:
- *         description: Lỗi server
- */
-router.get('/images/product/:productId', getProductImagesByProductIdController);
-
-/**
- * @swagger
- * /api/post/images/with-info:
- *   get:
- *     summary: Lấy ảnh với thông tin sản phẩm
- *     tags: [Posts]
- *     responses:
- *       200:
- *         description: Lấy danh sách ảnh với thông tin sản phẩm thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       image_id:
- *                         type: integer
- *                       product_id:
- *                         type: integer
- *                       url:
- *                         type: string
- *                       product_title:
- *                         type: string
- *                       brand:
- *                         type: string
- *                       model:
- *                         type: string
- *                       price:
- *                         type: number
- *                       category_name:
- *                         type: string
- *                       category_type:
- *                         type: string
- *       500:
- *         description: Lỗi server
- */
-router.get('/images/with-info', getProductImagesWithInfoController);
-
-/**
- * @swagger
- * /api/post/images/filter:
- *   get:
- *     summary: Lấy ảnh với filter
- *     tags: [Posts]
- *     parameters:
- *       - in: query
- *         name: productId
- *         schema:
- *           type: integer
- *         description: Filter theo product ID
- *       - in: query
- *         name: categoryType
- *         schema:
- *           type: string
- *         description: Filter theo loại category (car, battery)
- *       - in: query
- *         name: brand
- *         schema:
- *           type: string
- *         description: Filter theo thương hiệu
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Giới hạn số lượng record
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *         description: Bỏ qua số lượng record
- *     responses:
- *       200:
- *         description: Lấy danh sách ảnh với filter thành công
- *       500:
- *         description: Lỗi server
- */
-router.get('/images/filter', getProductImagesWithFilterController);
-
-/**
- * @swagger
- * /api/post/images/count-by-product:
- *   get:
- *     summary: Đếm số lượng ảnh theo sản phẩm
- *     tags: [Posts]
- *     responses:
- *       200:
- *         description: Lấy thống kê số lượng ảnh thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       product_id:
- *                         type: integer
- *                       title:
- *                         type: string
- *                       brand:
- *                         type: string
- *                       model:
- *                         type: string
- *                       image_count:
- *                         type: integer
- *       500:
- *         description: Lỗi server
- */
-router.get('/images/count-by-product', countImagesByProductController);
-
-/**
- * @swagger
- * /api/post/images/{imageId}:
- *   get:
- *     summary: Lấy ảnh theo ID cụ thể
- *     tags: [Posts]
- *     parameters:
- *       - in: path
- *         name: imageId
- *         required: true
- *         schema:
- *           type: integer
- *         description: ID của ảnh
- *     responses:
- *       200:
- *         description: Lấy thông tin ảnh thành công
- *       400:
- *         description: Image ID không hợp lệ
- *       404:
- *         description: Không tìm thấy ảnh
- *       500:
- *         description: Lỗi server
- */
-router.get('/images/:imageId', getProductImageByIdController);
 
 export default router;
