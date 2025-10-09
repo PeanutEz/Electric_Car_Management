@@ -7,7 +7,7 @@ import {
 	createPost,
 	searchForPosts,
 } from '../controllers/post.controller';
-import { authorizeRoles } from '../middleware/AuthMiddleware';
+import { authenticateToken, authorizeRoles } from '../middleware/AuthMiddleware';
 import multer from 'multer';
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -443,9 +443,9 @@ router.put('/update-post-by-admin/:id', updatePost);
  *         description: Lỗi server
  */
 router.post(
-	'/create-post',
+	'/create-post', authenticateToken,
 	upload.fields([
-		{ name: 'mainImage', maxCount: 1 },
+		{ name: 'image', maxCount: 1 },
 		{ name: 'images', maxCount: 6 },
 	]),
 	createPost,

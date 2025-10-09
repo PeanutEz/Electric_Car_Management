@@ -1,4 +1,4 @@
-import {Response } from 'express';
+import { Response } from 'express';
 import { JWTService, TokenPayload } from '../services/jwt.service';
 
 export function authenticateToken(req: any, res: Response, next: any) {
@@ -41,11 +41,15 @@ export function generateRefreshToken(user: TokenPayload) {
 export function authorizeRoles(req: any, res: Response, next: any) {
 	const header = req.headers['authorization'] || req.headers['Authorization'];
 	if (!header) {
-		return res.status(401).json({ message: 'Authorization header is required' });
+		return res
+			.status(401)
+			.json({ message: 'Authorization header is required' });
 	}
 	const tokenStr = (header as string).trim();
 	if (!tokenStr) {
-		return res.status(401).json({ message: 'Authorization header is empty' });
+		return res
+			.status(401)
+			.json({ message: 'Authorization header is empty' });
 	}
 	try {
 		const token = tokenStr.startsWith('Bearer ')
@@ -53,11 +57,12 @@ export function authorizeRoles(req: any, res: Response, next: any) {
 			: tokenStr;
 		const user = JWTService.verifyAccessToken(token);
 		req.user = user;
-		console.log('user in authorizeRoles:', user);
 		if (user.role !== 'admin') {
 			return res
 				.status(403)
-				.json({ message: 'Bạn không có quyền truy cập tài nguyên này' });
+				.json({
+					message: 'Bạn không có quyền truy cập tài nguyên này',
+				});
 		}
 		next();
 	} catch (error) {
@@ -65,4 +70,5 @@ export function authorizeRoles(req: any, res: Response, next: any) {
 			message: 'Token không hợp lệ hoặc đã hết hạn',
 			error: 'TOKEN_INVALID_OR_EXPIRED',
 		});
-	}}
+	}
+}

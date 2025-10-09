@@ -9,6 +9,7 @@ import {
 	updateUser,
 	updatePhoneUser,
 } from '../services/user.service';
+import  jwt  from 'jsonwebtoken';
 import * as uploadService from '../services/upload.service';
 
 export async function userDetail(req: Request, res: Response) {
@@ -219,13 +220,26 @@ export async function updateUserInfo(req: Request, res: Response) {
 
 export async function updateUserPhone(req: Request, res: Response) {
 	try {
-		const id = parseInt(req.params.id, 10);
-		const phone  = req.body.phone;
-		if (isNaN(id)) {
+		// lấy userId trong header Authorization: token decode
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
 			return res
-				.status(400)
-				.json({ message: 'ID người dùng không hợp lệ' });
+				.status(401)
+				.json({ message: 'Chưa cung cấp token xác thực' });
 		}
+		const token = authHeader.split(' ')[1];
+		const id = (jwt.decode(token) as any).id;
+		console.log('id user from token:', id);
+		if (!id) {
+			return res
+				.status(403)
+				.json({
+					message:
+						'Vui lòng cập nhật số điện thoại trước khi tạo bài viết',
+				});
+		}
+
+		const phone = req.body.phone;
 		const user = await updatePhoneUser(id, phone);
 		res.status(200).json({
 			message: 'Cập nhật số điện thoại người dùng thành công',

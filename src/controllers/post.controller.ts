@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Vehicle } from '../models/product.model';
 import { Battery } from '../models/product.model';
+import jwt from 'jsonwebtoken';
 import * as uploadService from '../services/upload.service';
 import {
 	paginatePosts,
@@ -124,6 +125,17 @@ export async function updatePost(req: Request, res: Response) {
 
 export async function createPost(req: Request, res: Response) {
 	try {
+		// lấy userId từ header : bearer token
+		const authHeader = req.headers.authorization;
+		if (!authHeader || !authHeader.startsWith('Bearer ')) {
+			return res.status(401).json({ message: 'Unauthorized' });
+		}
+		const token = authHeader.split(' ')[1];
+		const phone = (jwt.decode(token) as any).phone;
+		if (!phone) {
+			return res.status(403).json({ message: 'Vui lòng cập nhật số điện thoại trước khi tạo bài viết' });
+		}
+
 		// Lấy dữ liệu từ form
 		const postData = req.body;
 		const files = req.files as {

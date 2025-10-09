@@ -217,6 +217,7 @@ export async function updatePostByAdmin(
 //battery: brand, model, capacity, voltage, health, year, price, warranty, address, title, description, images
 //vehicle: brand, model, power, warranty, mileage_km, seats, year, color, price, address, title, description, images
 
+//nếu user tạo post mà chưa có số điện thoại thì không cho tạo
 export async function createNewPost(
 	postData: Partial<Vehicle> | Partial<Battery>,
 ): Promise<Vehicle | Battery> {

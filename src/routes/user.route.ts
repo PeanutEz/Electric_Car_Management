@@ -571,7 +571,7 @@ router.put('/update-user/:id', authenticateToken, upload.single('avatar'), updat
  *                   additionalProperties:
  *                     type: string
  */
-router.put('/update-phone/:id', authenticateToken, updateUserPhone);
+router.put('/update-phone', authenticateToken, updateUserPhone);
 
 
 export default router;
