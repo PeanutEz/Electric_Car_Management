@@ -14,13 +14,12 @@ import * as uploadService from '../services/upload.service';
 
 export async function userDetail(req: Request, res: Response) {
 	try {
-		const id = parseInt(req.params.id, 10);
-
-		if (isNaN(id)) {
-			return res
-				.status(400)
-				.json({ message: 'ID người dùng không hợp lệ' });
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res.status(401).json({ message: 'Unauthorized' });
 		}
+		const token = authHeader.split(' ')[1];
+		const id = (jwt.decode(token) as any).id;
 
 		const user = await getUserById(id);
 

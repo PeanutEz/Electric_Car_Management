@@ -11,7 +11,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/category/get-all-categories:
+ * /api/category/get-all:
  *   get:
  *     summary: Lấy danh sách danh mục sản phẩm
  *     tags: [Categories]

@@ -344,7 +344,7 @@ router.get('/get-all-users', authorizeRoles, listUsers);
 
 /**
  * @swagger
- * /api/user/{id}:
+ * /api/user/user-detail:
  *   get:
  *     summary: Get user by ID
  *     tags: [Users]
@@ -423,7 +423,7 @@ router.get('/get-all-users', authorizeRoles, listUsers);
  *                   type: string
  *                   example: "Lỗi máy chủ nội bộ"
  */
-router.get('/:id', userDetail);
+router.get('/user-detail', userDetail);
 
 /**
  * @swagger
