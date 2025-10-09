@@ -22,7 +22,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/post/get-posts:
+ * /api/post/get-all:
  *   get:
  *     summary: Lấy danh sách bài viết (có phân trang)
  *     tags: [Posts]
@@ -138,7 +138,7 @@ const router = Router();
  *       500:
  *         description: Lỗi server
  */
-router.get('/get-posts', listPosts);
+router.get('/get-all', listPosts);
 
 /**
  * @swagger
