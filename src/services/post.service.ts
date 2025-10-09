@@ -11,7 +11,7 @@ export async function paginatePosts(
 	const offset = (page - 1) * limit;
 	const [rows] = await pool.query(
 		`SELECT p.id, p.title, p.priority,
-      p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at,
+      p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at, p.address,
       pc.slug as slug, pc.name as category_name, pc.id as category_id
 		FROM products p
 		INNER JOIN product_categories pc ON pc.id = p.product_category_id
@@ -50,6 +50,7 @@ export async function paginatePosts(
 			model: r.model,
 			price: r.price,
 			year: r.year,
+			address: r.address,
 			image: r.image,
 			images: images
 				.filter((img) => img.product_id === r.id)
