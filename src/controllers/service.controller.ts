@@ -5,8 +5,10 @@ export async function listServices(req: Request, res: Response) {
    try {
       const services = await getAllServices();
       res.status(200).json({
-         message: 'Lấy danh sách dịch vụ thành công',
-         data: services,
+         message: 'Lấy danh sách plan thành công',
+         data: {
+            plan: services,
+         }
       });
    } catch (error: any) {
       res.status(500).json({

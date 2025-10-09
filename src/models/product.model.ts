@@ -36,6 +36,7 @@ export interface Vehicle {
 	license_plate: string;
 	engine_number: number;
 	price: number;
+	warranty: number;
 	year: number;
 	priority: number;
 	pushed_at: string;
@@ -57,6 +58,7 @@ export interface Battery {
 	voltage: number;
 	chemistry: string;
 	health: string;
+	warranty: number;
 	price: number;
 	year: number;
 	priority: number;

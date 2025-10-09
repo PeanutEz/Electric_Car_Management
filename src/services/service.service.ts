@@ -8,7 +8,7 @@ import { get } from 'http';
 
 export async function getAllServices(): Promise<Service[]> {
 	const [rows] = await pool.query(
-		'select id, type,name,description from services',
+		'select id, name,description, cost from services',
 	);
 	return rows as Service[];
 }

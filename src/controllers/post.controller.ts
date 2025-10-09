@@ -9,13 +9,9 @@ import {
 	getAllPostsForAdmin,
 	updatePostByAdmin,
 	createNewPost,
-	getAllProductImages,
-	getProductImagesByProductId,
-	getProductImagesWithProductInfo,
-	getProductImagesWithFilter,
-	countImagesByProduct,
-	getProductImageById,
-	searchPosts
+	searchPosts,
+	createVehiclePost,
+	createBatteryPost,
 } from '../services/post.service';
 
 export async function listPosts(req: Request, res: Response) {
@@ -25,8 +21,20 @@ export async function listPosts(req: Request, res: Response) {
 		const status = (req.query.status as string) || '';
 		const year = parseInt(req.query.year as string);
 		const category_type = (req.query.category_type as string) || '';
-		const posts = await paginatePosts(page, limit, status, year, category_type);
-		const totalPosts = await paginatePosts(1, 10000, status, year, category_type); // Lấy tất cả để tính tổng
+		const posts = await paginatePosts(
+			page,
+			limit,
+			status,
+			year,
+			category_type,
+		);
+		const totalPosts = await paginatePosts(
+			1,
+			10000,
+			status,
+			year,
+			category_type,
+		); // Lấy tất cả để tính tổng
 		res.status(200).json({
 			message: 'Lấy danh sách bài viết thành công',
 			data: {
@@ -47,7 +55,7 @@ export async function listPosts(req: Request, res: Response) {
 
 export async function searchForPosts(req: Request, res: Response) {
 	try {
-		const query = (req.params.title as string);
+		const query = req.params.title as string;
 		const posts = await searchPosts(query);
 		res.status(200).json({
 			message: 'Tìm kiếm bài viết thành công',
@@ -127,15 +135,15 @@ export async function updatePost(req: Request, res: Response) {
 export async function createPost(req: Request, res: Response) {
 	try {
 		// lấy userId từ header : bearer token
-		const authHeader = req.headers.authorization;
-		if (!authHeader || !authHeader.startsWith('Bearer ')) {
-			return res.status(401).json({ message: 'Unauthorized' });
-		}
-		const token = authHeader.split(' ')[1];
-		const phone = (jwt.decode(token) as any).phone;
-		if (!phone) {
-			return res.status(403).json({ message: 'Vui lòng cập nhật số điện thoại trước khi tạo bài viết' });
-		}
+		// const authHeader = req.headers.authorization;
+		// if (!authHeader || !authHeader.startsWith('Bearer ')) {
+		// 	return res.status(401).json({ message: 'Unauthorized' });
+		// }
+		// const token = authHeader.split(' ')[1];
+		// const phone = (jwt.decode(token) as any).phone;
+		// if (!phone) {
+		// 	return res.status(403).json({ message: 'Vui lòng cập nhật số điện thoại trước khi tạo bài viết' });
+		// }
 
 		// Lấy dữ liệu từ form
 		const postData = req.body;
@@ -216,158 +224,183 @@ export async function createPost(req: Request, res: Response) {
 	}
 }
 
-
-
-// ==================== PRODUCT IMAGES CONTROLLERS ====================
-
-// Lấy tất cả records từ bảng product_imgs
-export async function getAllProductImagesController(
-	req: Request,
-	res: Response,
-) {
+// Tạo bài viết xe (vehicle)
+export async function createVehiclePostController(req: Request, res: Response) {
 	try {
-		const images = await getAllProductImages();
-		return res.status(200).json({
-			message: 'Lấy danh sách tất cả ảnh sản phẩm thành công',
-			data: images,
-			count: images.length,
-		});
-	} catch (error: any) {
-		return res.status(500).json({
-			message: 'Lỗi khi lấy danh sách ảnh sản phẩm',
-			error: error.message,
-		});
-	}
-}
-
-// Lấy ảnh theo product_id
-export async function getProductImagesByProductIdController(
-	req: Request,
-	res: Response,
-) {
-	try {
-		const productId = parseInt(req.params.productId);
-		if (isNaN(productId)) {
-			return res.status(400).json({
-				message: 'Product ID không hợp lệ',
-			});
-		}
-
-		const images = await getProductImagesByProductId(productId);
-		return res.status(200).json({
-			message: 'Lấy danh sách ảnh sản phẩm thành công',
-			data: images,
-			count: images.length,
-		});
-	} catch (error: any) {
-		return res.status(500).json({
-			message: 'Lỗi khi lấy danh sách ảnh sản phẩm',
-			error: error.message,
-		});
-	}
-}
-
-// Lấy ảnh với thông tin sản phẩm
-export async function getProductImagesWithInfoController(
-	req: Request,
-	res: Response,
-) {
-	try {
-		const images = await getProductImagesWithProductInfo();
-		return res.status(200).json({
-			message: 'Lấy danh sách ảnh với thông tin sản phẩm thành công',
-			data: images,
-			count: images.length,
-		});
-	} catch (error: any) {
-		return res.status(500).json({
-			message: 'Lỗi khi lấy danh sách ảnh với thông tin sản phẩm',
-			error: error.message,
-		});
-	}
-}
-
-// Lấy ảnh với filter
-export async function getProductImagesWithFilterController(
-	req: Request,
-	res: Response,
-) {
-	try {
-		const options = {
-			productId: req.query.productId
-				? parseInt(req.query.productId as string)
-				: undefined,
-			categoryType: req.query.categoryType as string,
-			brand: req.query.brand as string,
-			limit: req.query.limit
-				? parseInt(req.query.limit as string)
-				: undefined,
-			offset: req.query.offset
-				? parseInt(req.query.offset as string)
-				: undefined,
+		const postData = req.body;
+		const files = req.files as {
+			[fieldname: string]: Express.Multer.File[];
 		};
 
-		const images = await getProductImagesWithFilter(options);
-		return res.status(200).json({
-			message: 'Lấy danh sách ảnh với filter thành công',
-			data: images,
-			count: images.length,
-			filter: options,
-		});
-	} catch (error: any) {
-		return res.status(500).json({
-			message: 'Lỗi khi lấy danh sách ảnh với filter',
-			error: error.message,
-		});
-	}
-}
-
-// Đếm ảnh theo sản phẩm
-export async function countImagesByProductController(
-	req: Request,
-	res: Response,
-) {
-	try {
-		const counts = await countImagesByProduct();
-		return res.status(200).json({
-			message: 'Lấy thống kê số lượng ảnh theo sản phẩm thành công',
-			data: counts,
-		});
-	} catch (error: any) {
-		return res.status(500).json({
-			message: 'Lỗi khi lấy thống kê số lượng ảnh',
-			error: error.message,
-		});
-	}
-}
-
-// Lấy ảnh theo ID
-export async function getProductImageByIdController(
-	req: Request,
-	res: Response,
-) {
-	try {
-		const imageId = parseInt(req.params.imageId);
-		if (isNaN(imageId)) {
+		// Validate dữ liệu cơ bản
+		if (
+			!postData.brand ||
+			!postData.model ||
+			!postData.price ||
+			!postData.title
+		) {
 			return res.status(400).json({
-				message: 'Image ID không hợp lệ',
+				message:
+					'Thiếu thông tin bắt buộc (brand, model, price, title)',
 			});
 		}
 
-		const image = await getProductImageById(imageId);
-		if (!image) {
-			return res.status(404).json({
-				message: 'Không tìm thấy ảnh',
+		// Validate trường riêng cho xe
+		if (!postData.power || !postData.seats) {
+			return res.status(400).json({
+				message: 'Thiếu thông tin xe (power, seats)',
 			});
 		}
 
-		return res.status(200).json({
-			message: 'Lấy thông tin ảnh thành công',
-			data: image,
+		// Parse category từ JSON string
+		let category;
+		try {
+			category =
+				typeof postData.category === 'string'
+					? JSON.parse(postData.category)
+					: postData.category;
+		} catch (error) {
+			return res.status(400).json({
+				message: 'Category phải là JSON hợp lệ',
+			});
+		}
+
+		if (!category || !category.id) {
+			return res.status(400).json({
+				message: 'Category phải có id',
+			});
+		}
+
+		// Force category type to vehicle
+		category.type = 'vehicle';
+
+		let imageUrl = '';
+		let imageUrls: string[] = [];
+
+		// Upload ảnh chính nếu có
+		if (files?.image && files.image[0]) {
+			const uploadResult = await uploadService.uploadImage(
+				files.image[0].buffer,
+			);
+			imageUrl = uploadResult.secure_url;
+		}
+
+		// Upload nhiều ảnh nếu có
+		if (files?.images && files.images.length > 0) {
+			const uploadResults = await uploadService.uploadImages(
+				files.images.map((file) => file.buffer),
+			);
+			imageUrls = uploadResults.map((result) => result.secure_url);
+		}
+
+		// Chuẩn bị dữ liệu để insert
+		const vehicleData = {
+			...postData,
+			category,
+			image: imageUrl,
+			images: imageUrls,
+		};
+
+		const newPost = await createVehiclePost(vehicleData);
+		return res.status(201).json({
+			message: 'Tạo bài viết xe thành công',
+			data: newPost,
 		});
 	} catch (error: any) {
+		console.error('Lỗi khi tạo bài viết xe:', error);
 		return res.status(500).json({
-			message: 'Lỗi khi lấy thông tin ảnh',
+			message: 'Lỗi khi tạo bài viết xe',
+			error: error.message,
+		});
+	}
+}
+
+// Tạo bài viết pin (battery)
+export async function createBatteryPostController(req: Request, res: Response) {
+	try {
+		const postData = req.body;
+		const files = req.files as {
+			[fieldname: string]: Express.Multer.File[];
+		};
+
+		// Validate dữ liệu cơ bản
+		if (
+			!postData.brand ||
+			!postData.model ||
+			!postData.price ||
+			!postData.title
+		) {
+			return res.status(400).json({
+				message:
+					'Thiếu thông tin bắt buộc (brand, model, price, title)',
+			});
+		}
+
+		// Validate trường riêng cho pin
+		if (!postData.capacity || !postData.voltage) {
+			return res.status(400).json({
+				message: 'Thiếu thông tin pin (capacity, voltage)',
+			});
+		}
+
+		// Parse category từ JSON string
+		let category;
+		try {
+			category =
+				typeof postData.category === 'string'
+					? JSON.parse(postData.category)
+					: postData.category;
+		} catch (error) {
+			return res.status(400).json({
+				message: 'Category phải là JSON hợp lệ',
+			});
+		}
+
+		if (!category || !category.id) {
+			return res.status(400).json({
+				message: 'Category phải có id',
+			});
+		}
+
+		// Force category type to battery
+		category.type = 'battery';
+
+		let imageUrl = '';
+		let imageUrls: string[] = [];
+
+		// Upload ảnh chính nếu có
+		if (files?.image && files.image[0]) {
+			const uploadResult = await uploadService.uploadImage(
+				files.image[0].buffer,
+			);
+			imageUrl = uploadResult.secure_url;
+		}
+
+		// Upload nhiều ảnh nếu có
+		if (files?.images && files.images.length > 0) {
+			const uploadResults = await uploadService.uploadImages(
+				files.images.map((file) => file.buffer),
+			);
+			imageUrls = uploadResults.map((result) => result.secure_url);
+		}
+
+		// Chuẩn bị dữ liệu để insert
+		const batteryData = {
+			...postData,
+			category,
+			image: imageUrl,
+			images: imageUrls,
+		};
+
+		const newPost = await createBatteryPost(batteryData);
+		return res.status(201).json({
+			message: 'Tạo bài viết pin thành công',
+			data: newPost,
+		});
+	} catch (error: any) {
+		console.error('Lỗi khi tạo bài viết pin:', error);
+		return res.status(500).json({
+			message: 'Lỗi khi tạo bài viết pin',
 			error: error.message,
 		});
 	}

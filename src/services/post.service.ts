@@ -26,7 +26,7 @@ export async function paginatePosts(
 
 	// Lấy IDs của products
 	const productIds = (rows as any[]).map((r: any) => r.id);
-	console.log("haha"+category_type);
+	console.log('haha' + category_type);
 	// Lấy images cho tất cả products một lần
 	let images: any[] = [];
 	if (productIds.length > 0) {
@@ -76,7 +76,7 @@ export async function searchPosts(title: string): Promise<Post[]> {
 		INNER JOIN product_categories pc ON pc.id = p.product_category_id
 		WHERE p.title LIKE ?
 		ORDER BY p.created_at DESC`,
-		[searchTerm]
+		[searchTerm],
 	);
 
 	return (rows as any).map((r: any) => ({
@@ -264,7 +264,7 @@ export async function createNewPost(
 				);
 			}
 		}
-		if (category?.type === 'car') {
+		if (category?.type === 'vehicle') {
 			const { power, mileage, seats, color } =
 				postData as Partial<Vehicle>;
 			await conn.query(
@@ -281,6 +281,161 @@ export async function createNewPost(
 		}
 		await conn.commit();
 		return getPostsById(insertId) as unknown as Vehicle | Battery;
+	} catch (error) {
+		await conn.rollback();
+		throw error;
+	} finally {
+		conn.release();
+	}
+}
+
+// Tạo bài viết xe (vehicle)
+export async function createVehiclePost(
+	postData: Partial<Vehicle>,
+): Promise<Vehicle> {
+	const conn = await pool.getConnection();
+	try {
+		await conn.beginTransaction();
+		const {
+			brand,
+			model,
+			price,
+			year,
+			description,
+			address,
+			title,
+			image,
+			images,
+			category,
+			power,
+			mileage,
+			seats,
+			color,
+			warranty,
+		} = postData;
+
+		// Validate category type
+		if (category?.type !== 'vehicle') {
+			throw new Error(
+				'Category type must be "vehicle" for vehicle posts',
+			);
+		}
+
+		// Insert vào bảng products
+		const [result] = await conn.query(
+			'INSERT INTO products (product_category_id, brand, model, price, year, description, warranty, address, title, image, status, created_at, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+			[
+				category?.id,
+				brand,
+				model,
+				price,
+				year,
+				description,
+				warranty,
+				address,
+				title,
+				image,
+				'pending',
+				1,
+			],
+		);
+		const insertId = (result as any).insertId;
+
+		// Lưu các ảnh phụ
+		if (images && Array.isArray(images) && images.length > 0) {
+			for (const imageUrl of images) {
+				await conn.query(
+					'INSERT INTO product_imgs (product_id, url) VALUES (?, ?)',
+					[insertId, imageUrl],
+				);
+			}
+		}
+
+		// Insert thông tin xe vào bảng vehicles
+		await conn.query(
+			'INSERT INTO vehicles (product_id, power, mileage_km, seats, color) VALUES (?, ?, ?, ?, ?)',
+			[insertId, power, mileage, seats, color],
+		);
+
+		await conn.commit();
+		return getPostsById(insertId) as unknown as Vehicle;
+	} catch (error) {
+		await conn.rollback();
+		throw error;
+	} finally {
+		conn.release();
+	}
+}
+
+// Tạo bài viết pin (battery)
+export async function createBatteryPost(
+	postData: Partial<Battery>,
+): Promise<Battery> {
+	const conn = await pool.getConnection();
+	try {
+		await conn.beginTransaction();
+		const {
+			brand,
+			model,
+			price,
+			year,
+			description,
+			address,
+			title,
+			image,
+			images,
+			category,
+			capacity,
+			voltage,
+			health,
+			warranty,
+		} = postData;
+
+		// Validate category type
+		if (category?.type !== 'battery') {
+			throw new Error(
+				'Category type must be "battery" for battery posts',
+			);
+		}
+
+		// Insert vào bảng products
+		const [result] = await conn.query(
+			'INSERT INTO products (product_category_id, brand, model, price, year, warranty, description, address, title, image, status, created_at, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+			[
+				category?.id,
+				brand,
+				model,
+				price,
+				year,
+				warranty,
+				description,
+				address,
+				title,
+				image,
+				'pending',
+				1,
+			],
+		);
+		const insertId = (result as any).insertId;
+
+		// Lưu các ảnh phụ
+		if (images && Array.isArray(images) && images.length > 0) {
+			for (const imageUrl of images) {
+				await conn.query(
+					'INSERT INTO product_imgs (product_id, url) VALUES (?, ?)',
+					[insertId, imageUrl],
+				);
+			}
+		}
+
+		// Insert thông tin pin vào bảng batteries
+		await conn.query(
+			'INSERT INTO batteries (product_id, capacity, voltage, health) VALUES (?, ?, ?, ?)',
+			[insertId, capacity, voltage, health],
+		);
+
+		await conn.commit();
+		return getPostsById(insertId) as unknown as Battery;
 	} catch (error) {
 		await conn.rollback();
 		throw error;
@@ -359,133 +514,4 @@ export async function updateProductImages(
 	} finally {
 		conn.release();
 	}
-}
-
-// ==================== PRODUCT IMAGES QUERIES ====================
-
-// Lấy tất cả records từ bảng product_imgs
-export async function getAllProductImages(): Promise<any[]> {
-	const [rows] = await pool.query(
-		'SELECT id, product_id, url FROM product_imgs ORDER BY product_id, id',
-	);
-	return rows as any[];
-}
-
-// Lấy records product_imgs theo product_id cụ thể
-export async function getProductImagesByProductId(
-	productId: number,
-): Promise<any[]> {
-	const [rows] = await pool.query(
-		'SELECT id, product_id, url FROM product_imgs WHERE product_id = ? ORDER BY id',
-		[productId],
-	);
-	return rows as any[];
-}
-
-// Lấy records product_imgs với thông tin product
-export async function getProductImagesWithProductInfo(): Promise<any[]> {
-	const [rows] = await pool.query(`
-		SELECT 
-			pi.id as image_id,
-			pi.product_id,
-			pi.url,
-			p.title as product_title,
-			p.brand,
-			p.model,
-			p.price,
-			pc.name as category_name,
-			pc.type as category_type
-		FROM product_imgs pi
-		INNER JOIN products p ON pi.product_id = p.id
-		LEFT JOIN product_categories pc ON p.product_category_id = pc.id
-		ORDER BY pi.product_id, pi.id
-	`);
-	return rows as any[];
-}
-
-// Lấy records product_imgs với filter
-export async function getProductImagesWithFilter(options: {
-	productId?: number;
-	categoryType?: string;
-	brand?: string;
-	limit?: number;
-	offset?: number;
-}): Promise<any[]> {
-	let query = `
-		SELECT 
-			pi.id as image_id,
-			pi.product_id,
-			pi.url,
-			p.title as product_title,
-			p.brand,
-			p.model,
-			p.price,
-			pc.name as category_name,
-			pc.type as category_type
-		FROM product_imgs pi
-		INNER JOIN products p ON pi.product_id = p.id
-		LEFT JOIN product_categories pc ON p.product_category_id = pc.id
-		WHERE 1=1
-	`;
-
-	const params: any[] = [];
-
-	if (options.productId) {
-		query += ' AND pi.product_id = ?';
-		params.push(options.productId);
-	}
-
-	if (options.categoryType) {
-		query += ' AND pc.type = ?';
-		params.push(options.categoryType);
-	}
-
-	if (options.brand) {
-		query += ' AND p.brand LIKE ?';
-		params.push(`%${options.brand}%`);
-	}
-
-	query += ' ORDER BY pi.product_id, pi.id';
-
-	if (options.limit) {
-		query += ' LIMIT ?';
-		params.push(options.limit);
-
-		if (options.offset) {
-			query += ' OFFSET ?';
-			params.push(options.offset);
-		}
-	}
-
-	const [rows] = await pool.query(query, params);
-	return rows as any[];
-}
-
-// Đếm số lượng ảnh theo product_id
-export async function countImagesByProduct(): Promise<any[]> {
-	const [rows] = await pool.query(`
-		SELECT 
-			p.id as product_id,
-			p.title,
-			p.brand,
-			p.model,
-			COUNT(pi.id) as image_count
-		FROM products p
-		LEFT JOIN product_imgs pi ON p.id = pi.product_id
-		GROUP BY p.id, p.title, p.brand, p.model
-		ORDER BY image_count DESC
-	`);
-	return rows as any[];
-}
-
-// Lấy record product_imgs theo ID cụ thể
-export async function getProductImageById(
-	imageId: number,
-): Promise<any | null> {
-	const [rows] = await pool.query(
-		'SELECT id, product_id, url FROM product_imgs WHERE id = ?',
-		[imageId],
-	);
-	const results = rows as any[];
-	return results.length > 0 ? results[0] : null;
 }

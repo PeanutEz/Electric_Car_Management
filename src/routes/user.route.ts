@@ -432,68 +432,88 @@ router.get('/user-detail', userDetail);
  *     summary: Cập nhật thông tin người dùng
  *     tags:
  *       - Users
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         description: ID của người dùng
- *         schema:
- *           type: integer
-*     requestBody:
-*       required: true
-*       content:
-*         multipart/form-data:
-*           schema:
-*             type: object
-*             properties:
-*               full_name:
-*                 type: string
-*                 example: "Phạm Lạc"
-*               phone:
-*                 type: string
-*                 example: "0912345678"
-*               email:
-*                 type: string
-*                 format: email
-*                 example: "lacpham@example.com"
-*               avatar:
-*                 type: string
-*                 format: binary
-*                 description: Ảnh đại diện (file upload)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               full_name:
+ *                 type: string
+ *                 description: Tên đầy đủ của người dùng
+ *                 example: "John Doe"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email của người dùng
+ *                 example: "john.doe@example.com"
+ *               avatar:
+ *                 type: string
+ *                 format: binary
+ *                 description: Ảnh đại diện của người dùng
  *     responses:
  *       200:
- *         description: Cập nhật thành công
+ *         description: Cập nhật thông tin người dùng thành công
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
  *                   example: "Cập nhật thông tin người dùng thành công"
  *                 data:
  *                   type: object
  *                   properties:
- *                     user:
- *                       type: object
- *                       properties:
- *                         id:
- *                           type: integer
- *                           example: 1
- *                         full_name:
- *                           type: string
- *                           example: "Phạm Lạc"
- *                         phone:
- *                           type: string
- *                           example: "0912345678"
- *                         email:
- *                           type: string
- *                           example: "lacpham@example.com"
- *                         avatar:
- *                           type: string
- *                           example: "https://cdn.example.com/avatar.jpg"
- *       422:
- *         description: Dữ liệu không hợp lệ
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     status:
+ *                       type: string
+ *                       example: "active"
+ *                     full_name:
+ *                       type: string
+ *                       example: "John Doe"
+ *                     email:
+ *                       type: string
+ *                       example: "john.doe@example.com"
+ *                     avatar:
+ *                       type: string
+ *                       example: "https://example.com/avatar.jpg"
+ *                     phone:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "+1234567890"
+ *                     reputation:
+ *                       type: integer
+ *                       example: 0
+ *                     total_credit:
+ *                       type: number
+ *                       example: 0.00
+ *                     role:
+ *                       type: string
+ *                       example: "staff"
+ *       400:
+ *         description: Yêu cầu không hợp lệ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Dữ liệu không hợp lệ"
+ *       401:
+ *         description: Không được phép - token không hợp lệ hoặc thiếu
  *         content:
  *           application/json:
  *             schema:
@@ -501,11 +521,20 @@ router.get('/user-detail', userDetail);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Dữ liệu không hợp lệ"
- *                 data:
- *                   type: object
- *                   additionalProperties:
- *                     type: string
+ *                   example: "Không được phép"
+ *       500:
+ *         description: Lỗi máy chủ nội bộ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Lỗi máy chủ nội bộ"
  */
 router.put('/update-user', authenticateToken, upload.single('avatar'), updateUserInfo);
 
