@@ -37,7 +37,6 @@ const router = Router();
  *         description: Lỗi server
 */
 router.get('/get-all', listServices);
-
 router.post('/create-topup-payment', createTopupPaymentController);
 router.post('/topup-credit', topupCreditController);
 router.post('/purchase-package', purchasePackageController);
