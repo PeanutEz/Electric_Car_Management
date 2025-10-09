@@ -17,7 +17,7 @@ export async function paginatePosts(
 		FROM products p
 		INNER JOIN product_categories pc ON pc.id = p.product_category_id
       where p.status like '%${status}%' 
-		and pc.slug = '${category_type}'
+		and pc.slug like '%${category_type}%'
       and (p.year is null or p.year = ${year || 'p.year'})
       ORDER BY p.created_at DESC
 		LIMIT ? OFFSET ?`,
@@ -26,7 +26,7 @@ export async function paginatePosts(
 
 	// Lấy IDs của products
 	const productIds = (rows as any[]).map((r: any) => r.id);
-
+	console.log("haha"+category_type);
 	// Lấy images cho tất cả products một lần
 	let images: any[] = [];
 	if (productIds.length > 0) {

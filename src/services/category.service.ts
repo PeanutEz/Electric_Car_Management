@@ -82,8 +82,8 @@ export async function getCategoryBySlug(slug: any): Promise<Category[]> {
 	const [rows1] = await pool.query(
 		`SELECT pc.type, pc.slug, pc.id, pc.name, COUNT(p.id) as count
 	    FROM product_categories pc
-	    left JOIN products p ON p.product_category_id = pc.id
-	    WHERE pc.slug = ? and p.status = 'approved'
+	    left JOIN  (select * from products where status = 'approved') p ON p.product_category_id = pc.id
+	    WHERE pc.slug = ? 
 	    GROUP BY pc.type, pc.slug, pc.id, pc.name`,
 		[slug],
 	);
@@ -133,8 +133,7 @@ export async function getAllCategoryDetail(): Promise<any> {
 	const [parentRows] = await pool.query(
 		`SELECT pc.type, pc.slug, COUNT(p.id) as count
      FROM product_categories pc
-     INNER JOIN products p ON p.product_category_id = pc.id
-     WHERE p.status = 'approved'
+     left JOIN (select * from products where status = 'approved') p ON p.product_category_id = pc.id
      GROUP BY pc.type, pc.slug`,
 	);
 
@@ -142,15 +141,13 @@ export async function getAllCategoryDetail(): Promise<any> {
 	const [childRows] = await pool.query(
 		`SELECT pc.id, pc.name, pc.type, pc.slug, COUNT(p.id) as count
       FROM product_categories pc
-      LEFT JOIN products p ON p.product_category_id = pc.id
-      WHERE p.status = 'approved'
+      LEFT JOIN (select * from products where status = 'approved') p ON p.product_category_id = pc.id
       GROUP BY pc.id, pc.name, pc.type, pc.slug`,
 	);
 	const parents: any = (parentRows as any).map((r: any) => ({
 		type: r.type,
 		slug: r.slug,
 		count: r.count,
-		has_children: true,
 	}));
 	const children = childRows as any;
 

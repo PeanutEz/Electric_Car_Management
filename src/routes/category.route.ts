@@ -46,7 +46,7 @@ const router = Router();
  *       500:
  *         description: Lỗi server
 */
-router.get('/get-all-categories', listCategories);
+router.get('/get-all', listCategories);
 
 /**
  * @swagger
