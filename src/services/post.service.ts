@@ -7,6 +7,7 @@ export async function paginatePosts(
 	limit: number,
 	status?: string,
 	year?: number,
+	category_type?: string,
 ): Promise<Post[]> {
 	const offset = (page - 1) * limit;
 	const [rows] = await pool.query(
@@ -16,6 +17,7 @@ export async function paginatePosts(
 		FROM products p
 		INNER JOIN product_categories pc ON pc.id = p.product_category_id
       where p.status like '%${status}%' 
+		and pc.slug = '${category_type}'
       and (p.year is null or p.year = ${year || 'p.year'})
       ORDER BY p.created_at DESC
 		LIMIT ? OFFSET ?`,

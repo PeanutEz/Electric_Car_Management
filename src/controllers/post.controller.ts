@@ -24,8 +24,9 @@ export async function listPosts(req: Request, res: Response) {
 		const limit = parseInt(req.query.limit as string) || 10;
 		const status = (req.query.status as string) || '';
 		const year = parseInt(req.query.year as string);
-		const posts = await paginatePosts(page, limit, status, year);
-		const totalPosts = await paginatePosts(1, 10000, status, year); // Lấy tất cả để tính tổng
+		const category_type = (req.query.category_type as string) || '';
+		const posts = await paginatePosts(page, limit, status, year, category_type);
+		const totalPosts = await paginatePosts(1, 10000, status, year, category_type); // Lấy tất cả để tính tổng
 		res.status(200).json({
 			message: 'Lấy danh sách bài viết thành công',
 			data: {
