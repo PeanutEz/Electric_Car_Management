@@ -511,7 +511,7 @@ router.put('/update-user/:id', authenticateToken, upload.single('avatar'), updat
 
 /** 
  * @swagger
- * /api/user/update-phone/{id}:
+ * /api/user/update-phone:
  *   put:
  *     summary: Cập nhật số điện thoại người dùng
  *     tags:
