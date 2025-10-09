@@ -173,13 +173,17 @@ export async function logout(req: Request, res: Response) {
 
 export async function updateUserInfo(req: Request, res: Response) {
 	try {
-		const id = parseInt(req.params.id, 10);
-		const userData = req.body;
-		if (isNaN(id)) {
+		// lấy userId trong header Authorization: token decode
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
 			return res
-				.status(400)
-				.json({ message: 'ID người dùng không hợp lệ' });
+				.status(401)
+				.json({ message: 'Chưa cung cấp token xác thực' });
 		}
+		const token = authHeader.split(' ')[1];
+		const id = (jwt.decode(token) as any).id;
+		const userData = req.body;
+		
 
 		// Handle avatar upload if a file is provided
 		if (req.file) {

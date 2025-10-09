@@ -427,7 +427,7 @@ router.get('/user-detail', userDetail);
 
 /**
  * @swagger
- * /api/user/update-user/{id}:
+ * /api/user/update-user:
  *   put:
  *     summary: Cập nhật thông tin người dùng
  *     tags:
@@ -507,7 +507,7 @@ router.get('/user-detail', userDetail);
  *                   additionalProperties:
  *                     type: string
  */
-router.put('/update-user/:id', authenticateToken, upload.single('avatar'), updateUserInfo);
+router.put('/update-user', authenticateToken, upload.single('avatar'), updateUserInfo);
 
 /** 
  * @swagger
