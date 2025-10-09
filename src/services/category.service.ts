@@ -90,11 +90,10 @@ export async function getCategoryBySlug(slug: any): Promise<Category[]> {
 	const parent = (rows as any).map((r: any) => ({
 		type: r.type,
 		slug: r.slug,
-		count: r.count,
-		has_children: true, // Giả sử tất cả đều có con, bạn có thể điều chỉnh logic này nếu cần
+		count: r.count, // Giả sử tất cả đều có con, bạn có thể điều chỉnh logic này nếu cần
 	}))[0];
 	const children = rows1 as any;
-	return [
+	return (
 		{
 			...parent,
 			childrens: children.map((c: any) => ({
@@ -103,8 +102,8 @@ export async function getCategoryBySlug(slug: any): Promise<Category[]> {
 				name: c.name,
 				count: c.count,
 			})),
-		},
-	];
+		}
+	)
 }
 
 // export async function getCategoryBySlug(slug: any): Promise<Category[]> {
