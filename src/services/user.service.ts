@@ -127,7 +127,7 @@ export async function registerUser(userData: User) {
 	const insertedId = result.insertId;
 
 	const [selectUser]: any = await pool.query(
-		'select * from users WHERE id = ?',
+		'select * from users u WHERE id = ?',
 		insertedId,
 	);
 	const [rows]: any = await pool.query(

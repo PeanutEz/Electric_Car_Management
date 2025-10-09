@@ -1,3 +1,4 @@
+import { count } from 'console';
 import pool from '../config/db';
 import { Category } from '../models/product.model';
 
@@ -22,17 +23,27 @@ export async function getAllCategories(status: string): Promise<Category[]> {
 	const [rows] = await pool.query(
 		`SELECT pc.type, pc.slug, COUNT(p.id) as count
      FROM product_categories pc
-     INNER JOIN products p ON p.product_category_id = pc.id
-     WHERE p.status = ?
+     left JOIN (select * from products where status = 'approved') p ON p.product_category_id = pc.id
      GROUP BY pc.type, pc.slug`,
 		[status],
 	);
-	return (rows as any).map((r: any) => ({
-		type: r.type,
-		slug: r.slug,
-		count: r.count,
-		has_children: true, // Giả sử tất cả đều có con, bạn có thể điều chỉnh logic này nếu cần
-	}));
+
+	return (rows as any).map((r: any) => {
+		if (r.count > 0) {
+			return {
+				type: r.type,
+				slug: r.slug,
+				count: r.count,
+				has_children: true, // Giả sử tất cả đều có con, bạn có thể điều chỉnh logic này nếu cần
+			};
+		}
+		return {
+				type: r.type,
+				slug: r.slug,
+				count: r.count,
+				has_children: false, // Giả sử tất cả đều có con, bạn có thể điều chỉnh logic này nếu cần
+			};
+	});
 }
 
 // query param : slug

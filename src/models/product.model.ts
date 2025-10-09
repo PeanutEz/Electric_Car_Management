@@ -1,6 +1,8 @@
 export interface Category {
 	id: number;
 	type: string;
+	slug: string;
+	count: number;
 	name: string;
 }
 
