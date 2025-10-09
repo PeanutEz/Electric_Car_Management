@@ -29,7 +29,7 @@ export async function listPosts(req: Request, res: Response) {
 		res.status(200).json({
 			message: 'Lấy danh sách bài viết thành công',
 			data: {
-				post: posts,
+				posts: posts,
 				pagination: {
 					page: page,
 					limit: limit,
