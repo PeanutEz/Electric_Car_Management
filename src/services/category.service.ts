@@ -97,7 +97,7 @@ export async function getCategoryBySlug(slug: any): Promise<Category[]> {
 	return [
 		{
 			...parent,
-			children: children.map((c: any) => ({
+			childrens: children.map((c: any) => ({
 				id: c.id,
 				typeSlug: c.slug,
 				name: c.name,
@@ -153,7 +153,7 @@ export async function getAllCategoryDetail(): Promise<any> {
 
 	return parents.map((parent: any) => ({
 		...parent,
-		children: children
+		childrens: children
 			.filter((child: any) => child.type === parent.type)
 			.map((child: any) => ({
 				id: child.id,
