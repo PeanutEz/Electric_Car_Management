@@ -9,6 +9,8 @@ export interface Post {
    review_by: number;
    created_by: number;
    created_at: Date;
+   description: string;
+   updated_at: Date;
    priority: number;
    pushed_at: Date;
    product: Vehicle | Battery;

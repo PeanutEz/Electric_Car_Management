@@ -516,26 +516,23 @@ router.put('/update-user/:id', authenticateToken, upload.single('avatar'), updat
  *     summary: Cập nhật số điện thoại người dùng
  *     tags:
  *       - Users
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         description: ID của người dùng
- *         schema:
- *           type: integer
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - phone
  *             properties:
  *               phone:
  *                 type: string
  *                 example: "0912345678"
  *     responses:
  *       200:
- *         description: Cập nhật thành công
+ *         description: Cập nhật số điện thoại thành công
  *         content:
  *           application/json:
  *             schema:
@@ -547,29 +544,18 @@ router.put('/update-user/:id', authenticateToken, upload.single('avatar'), updat
  *                 data:
  *                   type: object
  *                   properties:
- *                     user:
- *                       type: object
- *                       properties:
- *                         id:
- *                           type: integer
- *                           example: 1
- *                         phone:
- *                           type: string
- *                           example: "0912345678"
- *       422:
- *         description: Dữ liệu không hợp lệ
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Dữ liệu không hợp lệ"
- *                 data:
- *                   type: object
- *                   additionalProperties:
- *                     type: string
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     status:
+ *                       type: string
+ *                       example: "active"
+ *                     full_name:
+ *                       type: string
+ *                       example: "John Doe"
+ *                     email:
+ *                       type: string
+ *                       example: "john.doe@example.com"
  */
 router.put('/update-phone', authenticateToken, updateUserPhone);
 

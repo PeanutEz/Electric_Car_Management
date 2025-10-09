@@ -10,9 +10,9 @@ export async function paginatePosts(
 ): Promise<Post[]> {
 	const offset = (page - 1) * limit;
 	const [rows] = await pool.query(
-		`SELECT p.id, p.title, p.status, p.end_date, p.pushed_at, p.priority,
-      p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,
-      pc.type as category_type, pc.name as category_name
+		`SELECT p.id, p.title, p.priority,
+      p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at,
+      pc.slug as slug, pc.name as category_name, pc.id as category_id
 		FROM products p
 		INNER JOIN product_categories pc ON pc.id = p.product_category_id
       where p.status like '%${status}%' 
@@ -39,27 +39,24 @@ export async function paginatePosts(
 
 	return (rows as any).map((r: any) => ({
 		id: r.id,
-		product_id: r.product_id,
 		title: r.title,
-		status: r.status,
-		year: r.year,
 		created_at: r.created_at,
-		end_date: r.end_date,
-		reviewed_by: r.reviewed_by,
-		created_by: r.created_by,
-		pushed_at: r.pushed_at,
+		updated_at: r.updated_at,
+		description: r.description,
 		priority: r.priority,
 		product: {
+			id: r.product_id,
+			brand: r.brand,
 			model: r.model,
 			price: r.price,
-			description: r.description,
-			brand: r.brand,
+			year: r.year,
 			image: r.image,
 			images: images
 				.filter((img) => img.product_id === r.id)
 				.map((img) => img.url),
 			category: {
-				type: r.category_type,
+				id: r.category_id,
+				typeSlug: r.slug,
 				name: r.category_name,
 			},
 		},

@@ -247,6 +247,10 @@ export async function updateUserPhone(req: Request, res: Response) {
 				user: {
 					id: user?.id,
 					phone: user?.phone,
+					full_name: user?.full_name,
+					email: user?.email,
+					status: user?.status,
+					
 				},
 			},
 		});
