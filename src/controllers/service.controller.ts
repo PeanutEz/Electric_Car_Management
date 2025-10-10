@@ -1,13 +1,31 @@
 import { Request, Response } from 'express';
-import {getAllServices, topupCredit, purchasePackage, createPackagePayment, createTopupPayment } from '../services/service.service';
+import {getAllServices, topupCredit, purchasePackage, createPackagePayment, createTopupPayment, getServicePostByProductType } from '../services/service.service';
 
 export async function listServices(req: Request, res: Response) {
    try {
       const services = await getAllServices();
       res.status(200).json({
-         message: 'Lấy danh sách plan thành công',
+         message: 'Lấy danh sách dịch vụ thành công',
          data: {
-            plan: services,
+            services: services,
+         }
+      });
+   } catch (error: any) {
+      res.status(500).json({
+         message: error.message,
+      });
+   }
+}
+
+export async function getServiceByTypeController(req: Request, res: Response) {
+   try {
+      const type = req.params.type;
+      const productType = req.params.productType;
+      const service = await getServicePostByProductType(type, productType);
+      res.status(200).json({
+         message: 'Lấy dịch vụ thành công',
+         data: {
+            services: service,
          }
       });
    } catch (error: any) {

@@ -9,7 +9,7 @@ import {
 	updateUser,
 	updatePhoneUser,
 } from '../services/user.service';
-import  jwt  from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import * as uploadService from '../services/upload.service';
 
 export async function userDetail(req: Request, res: Response) {
@@ -30,8 +30,20 @@ export async function userDetail(req: Request, res: Response) {
 		}
 
 		return res.status(200).json({
-			message: 'Lấy thông tin người dùng thành công',
-			data: user,
+			data: {
+				user: {
+					id: user.id,
+					status: user.status,
+					full_name: user.full_name,
+					email: user.email,
+					phone: user.phone,
+					reputation: user.reputation,
+					total_credit: user.total_credit,
+					role: user.role,
+				},
+				refresh_token: user.refresh_token,
+				expired_refresh_token: user.expired_refresh_token,
+			},
 		});
 	} catch {
 		return res.status(500).json({ message: 'Lỗi máy chủ nội bộ' });
@@ -183,7 +195,6 @@ export async function updateUserInfo(req: Request, res: Response) {
 		const token = authHeader.split(' ')[1];
 		const id = (jwt.decode(token) as any).id;
 		const userData = req.body;
-		
 
 		// Handle avatar upload if a file is provided
 		if (req.file) {
@@ -234,12 +245,10 @@ export async function updateUserPhone(req: Request, res: Response) {
 		const id = (jwt.decode(token) as any).id;
 		console.log('id user from token:', id);
 		if (!id) {
-			return res
-				.status(403)
-				.json({
-					message:
-						'Vui lòng cập nhật số điện thoại trước khi tạo bài viết',
-				});
+			return res.status(403).json({
+				message:
+					'Vui lòng cập nhật số điện thoại trước khi tạo bài viết',
+			});
 		}
 
 		const phone = req.body.phone;
@@ -248,13 +257,19 @@ export async function updateUserPhone(req: Request, res: Response) {
 			message: 'Cập nhật số điện thoại người dùng thành công',
 			data: {
 				user: {
-					id: user?.id,
-					phone: user?.phone,
-					full_name: user?.full_name,
-					email: user?.email,
-					status: user?.status,
-					
+				id: user.id,
+				status: user.status,
+				full_name: user.full_name,
+				email: user.email,
+				phone: phone,
+				reputation: user.reputation,
+				total_credit: user.total_credit,
+				role: user.role,
 				},
+				access_token: user.access_token,
+				expired_access_token: 3600, // 1 hour in seconds
+				refresh_token: user.refresh_token,
+				expired_refresh_token: 7 * 24 * 3600, // 7 days in seconds
 			},
 		});
 	} catch (error: any) {

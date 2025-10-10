@@ -2,15 +2,47 @@ import pool from '../config/db';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/user.model';
 import { JWTService } from './jwt.service';
-
+import { get } from 'http';
+import { access } from 'fs';
 
 export async function getUserById(id: number): Promise<User | null> {
-	const [rows] = await pool.query(
-		'select id, status, full_name, email, phone, avatar, reputation, total_credit, created_at from users where id = ?',
+	const [rows]: any = await pool.query(
+		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?',
 		[id],
 	);
-	const users = rows as User[];
-	return users.length > 0 ? users[0] : null;
+
+	const user = rows[0];
+	const roleName = await pool.query(
+		'select r.name as role from users u inner join roles r on u.role_id = r.id where u.id = ?',
+		[id],
+	);
+	//return data giống như hàm loginUser
+	if (!user) {
+		return null;
+	}
+	return {
+		id: user.id,
+		status: user.status,
+		full_name: user.full_name,
+		email: user.email,
+		phone: user.phone,
+		reputation: user.reputation,
+		total_credit: user.total_credit,
+		role: user.role,
+		expired_access_token: 3600, // 1 hour in seconds
+		refresh_token: 'Bearer ' + user.refresh_token,
+	} as any;
+}
+
+export function getTokenById(user: User): any {
+	const tokens = JWTService.generateTokens({
+		id: user.id as number,
+		full_name: user.full_name,
+		email: user.email,
+		phone: user.phone,
+		role: user.role,
+	});
+	return tokens;
 }
 
 export async function getAllUsers(): Promise<User[]> {
@@ -40,19 +72,12 @@ export async function loginUser(email: string, password: string) {
 		throw error;
 	}
 
-	// Generate tokens using JWT service
-	const tokens = JWTService.generateTokens({
-		id: user.id,
-		full_name: user.full_name,
-		email: user.email,
-		phone: user.phone,
-		role: user.role,
-	});
+	const tokens = getTokenById(user);
 
 	// Lưu refresh token vào database
 	await JWTService.saveRefreshToken(user.id, tokens.refreshToken);
 
-	if (user.phone === null) {
+	if (user.phone === null || user.phone === '') {
 		return {
 			id: user.id,
 			status: user.status,
@@ -143,7 +168,6 @@ export async function registerUser(userData: User) {
 	);
 	user.role_name = roleRows[0]?.name || 'unknown';
 
-
 	const tokens = JWTService.generateTokens({
 		id: user.id,
 		email: user.email,
@@ -230,14 +254,12 @@ export async function updateUser(userId: number, userData: Partial<User>) {
 	return getUserById(userId);
 }
 
-
 export async function updatePhoneUser(userId: number, phone: string) {
 	const [user]: any = await pool.query(
-		'select * from users where id = ?',
+		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?',
 		[userId],
 	);
 	const errors: { [key: string]: string } = {};
-
 
 	if (user.length === 0) {
 		errors.user = 'Người dùng không tồn tại';
@@ -253,10 +275,34 @@ export async function updatePhoneUser(userId: number, phone: string) {
 		throw error;
 	}
 
-	await pool.query(
-		'UPDATE users SET phone = ? WHERE id = ?',
-		[phone, userId],
+	await pool.query('UPDATE users SET phone = ? WHERE id = ?', [
+		phone,
+		userId,
+	]);
+
+	const [user1]: any = await pool.query(
+		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?',
+		[userId],
 	);
 
-	return getUserById(userId);
+	const token = getTokenById(user1[0]);
+
+	// Lưu refresh token vào database
+	await JWTService.saveRefreshToken(userId, token.refreshToken);
+	
+
+	return {
+		id: user1[0].id,
+		status: user1[0].status,
+		full_name: user1[0].full_name,
+		email: user1[0].email,
+		phone: phone,
+		reputation: user1[0].reputation,
+		total_credit: user1[0].total_credit,
+		role: user1[0].role,
+		expired_access_token: 3600, // 1 hour in seconds
+		access_token: 'Bearer ' + token.accessToken,
+		refresh_token: 'Bearer ' + token.refreshToken,
+		expired_refresh_token: 7 * 24 * 3600, // 7 days in seconds
+	};
 }

@@ -13,6 +13,14 @@ export async function getAllServices(): Promise<Service[]> {
 	return rows as Service[];
 }
 
+export async function getServicePostByProductType(type: string, productType: string): Promise<Service> {
+	const [rows] = await pool.query(
+		'select id, name,description, cost from services where type = ? and product_type = ?',
+		[type, productType],
+	);
+	return rows as any;
+}
+
 export async function createTopupPayment(payload: Payment) {
 	try {
 		const orderCode = Math.floor(Math.random() * 1000000);
