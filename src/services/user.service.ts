@@ -161,12 +161,10 @@ export async function registerUser(userData: User) {
 	);
 
 	const user = rows[0];
-	//get role_name from roles table
-	const [roleRows]: any = await pool.query(
-		'select name from roles WHERE id = ?',
-		[user.role_id],
+   const roleName: any = await pool.query(
+		'select r.name as role from users u inner join roles r on u.role_id = r.id where u.id = ?',
+		[insertedId],
 	);
-	user.role_name = roleRows[0]?.name || 'unknown';
 
 	const tokens = JWTService.generateTokens({
 		id: user.id,
@@ -187,7 +185,7 @@ export async function registerUser(userData: User) {
 		phone: user.phone,
 		reputation: user.reputation,
 		total_credit: user.total_credit,
-		role: user.role_id,
+		role: roleName[0][0].role,
 		access_token: 'Bearer ' + tokens.accessToken,
 		expired_access_token: 3600, // 1 hour in seconds
 		refresh_token: 'Bearer ' + tokens.refreshToken,
