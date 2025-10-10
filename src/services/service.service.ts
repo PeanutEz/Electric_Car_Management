@@ -13,11 +13,27 @@ export async function getAllServices(): Promise<Service[]> {
 	return rows as Service[];
 }
 
-export async function getServicePostByProductType(type: string, productType: string): Promise<Service> {
+export async function getServicePostByProductType(type: string, productType: string, userId: number): Promise<Service> {
+	// const [rows] = await pool.query(
+	// 	'select id, name,description, cost from services where type = ? and product_type = ?',
+	// 	[type, productType],
+	// );
 	const [rows] = await pool.query(
-		'select id, name,description, cost from services where type = ? and product_type = ?',
-		[type, productType],
-	);
+	`SELECT 
+		s.id,
+		s.name,
+		s.description,
+		s.cost as price,
+		COALESCE(uq.amount, 0) AS userUsageCount
+	FROM services s
+	LEFT JOIN user_quota uq 
+		ON s.id = uq.service_id 
+		AND uq.user_id = ?
+	WHERE 
+		s.type = ?
+		AND s.product_type = ?`,
+	[userId, type, productType]
+);
 	return rows as any;
 }
 

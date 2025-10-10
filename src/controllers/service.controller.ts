@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import {getAllServices, topupCredit, purchasePackage, createPackagePayment, createTopupPayment, getServicePostByProductType } from '../services/service.service';
 
 export async function listServices(req: Request, res: Response) {
@@ -19,12 +20,20 @@ export async function listServices(req: Request, res: Response) {
 
 export async function getServiceByTypeController(req: Request, res: Response) {
    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+         return res.status(401).json({ message: 'Unauthorized' });
+      }
+      const token = authHeader.split(' ')[1];
+      const user = jwt.decode(token) as any;
+      const userId = user.id;
       const type = req.params.type;
       const productType = req.params.productType;
-      const service = await getServicePostByProductType(type, productType);
+      const service = await getServicePostByProductType(type, productType, userId);
       res.status(200).json({
          message: 'Lấy dịch vụ thành công',
          data: {
+            version: new Date().toISOString(),
             services: service,
          }
       });
