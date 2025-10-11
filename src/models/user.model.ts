@@ -11,6 +11,14 @@ export interface User {
 	role_id?: number;
 	role?: string;
 	avatar?: string;
+	verificationStatus?: boolean;
+	total_posts?: number;
+	total_transactions?: number;
+	recentTransaction?: {
+		description: string;
+		date: string;
+		amount: number;
+	};
 	//access_token?: string;
 	refresh_token?: string;
 	//access_token_expires?: Date;

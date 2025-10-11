@@ -11,15 +11,29 @@ export async function getUserById(id: number): Promise<User | null> {
 		[id],
 	);
 
-	const user = rows[0];
-	const roleName = await pool.query(
-		'select r.name as role from users u inner join roles r on u.role_id = r.id where u.id = ?',
+	const totalPosts: any = await pool.query(
+		'select count(*) as total from products where created_by = ?',
 		[id],
 	);
+
+	const totalTransactions: any = await pool.query(
+		'select count(*) as total from orders where buyer_id = ?',
+		[id],
+	);
+
+	const recentTransactions: any = await pool.query(
+		'select created_at, description, price from orders where buyer_id = ? order by created_at desc limit 1',
+		[id],
+	);
+
+	const user = rows[0];
 	//return data giống như hàm loginUser
 	if (!user) {
 		return null;
 	}
+
+	const is_verified = user.phone !== null && user.phone !== '';
+
 	return {
 		id: user.id,
 		status: user.status,
@@ -28,6 +42,23 @@ export async function getUserById(id: number): Promise<User | null> {
 		phone: user.phone,
 		reputation: user.reputation,
 		total_credit: user.total_credit,
+		total_posts: totalPosts[0][0].total,
+		total_transactions: totalTransactions[0][0].total,
+		verificationStatus: is_verified,
+		recentTransaction: {
+			description:
+				recentTransactions[0].length > 0
+					? recentTransactions[0][0].description
+					: 'Chưa có giao dịch gần đây',
+			date:
+				recentTransactions[0].length > 0
+					? recentTransactions[0][0].created_at
+					: 'Chưa có giao dịch gần đây',
+			amount:
+				recentTransactions[0].length > 0
+					? recentTransactions[0][0].price
+					: 0,
+		},
 		role: user.role,
 		expired_access_token: 3600, // 1 hour in seconds
 		refresh_token: 'Bearer ' + user.refresh_token,

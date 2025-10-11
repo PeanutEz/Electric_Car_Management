@@ -20,7 +20,7 @@ export async function userDetail(req: Request, res: Response) {
 		}
 		const token = authHeader.split(' ')[1];
 		const id = (jwt.decode(token) as any).id;
-
+		console.log(id);
 		const user = await getUserById(id);
 
 		if (!user) {
@@ -39,7 +39,15 @@ export async function userDetail(req: Request, res: Response) {
 					phone: user.phone,
 					reputation: user.reputation,
 					total_credit: user.total_credit,
+					total_posts: user.total_posts,
+					total_transactions: user.total_transactions,
+					verificationStatus: user.verificationStatus,
 					role: user.role,
+					recentTransactions: {
+						description: user.recentTransaction?.description || null,
+						date: user.recentTransaction?.date || null,
+						amount: user.recentTransaction?.amount || null,
+					}
 				},
 				refresh_token: user.refresh_token,
 				expired_refresh_token: user.expired_refresh_token,
