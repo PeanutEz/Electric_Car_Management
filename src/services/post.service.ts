@@ -12,11 +12,11 @@ export async function paginatePosts(
 	const offset = (page - 1) * limit;
 	const [rows] = await pool.query(
 		`SELECT p.id, p.title, p.priority,
-      p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at, p.address,
+      p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at, p.address,p.status,
       pc.slug as slug, pc.name as category_name, pc.id as category_id
 		FROM products p
 		INNER JOIN product_categories pc ON pc.id = p.product_category_id
-      where p.status like '%${status}%' 
+      where p.status like '%${status}%'  
 		and pc.slug like '%${category_type}%'
       and (p.year is null or p.year = ${year || 'p.year'})
       ORDER BY p.created_at DESC
@@ -46,6 +46,7 @@ export async function paginatePosts(
 		updated_at: r.updated_at,
 		description: r.description,
 		priority: r.priority,
+		status: r.status,
 		product: {
 			id: r.product_id,
 			brand: r.brand,
@@ -264,6 +265,11 @@ export async function createNewPost(
 				);
 			}
 		}
+		const categoryType = await conn.query(
+			'SELECT type FROM product_categories WHERE id = ?',
+			[category?.id],
+		);
+
 		if (category?.type === 'vehicle') {
 			const { power, mileage, seats, color } =
 				postData as Partial<Vehicle>;
