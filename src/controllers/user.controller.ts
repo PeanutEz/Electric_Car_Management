@@ -8,6 +8,7 @@ import {
 	registerUser,
 	updateUser,
 	updatePhoneUser,
+	getPostByUserId
 } from '../services/user.service';
 import jwt from 'jsonwebtoken';
 import * as uploadService from '../services/upload.service';
@@ -279,6 +280,37 @@ export async function updateUserPhone(req: Request, res: Response) {
 				refresh_token: user.refresh_token,
 				expired_refresh_token: 7 * 24 * 3600, // 7 days in seconds
 			},
+		});
+	} catch (error: any) {
+		res.status(422).json({
+			message: error.message,
+			data: error.data,
+		});
+	}
+}
+
+export async function getUserPosts(req: Request, res: Response) {
+	try {
+		// lấy userId trong header Authorization: token decode
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res
+				.status(401)
+				.json({ message: 'Chưa cung cấp token xác thực' });
+		}
+		const token = authHeader.split(' ')[1];
+		const id = (jwt.decode(token) as any).id;
+		console.log('id user from token:', id);
+		if (!id) {
+			return res.status(403).json({
+				message:
+					'Vui lòng đăng nhập để xem bài viết của bạn',
+			});
+		}
+		const posts = await getPostByUserId(id);
+		res.status(200).json({
+			message: 'Lấy danh sách bài viết của người dùng thành công',
+			data: posts,
 		});
 	} catch (error: any) {
 		res.status(422).json({

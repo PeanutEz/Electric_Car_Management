@@ -41,6 +41,7 @@ export interface Vehicle {
 	priority: number;
 	pushed_at: string;
 	category: Category;
+	created_by?: number;
 	image: string;
 	images: string[];
 }
@@ -65,6 +66,7 @@ export interface Battery {
 	end_date?: string;
 	pushed_at: string;
 	category: Category;
+	created_by?: number;
 	image: string;
 	images: string[];
 }

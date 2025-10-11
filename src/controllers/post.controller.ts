@@ -187,9 +187,9 @@ export async function createPost(req: Request, res: Response) {
 		let imageUrls: string[] = [];
 
 		// Upload ảnh chính nếu có
-		if (files?.mainImage && files.mainImage[0]) {
+		if (files?.image && files.image[0]) {
 			const uploadResult = await uploadService.uploadImage(
-				files.mainImage[0].buffer,
+				files.image[0].buffer,
 			);
 			imageUrl = uploadResult.secure_url;
 		}

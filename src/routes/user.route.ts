@@ -8,7 +8,8 @@ import {
 	refreshToken,
 	logout,
 	updateUserInfo,
-	updateUserPhone
+	updateUserPhone,
+	getUserPosts
 } from '../controllers/user.controller';
 import { authenticateToken, authorizeRoles } from '../middleware/AuthMiddleware';
 
@@ -587,6 +588,47 @@ router.put('/update-user', authenticateToken, upload.single('avatar'), updateUse
  *                       example: "john.doe@example.com"
  */
 router.put('/update-phone', authenticateToken, updateUserPhone);
+
+/**
+ * @swagger
+ * /api/user/user-posts:
+ *   get:
+ *     summary: Lấy danh sách bài viết của người dùng
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách bài viết thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Lấy danh sách bài viết của người dùng thành công"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 1
+ *                       title:
+ *                         type: string
+ *                         example: "Bài viết đầu tiên"
+ *                       content:
+ *                         type: string
+ *                         example: "Nội dung bài viết đầu tiên"
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2023-01-01T00:00:00Z"
+ */
+router.get('/user-posts', authenticateToken, getUserPosts);
 
 
 export default router;

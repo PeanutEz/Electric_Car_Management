@@ -335,3 +335,12 @@ export async function updatePhoneUser(userId: number, phone: string) {
 		expired_refresh_token: 7 * 24 * 3600, // 7 days in seconds
 	};
 }
+
+export async function getPostByUserId(userId: number) {
+	const [posts]: any = await pool.query(
+		`select p.id, p.title,p.brand, p.model,p.description,p.year,p.address,p.image,p.end_date,p.warranty,p.priority,p.price, p.status, p.created_at, pc.name as category 
+		from products p inner join product_categories pc on p.product_category_id = pc.id where p.created_by = ? order by p.created_at desc`,
+		[userId],
+	);
+	return posts;
+}
