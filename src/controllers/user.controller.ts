@@ -171,7 +171,7 @@ export async function login(req: Request, res: Response) {
 // }
 export async function refreshToken(req: any, res: Response) {
 	try {
-		const refreshTokenRaw = req.body['refresh-token'];
+		const refreshTokenRaw = req.body['refresh_token'];
 		if (!refreshTokenRaw) {
 			return res
 				.status(400)
