@@ -237,6 +237,8 @@ export async function refreshToken(refreshToken: string) {
 			? refreshToken.substring(7)
 			: refreshToken;
 
+		console.log(token);	
+
 		const result = await JWTService.refreshAccessToken(token);
 
 		return {

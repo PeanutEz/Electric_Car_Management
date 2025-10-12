@@ -188,14 +188,19 @@ router.post('/login', login);
  *   post:
  *     summary: Refresh access token using refresh token
  *     tags: [Users]
- *     parameters:
- *       - in: header
- *         name: Authorization
- *         required: true
- *         schema:
- *           type: string
- *         description: "Refresh token in Authorization header (use 'Bearer <token>' or just the token)"
- *         example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refresh-token
+ *             properties:
+ *               refresh-token:
+ *                 type: string
+ *                 description: Refresh token nhận được khi đăng nhập
+ *                 example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *     responses:
  *       200:
  *         description: Access token refreshed successfully
@@ -204,9 +209,6 @@ router.post('/login', login);
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
  *                   example: "Làm mới token thành công"
@@ -223,9 +225,6 @@ router.post('/login', login);
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
  *                 message:
  *                   type: string
  *                   example: "Refresh token là bắt buộc"
@@ -236,14 +235,11 @@ router.post('/login', login);
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
  *                 message:
  *                   type: string
  *                   example: "Token làm mới không hợp lệ hoặc đã hết hạn"
  */
-router.post('/refresh-token', refreshToken);
+router.post('/refresh-token', authenticateToken, refreshToken);
 
 /**
  * @swagger

@@ -83,7 +83,8 @@ export class JWTService {
 		refreshToken: string,
 	): Promise<void> {
 		// Lưu refresh token và đặt expired_refresh_token là epoch seconds (giây) kể từ 1970
-		const expiresAtSec = 7 * 24 * 3600; // now + 7 days
+		// const expiresAtSec = 7 * 24 * 3600; // now + 7 days
+		const expiresAtSec = Math.floor(Date.now() / 1000) + 7 * 24 * 3600; // now + 7 ngày
 		await pool.query(
 			'UPDATE users SET refresh_token = ?, expired_refresh_token = ? WHERE id = ?',
 			[refreshToken, expiresAtSec, userId],
@@ -107,13 +108,30 @@ export class JWTService {
 		}
 
 		const user = rows[0];
-		const nowSec = Math.floor(Date.now() / 1000);
-		const expiredAtSec = Number(user.expired_refresh_token) || 0;
+		console.log('DB refresh_token:', user.refresh_token);
+        console.log('DB expired_refresh_token:', user.expired_refresh_token);
+        console.log('Client refresh_token:', refreshToken);
+		// const nowSec = Math.floor(Date.now() / 1000);
+		// const expiredAtSec = Number(user.expired_refresh_token) || 0;
 
-		return (
-			user.refresh_token === refreshToken &&
-			expiredAtSec > nowSec
-		);
+		// return (
+		// 	user.refresh_token === refreshToken &&
+		// 	expiredAtSec > nowSec
+		// );
+
+		const nowSec = Math.floor(Date.now() / 1000);
+
+    // expired_refresh_token phải là epoch seconds (thời điểm hết hạn)
+    // Nếu expired_refresh_token < nowSec => token đã hết hạn
+    if (user.refresh_token !== refreshToken) {
+        console.log('Token mismatch!');
+        return false;
+    }
+    if (Number(user.expired_refresh_token) < nowSec) {
+        console.log('Refresh token expired!');
+        return false;
+    }
+    return true;
 	}
 
 	/**
