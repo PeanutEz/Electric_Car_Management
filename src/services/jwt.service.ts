@@ -22,7 +22,7 @@ export class JWTService {
 		.ACCESS_TOKEN_SECRET as string;
 	private static readonly REFRESH_TOKEN_SECRET = process.env
 		.REFRESH_TOKEN_SECRET as string;
-	private static readonly ACCESS_TOKEN_EXPIRY = '5s'; // 5 seconds
+	private static readonly ACCESS_TOKEN_EXPIRY = '15s'; // 15 seconds
 	private static readonly REFRESH_TOKEN_EXPIRY = '30s'; // 30 seconds
 
 	/**
