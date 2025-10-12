@@ -59,9 +59,10 @@ export class JWTService {
 	public static verifyAccessToken(token: string): TokenPayload {
 		try {
 			return jwt.verify(token, this.ACCESS_TOKEN_SECRET) as TokenPayload;
-		} catch (error) {
-			throw new Error('Token truy cập không hợp lệ hoặc đã hết hạn');
+		} catch (error: any) {
+			throw error;
 		}
+		
 	}
 
 	/**

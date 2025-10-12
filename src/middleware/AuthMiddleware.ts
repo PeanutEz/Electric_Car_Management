@@ -1,5 +1,32 @@
 import { Response } from 'express';
 import { JWTService, TokenPayload } from '../services/jwt.service';
+import jwt from 'jsonwebtoken';
+
+// export function authenticateToken(req: any, res: Response, next: any) {
+// 	const authHeader = req.headers.token || req.headers.authorization;
+
+// 	if (authHeader) {
+// 		const token = authHeader.startsWith('Bearer ')
+// 			? authHeader.split(' ')[1]
+// 			: authHeader.split(' ')[1];
+
+// 		try {
+// 			const user = JWTService.verifyAccessToken(token);
+// 			req.user = user;
+// 			next();
+// 		} catch (error) {
+// 			return res.status(401).json({
+// 				message: 'Token không hợp lệ hoặc đã hết hạn',
+// 				error: 'TOKEN_EXPIRED',
+// 			});
+// 		}
+// 	} else {
+// 		return res.status(401).json({
+// 			message: 'Bạn chưa xác thực',
+// 			error: 'NO_TOKEN',
+// 		});
+// 	}
+// }
 
 export function authenticateToken(req: any, res: Response, next: any) {
 	const authHeader = req.headers.token || req.headers.authorization;
@@ -14,15 +41,30 @@ export function authenticateToken(req: any, res: Response, next: any) {
 			req.user = user;
 			next();
 		} catch (error) {
-			return res.status(403).json({
-				message: 'Token không hợp lệ hoặc đã hết hạn',
-				error: 'TOKEN_EXPIRED',
+			if (error instanceof jwt.TokenExpiredError) {
+				return res.status(401).json({
+					message: 'Token hết hạn',
+					data: {
+						name: 'EXPIRED_TOKEN',
+						message: 'Token hết hạn',
+					}
+				});
+			}
+			return res.status(401).json({
+				message: 'Token không hợp lệ',
+				data: {
+					name: 'INVALID_TOKEN',
+					message: 'Token không hợp lệ',
+				}
 			});
 		}
 	} else {
 		return res.status(401).json({
 			message: 'Bạn chưa xác thực',
-			error: 'NO_TOKEN',
+			data: {
+				name: 'NO_TOKEN',
+				message: 'Bạn chưa xác thực',
+			},
 		});
 	}
 }
