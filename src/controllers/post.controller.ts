@@ -13,6 +13,7 @@ import {
 	createVehiclePost,
 	createBatteryPost,
 } from '../services/post.service';
+import { checkAndProcessPostPayment } from '../services/service.service';
 
 export async function listPosts(req: Request, res: Response) {
 	try {
@@ -232,6 +233,44 @@ export async function createVehiclePostController(req: Request, res: Response) {
 			[fieldname: string]: Express.Multer.File[];
 		};
 
+		// Extract userId from JWT token
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res.status(401).json({
+				message: 'Không tìm thấy token xác thực',
+			});
+		}
+
+		const token = authHeader.split(' ')[1];
+		const decoded = jwt.verify(
+			token,
+			process.env.JWT_SECRET || 'your-secret-key',
+		) as { userId: number };
+		const userId = decoded.userId;
+
+		// Validate serviceId for payment check
+		if (!postData.serviceId) {
+			return res.status(400).json({
+				message: 'Thiếu serviceId để kiểm tra thanh toán',
+			});
+		}
+
+		// Check payment/quota before creating post
+		const paymentCheck = await checkAndProcessPostPayment(
+			userId,
+			parseInt(postData.serviceId),
+		);
+
+		if (!paymentCheck.canPost) {
+			// User needs to pay or top up credit
+			return res.status(402).json({
+				message: paymentCheck.message,
+				needPayment: true,
+				priceRequired: paymentCheck.priceRequired,
+			});
+		}
+
+		// If canPost is true, proceed with post creation
 		// Validate dữ liệu cơ bản
 		if (
 			!postData.brand ||
@@ -323,6 +362,44 @@ export async function createBatteryPostController(req: Request, res: Response) {
 			[fieldname: string]: Express.Multer.File[];
 		};
 
+		// Extract userId from JWT token
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res.status(401).json({
+				message: 'Không tìm thấy token xác thực',
+			});
+		}
+
+		const token = authHeader.split(' ')[1];
+		const decoded = jwt.verify(
+			token,
+			process.env.JWT_SECRET || 'your-secret-key',
+		) as { userId: number };
+		const userId = decoded.userId;
+
+		// Validate serviceId for payment check
+		if (!postData.serviceId) {
+			return res.status(400).json({
+				message: 'Thiếu serviceId để kiểm tra thanh toán',
+			});
+		}
+
+		// Check payment/quota before creating post
+		const paymentCheck = await checkAndProcessPostPayment(
+			userId,
+			parseInt(postData.serviceId),
+		);
+
+		if (!paymentCheck.canPost) {
+			// User needs to pay or top up credit
+			return res.status(402).json({
+				message: paymentCheck.message,
+				needPayment: true,
+				priceRequired: paymentCheck.priceRequired,
+			});
+		}
+
+		// If canPost is true, proceed with post creation
 		// Validate dữ liệu cơ bản
 		if (
 			!postData.brand ||

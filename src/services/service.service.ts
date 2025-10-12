@@ -13,13 +13,17 @@ export async function getAllServices(): Promise<Service[]> {
 	return rows as Service[];
 }
 
-export async function getServicePostByProductType(type: string, productType: string, userId: number): Promise<Service> {
+export async function getServicePostByProductType(
+	type: string,
+	productType: string,
+	userId: number,
+): Promise<Service> {
 	// const [rows] = await pool.query(
 	// 	'select id, name,description, cost from services where type = ? and product_type = ?',
 	// 	[type, productType],
 	// );
 	const [rows] = await pool.query(
-	`SELECT 
+		`SELECT 
 		s.id,
 		s.name,
 		s.description,
@@ -32,9 +36,115 @@ export async function getServicePostByProductType(type: string, productType: str
 	WHERE 
 		s.type = ?
 		AND s.product_type = ?`,
-	[userId, type, productType]
-);
+		[userId, type, productType],
+	);
 	return rows as any;
+}
+
+// Kiểm tra và xử lý quota/payment khi tạo post
+export async function checkAndProcessPostPayment(
+	userId: number,
+	serviceId: number,
+): Promise<{
+	canPost: boolean;
+	needPayment: boolean;
+	message: string;
+	priceRequired?: number;
+}> {
+	const conn = await pool.getConnection();
+	try {
+		await conn.beginTransaction();
+
+		// 1. Kiểm tra user_quota
+		const [quotaRows]: any = await conn.query(
+			'SELECT amount FROM user_quota WHERE user_id = ? AND service_id = ? FOR UPDATE',
+			[userId, serviceId],
+		);
+
+		// Nếu có quota và amount > 0
+		if (quotaRows.length > 0 && quotaRows[0].amount > 0) {
+			// Trừ 1 lần sử dụng
+			await conn.query(
+				'UPDATE user_quota SET amount = amount - 1 WHERE user_id = ? AND service_id = ?',
+				[userId, serviceId],
+			);
+			await conn.commit();
+			return {
+				canPost: true,
+				needPayment: false,
+				message: 'Sử dụng quota thành công',
+			};
+		}
+
+		// 2. Nếu không có quota hoặc amount = 0, kiểm tra total_credit
+		const [serviceRows]: any = await conn.query(
+			'SELECT cost FROM services WHERE id = ?',
+			[serviceId],
+		);
+
+		if (serviceRows.length === 0) {
+			await conn.rollback();
+			return {
+				canPost: false,
+				needPayment: false,
+				message: 'Dịch vụ không tồn tại',
+			};
+		}
+
+		const serviceCost = parseFloat(serviceRows[0].cost);
+
+		const [userRows]: any = await conn.query(
+			'SELECT total_credit FROM users WHERE id = ? FOR UPDATE',
+			[userId],
+		);
+
+		if (userRows.length === 0) {
+			await conn.rollback();
+			return {
+				canPost: false,
+				needPayment: false,
+				message: 'User không tồn tại',
+			};
+		}
+
+		const userCredit = parseFloat(userRows[0].total_credit);
+
+		// 3. Kiểm tra credit có đủ không
+		if (userCredit < serviceCost) {
+			await conn.rollback();
+			return {
+				canPost: false,
+				needPayment: true,
+				message: `Không đủ credit. Cần ${serviceCost} VND, hiện tại: ${userCredit} VND`,
+				priceRequired: serviceCost - userCredit,
+			};
+		}
+
+		// 4. Trừ credit
+		await conn.query(
+			'UPDATE users SET total_credit = total_credit - ? WHERE id = ?',
+			[serviceCost, userId],
+		);
+
+		// 5. Tạo record order để tracking
+		const orderCode = Math.floor(Math.random() * 1000000);
+		await conn.query(
+			'INSERT INTO orders (code, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+			[orderCode, serviceId, userId, serviceCost, 'PAID', 'CREDIT'],
+		);
+
+		await conn.commit();
+		return {
+			canPost: true,
+			needPayment: false,
+			message: 'Thanh toán thành công bằng credit',
+		};
+	} catch (error) {
+		await conn.rollback();
+		throw error;
+	} finally {
+		conn.release();
+	}
 }
 
 export async function createTopupPayment(payload: Payment) {
@@ -204,7 +314,8 @@ export async function purchasePackage(orderCode: string, user_id: number) {
 	// và cập nhật service_id và service_expiry
 	// giả sử mỗi gói dịch vụ có thời hạn 30 ngày
 
-	if (paymentStatus.data.data.status === 'PAID' &&
+	if (
+		paymentStatus.data.data.status === 'PAID' &&
 		currentOrderStatus !== 'PAID'
 	) {
 		const [updateOrder] = await pool.query(

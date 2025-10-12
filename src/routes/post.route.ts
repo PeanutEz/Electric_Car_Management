@@ -460,8 +460,10 @@ router.post(
  * @swagger
  * /api/post/create-post-vehicle:
  *   post:
- *     summary: Tạo bài viết xe với upload ảnh
+ *     summary: Tạo bài viết xe với upload ảnh (Kiểm tra quota/credit trước)
  *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
  *     consumes:
  *       - multipart/form-data
  *     requestBody:
@@ -471,6 +473,7 @@ router.post(
  *           schema:
  *             type: object
  *             required:
+ *               - serviceId
  *               - brand
  *               - model
  *               - price
@@ -479,6 +482,10 @@ router.post(
  *               - power
  *               - seats
  *             properties:
+ *               serviceId:
+ *                 type: integer
+ *                 example: 1
+ *                 description: ID của dịch vụ đăng bài để kiểm tra thanh toán
  *               brand:
  *                 type: string
  *                 example: Tesla
@@ -535,11 +542,30 @@ router.post(
  *         description: Tạo bài viết xe thành công
  *       400:
  *         description: Thiếu thông tin bắt buộc
+ *       401:
+ *         description: Không có token xác thực
+ *       402:
+ *         description: Cần thanh toán hoặc nạp tiền
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Bạn không đủ credit. Vui lòng nạp thêm 50000 VND.
+ *                 needPayment:
+ *                   type: boolean
+ *                   example: true
+ *                 priceRequired:
+ *                   type: number
+ *                   example: 50000
  *       500:
  *         description: Lỗi server
  */
 router.post(
 	'/create-post-vehicle',
+	authenticateToken,
 	upload.fields([
 		{ name: 'image', maxCount: 1 },
 		{ name: 'images', maxCount: 6 },
@@ -551,8 +577,10 @@ router.post(
  * @swagger
  * /api/post/create-post-battery:
  *   post:
- *     summary: Tạo bài viết pin với upload ảnh
+ *     summary: Tạo bài viết pin với upload ảnh (Kiểm tra quota/credit trước)
  *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
  *     consumes:
  *       - multipart/form-data
  *     requestBody:
@@ -562,6 +590,7 @@ router.post(
  *           schema:
  *             type: object
  *             required:
+ *               - serviceId
  *               - brand
  *               - model
  *               - price
@@ -570,6 +599,10 @@ router.post(
  *               - capacity
  *               - voltage
  *             properties:
+ *               serviceId:
+ *                 type: integer
+ *                 example: 1
+ *                 description: ID của dịch vụ đăng bài để kiểm tra thanh toán
  *               brand:
  *                 type: string
  *                 example: Panasonic
@@ -622,11 +655,30 @@ router.post(
  *         description: Tạo bài viết pin thành công
  *       400:
  *         description: Thiếu thông tin bắt buộc
+ *       401:
+ *         description: Không có token xác thực
+ *       402:
+ *         description: Cần thanh toán hoặc nạp tiền
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Bạn không đủ credit. Vui lòng nạp thêm 50000 VND.
+ *                 needPayment:
+ *                   type: boolean
+ *                   example: true
+ *                 priceRequired:
+ *                   type: number
+ *                   example: 50000
  *       500:
  *         description: Lỗi server
  */
 router.post(
 	'/create-post-battery',
+	authenticateToken,
 	upload.fields([
 		{ name: 'image', maxCount: 1 },
 		{ name: 'images', maxCount: 6 },
