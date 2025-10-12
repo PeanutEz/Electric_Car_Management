@@ -27,11 +27,11 @@ ID  Name                          type            cost          number_of_post  
 5  Kiểm duyệt cho vehicle có phí   verify          50000             0                 0                   1                 5
 6  Kiểm duyệt cho battery có phí    verify          50000             0                 0                   1                 6
 7  Gói cơ bản(3 lần đăng tin cho xe)   package               100000            3                 0                   0                  1
-8  gói nâng cao (3 push 3 post cho xe)   package           300000            3                 3                   0                  1,2
+8  gói nâng cao (3 push 3 post cho xe)   package           300000            3                 3                   0                  1,3
 
 ## 📦 Table: `user_quota`
 id  user_id  service_id  amount
-1      1         1         3
-2      1         2         1
+1      1         1         0
+2      1         2         0
 
 

@@ -63,8 +63,6 @@ export async function checkAndProcessPostPayment(
 			'SELECT amount FROM user_quota WHERE user_id = ? AND service_id = ? FOR UPDATE',
 			[userId, serviceId],
 		);
-		
-
 
 		// Nếu có quota và amount > 0
 		if (quotaRows.length > 0 && quotaRows[0].amount > 0) {
@@ -105,14 +103,7 @@ export async function checkAndProcessPostPayment(
 			// Tạo order trong database với status PENDING
 			await pool.query(
 				'INSERT INTO orders (code, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-				[
-					orderCode,
-					serviceId,
-					userId,
-					serviceCost,
-					'PENDING',
-					'PAYOS',
-				],
+				[orderCode, serviceId, userId, serviceCost, 'PENDING', 'PAYOS'],
 			);
 			try {
 				// Tạo payment link PayOS
@@ -151,7 +142,7 @@ export async function checkAndProcessPostPayment(
 
 		// 2. Nếu không có quota hoặc amount = 0, kiểm tra total_credit
 		const [serviceRows]: any = await conn.query(
-			'SELECT cost, name FROM services WHERE id = ?',
+			'SELECT cost, name, number_of_post FROM services WHERE id = ?',
 			[serviceId],
 		);
 
@@ -166,6 +157,7 @@ export async function checkAndProcessPostPayment(
 
 		const serviceCost = parseFloat(serviceRows[0].cost);
 		const serviceName = serviceRows[0].name;
+		const numberOfPost = parseInt(serviceRows[0].number_of_post || 1); // Số lượng post từ service
 
 		const [userRows]: any = await conn.query(
 			'SELECT total_credit FROM users WHERE id = ? FOR UPDATE',
@@ -184,7 +176,43 @@ export async function checkAndProcessPostPayment(
 		const userCredit = parseFloat(userRows[0].total_credit);
 
 		// 3. Kiểm tra credit có đủ không
-		if (userCredit < serviceCost) {
+		if (userCredit >= serviceCost) {
+			// ✅ Đủ credit → Trừ tiền + Cộng quota + Trừ 1 quota để đăng bài
+
+			// Trừ tiền
+			await conn.query(
+				'UPDATE users SET total_credit = total_credit - ? WHERE id = ?',
+				[serviceCost, userId],
+			);
+
+			// Cộng quota theo số lượng post của service
+			await conn.query(
+				'UPDATE user_quota SET amount = amount + ? WHERE user_id = ? AND service_id = ?',
+				[numberOfPost, userId, serviceId],
+			);
+
+			// Trừ 1 quota để đăng bài ngay
+			await conn.query(
+				'UPDATE user_quota SET amount = amount - 1 WHERE user_id = ? AND service_id = ?',
+				[userId, serviceId],
+			);
+
+			// Tạo order để tracking
+			const orderCode = Math.floor(Math.random() * 1000000);
+			await conn.query(
+				'INSERT INTO orders (code, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+				[orderCode, serviceId, userId, serviceCost, 'PAID', 'CREDIT'],
+			);
+
+			await conn.commit();
+			return {
+				canPost: true,
+				needPayment: false,
+				message: `Thanh toán thành công ${serviceCost} VND. Quota còn lại: ${
+					numberOfPost - 1
+				}`,
+			};
+		} else if (userCredit < serviceCost) {
 			await conn.rollback();
 
 			// Tạo payment link PayOS
@@ -241,24 +269,12 @@ export async function checkAndProcessPostPayment(
 			}
 		}
 
-		// 4. Trừ credit
-		await conn.query(
-			'UPDATE users SET total_credit = total_credit - ? WHERE id = ?',
-			[serviceCost, userId],
-		);
-
-		// 5. Tạo record order để tracking
-		const orderCode = Math.floor(Math.random() * 1000000);
-		await conn.query(
-			'INSERT INTO orders (code, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-			[orderCode, serviceId, userId, serviceCost, 'PAID', 'CREDIT'],
-		);
-
-		await conn.commit();
+		// Không nên đến đây (đã handle hết các case ở trên)
+		await conn.rollback();
 		return {
-			canPost: true,
+			canPost: false,
 			needPayment: false,
-			message: 'Thanh toán thành công bằng credit',
+			message: 'Lỗi logic không xác định',
 		};
 	} catch (error) {
 		await conn.rollback();

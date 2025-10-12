@@ -183,32 +183,33 @@ export async function createPost(req: Request, res: Response) {
 			!postData.brand ||
 			!postData.model ||
 			!postData.price ||
-			!postData.title
+			!postData.title || 
+			!postData.category_id
 		) {
 			return res.status(400).json({
 				message:
-					'Thiếu thông tin bắt buộc (brand, model, price, title)',
+					'Thiếu thông tin bắt buộc (brand, model, price, title, category_id)',
 			});
 		}
 
 		// Parse category từ JSON string
-		let category;
-		try {
-			category =
-				typeof postData.category === 'string'
-					? JSON.parse(postData.category)
-					: postData.category;
-		} catch (error) {
-			return res.status(400).json({
-				message: 'Category phải là JSON hợp lệ',
-			});
-		}
+		// let category;
+		// try {
+		// 	category =
+		// 		typeof postData.category === 'string'
+		// 			? JSON.parse(postData.category)
+		// 			: postData.category;
+		// } catch (error) {
+		// 	return res.status(400).json({
+		// 		message: 'Category phải là JSON hợp lệ',
+		// 	});
+		// }
 
-		if (!category || !category.id || !category.type) {
-			return res.status(400).json({
-				message: 'Category phải có id và type',
-			});
-		}
+		// if (!category || !category.id || !category.type) {
+		// 	return res.status(400).json({
+		// 		message: 'Category phải có id và type',
+		// 	});
+		// }
 
 		let imageUrl = '';
 		let imageUrls: string[] = [];
@@ -228,11 +229,10 @@ export async function createPost(req: Request, res: Response) {
 			);
 			imageUrls = uploadResults.map((result) => result.secure_url);
 		}
-
 		// Chuẩn bị dữ liệu để insert
 		const postDataWithImages = {
 			...postData,
-			category,
+			category_id: parseInt(postData.category_id),
 			image: imageUrl,
 			images: imageUrls,
 		};

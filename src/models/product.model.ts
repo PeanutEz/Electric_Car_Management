@@ -21,6 +21,7 @@ export interface ProductImage {
 export interface Vehicle {
 	id: number;
 	product_category_id?: number;
+	category_id?: number;
 	status?: string;
 	brand: string;
 	model: string;
@@ -49,6 +50,7 @@ export interface Vehicle {
 export interface Battery {
 	id: number;
 	product_category_id?: number;
+	category_id?: number;
 	status?: string;
 	brand: string;
 	model: string;

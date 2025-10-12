@@ -26,7 +26,7 @@ export async function paginatePosts(
 
 	// Lấy IDs của products
 	const productIds = (rows as any[]).map((r: any) => r.id);
-	console.log('haha' + category_type);
+
 	// Lấy images cho tất cả products một lần
 	let images: any[] = [];
 	if (productIds.length > 0) {
@@ -225,22 +225,31 @@ export async function createNewPost(
 	const conn = await pool.getConnection();
 	try {
 		await conn.beginTransaction();
-		const {brand, model, price, year, description, address, warranty, title, image, images, category, created_by} = postData;
+		const {brand, model, price, year, description, address, warranty, title, image, images, category, category_id, created_by} = postData;
 
+
+		// const [rows]: any = await pool.query(
+		// 	'SELECT * FROM product_categories WHERE id = ? AND type = ?',
+		// 	[category?.id, category?.type],
+		// );
 
 		const [rows]: any = await pool.query(
-			'SELECT * FROM product_categories WHERE id = ? AND type = ?',
-			[category?.id, category?.type],
+			'SELECT type as category_type FROM product_categories WHERE id = ?',
+			[category_id],
 		);
+		const category_type = rows[0]?.category_type;
+
+
+		console.log("service " + category_id + " type: " + category_type);
 
 		if (rows.length === 0) {
-			throw new Error('Invalid category ID or type');
+			throw new Error('Invalid category ID');
 		}
 
 		const [result] = await conn.query(
 			'INSERT INTO products (product_category_id, brand, model, price, year, warranty, description, address, title, image, status, created_at, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
 			[
-				category?.id,
+				category_id,
 				brand,
 				model,
 				price,
@@ -270,7 +279,7 @@ export async function createNewPost(
 		let data: Vehicle | Battery;
 
 		// ✅ Insert vehicle
-		if (category?.type === 'vehicle') {
+		if (category_type === 'vehicle') {
 			const { power, mileage, seats, color } =
 				postData as Partial<Vehicle>;
 
@@ -290,7 +299,7 @@ export async function createNewPost(
 		}
 
 		// ✅ Insert battery
-		else if (category?.type === 'battery') {
+		else if (category_type === 'battery') {
 			const { capacity, voltage, health } = postData as Partial<Battery>;
 
 			await conn.query(
