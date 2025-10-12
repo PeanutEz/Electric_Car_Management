@@ -8,7 +8,7 @@ import {
 	registerUser,
 	updateUser,
 	updatePhoneUser,
-	getPostByUserId
+	getPostByUserId,
 } from '../services/user.service';
 import jwt from 'jsonwebtoken';
 import * as uploadService from '../services/upload.service';
@@ -45,10 +45,11 @@ export async function userDetail(req: Request, res: Response) {
 					verificationStatus: user.verificationStatus,
 					role: user.role,
 					recentTransactions: {
-						description: user.recentTransaction?.description || null,
+						description:
+							user.recentTransaction?.description || null,
 						date: user.recentTransaction?.date || null,
 						amount: user.recentTransaction?.amount || null,
-					}
+					},
 				},
 				refresh_token: user.refresh_token,
 				expired_refresh_token: user.expired_refresh_token,
@@ -169,29 +170,31 @@ export async function login(req: Request, res: Response) {
 // 	}
 // }
 export async function refreshToken(req: any, res: Response) {
-    try {
-        const refreshTokenRaw = req.body['refresh-token'];
-        if (!refreshTokenRaw) {
-            return res.status(400).json({ message: 'Refresh token là bắt buộc' });
-        }
+	try {
+		const refreshTokenRaw = req.body['refresh-token'];
+		if (!refreshTokenRaw) {
+			return res
+				.status(400)
+				.json({ message: 'Refresh token là bắt buộc' });
+		}
 
-        // Remove "Bearer " prefix if present
-        const refreshToken = refreshTokenRaw.startsWith('Bearer ')
-            ? refreshTokenRaw.substring(7)
-            : refreshTokenRaw;
+		// Remove "Bearer " prefix if present
+		const refreshToken = refreshTokenRaw.startsWith('Bearer ')
+			? refreshTokenRaw.substring(7)
+			: refreshTokenRaw;
 
-        const result = await refreshUserToken(refreshToken);
+		const result = await refreshUserToken(refreshToken);
 
-        return res.status(200).json({
-            message: 'Làm mới token thành công',
-            data: {
-                access_token: result.access_token,
-            },
-        });
-    } catch (error: any) {
-        const msg = error?.message || 'Không thể làm mới token';
-        return res.status(401).json({ message: msg });
-    }
+		return res.status(200).json({
+			message: 'Làm mới token thành công',
+			data: {
+				access_token: result.access_token,
+			},
+		});
+	} catch (error: any) {
+		const msg = error?.message || 'Không thể làm mới token';
+		return res.status(401).json({ message: msg });
+	}
 }
 
 export async function logout(req: Request, res: Response) {
@@ -291,14 +294,14 @@ export async function updateUserPhone(req: Request, res: Response) {
 			message: 'Cập nhật số điện thoại người dùng thành công',
 			data: {
 				user: {
-				id: user.id,
-				status: user.status,
-				full_name: user.full_name,
-				email: user.email,
-				phone: phone,
-				reputation: user.reputation,
-				total_credit: user.total_credit,
-				role: user.role,
+					id: user.id,
+					status: user.status,
+					full_name: user.full_name,
+					email: user.email,
+					phone: phone,
+					reputation: user.reputation,
+					total_credit: user.total_credit,
+					role: user.role,
 				},
 				access_token: user.access_token,
 				expired_access_token: 3600, // 1 hour in seconds
@@ -328,8 +331,7 @@ export async function getUserPosts(req: Request, res: Response) {
 		console.log('id user from token:', id);
 		if (!id) {
 			return res.status(403).json({
-				message:
-					'Vui lòng đăng nhập để xem bài viết của bạn',
+				message: 'Vui lòng đăng nhập để xem bài viết của bạn',
 			});
 		}
 		const posts = await getPostByUserId(id);
