@@ -192,7 +192,7 @@ export async function registerUser(userData: User) {
 	);
 
 	const user = rows[0];
-   const roleName: any = await pool.query(
+	const roleName: any = await pool.query(
 		'select r.name as role from users u inner join roles r on u.role_id = r.id where u.id = ?',
 		[insertedId],
 	);
@@ -318,7 +318,6 @@ export async function updatePhoneUser(userId: number, phone: string) {
 
 	// Lưu refresh token vào database
 	await JWTService.saveRefreshToken(userId, token.refreshToken);
-	
 
 	return {
 		id: user1[0].id,
@@ -337,10 +336,133 @@ export async function updatePhoneUser(userId: number, phone: string) {
 }
 
 export async function getPostByUserId(userId: number) {
+	// Lấy tất cả products của user với thông tin category
 	const [posts]: any = await pool.query(
-		`select p.id, p.title,p.brand, p.model,p.description,p.year,p.address,p.image,p.end_date,p.warranty,p.priority,p.price, p.status, p.created_at, pc.name as category 
-		from products p inner join product_categories pc on p.product_category_id = pc.id where p.created_by = ? order by p.created_at desc`,
+		`SELECT 
+			p.id, 
+			p.title,
+			p.brand, 
+			p.model,
+			p.description,
+			p.year,
+			p.address,
+			p.image,
+			p.end_date,
+			p.warranty,
+			p.priority,
+			p.price, 
+			p.status, 
+			p.created_at,
+			p.updated_at,
+			pc.id as category_id,
+			pc.name as category,
+			pc.type as category_type,
+			pc.slug as category_slug
+		FROM products p 
+		INNER JOIN product_categories pc ON p.product_category_id = pc.id 
+		WHERE p.created_by = ? 
+		ORDER BY p.created_at DESC`,
 		[userId],
 	);
-	return posts;
+
+	// Lấy IDs của products
+	const productIds = posts.map((p: any) => p.id);
+
+	if (productIds.length === 0) {
+		return [];
+	}
+
+	// Lấy thông tin vehicles cho các product là vehicle
+	const [vehicles]: any = await pool.query(
+		`SELECT 
+			product_id,
+			color,
+			seats,
+			mileage_km,
+			battery_capacity,
+			license_plate,
+			engine_number,
+			is_verified,
+			power
+		FROM vehicles 
+		WHERE product_id IN (${productIds.map(() => '?').join(',')})`,
+		productIds,
+	);
+
+	// Lấy thông tin batteries cho các product là battery
+	const [batteries]: any = await pool.query(
+		`SELECT 
+			product_id,
+			capacity,
+			health,
+			chemistry,
+			voltage,
+			dimension
+		FROM batteries 
+		WHERE product_id IN (${productIds.map(() => '?').join(',')})`,
+		productIds,
+	);
+
+	// Lấy images cho tất cả products
+	const [images]: any = await pool.query(
+		`SELECT 
+			product_id,
+			url
+		FROM product_imgs 
+		WHERE product_id IN (${productIds.map(() => '?').join(',')})`,
+		productIds,
+	);
+
+	// Map vehicles, batteries, và images vào từng post
+	const vehicleMap = new Map(vehicles.map((v: any) => [v.product_id, v]));
+	const batteryMap = new Map(batteries.map((b: any) => [b.product_id, b]));
+
+	// Group images by product_id
+	const imageMap = new Map();
+	images.forEach((img: any) => {
+		if (!imageMap.has(img.product_id)) {
+			imageMap.set(img.product_id, []);
+		}
+		imageMap.get(img.product_id).push(img.url);
+	});
+
+	// Kết hợp tất cả thông tin
+	return posts.map((post: any) => {
+		const result: any = {
+			id: post.id,
+			title: post.title,
+			brand: post.brand,
+			model: post.model,
+			description: post.description,
+			year: post.year,
+			address: post.address,
+			image: post.image,
+			end_date: post.end_date,
+			warranty: post.warranty,
+			priority: post.priority,
+			price: post.price,
+			status: post.status,
+			created_at: post.created_at,
+			updated_at: post.updated_at,
+			category: {
+				id: post.category_id,
+				name: post.category,
+				type: post.category_type,
+				slug: post.category_slug,
+			},
+			images: imageMap.get(post.id) || [],
+		};
+
+		// Thêm vehicle info nếu là vehicle
+		if (vehicleMap.has(post.id)) {
+			result.vehicle = vehicleMap.get(post.id);
+		}
+
+		// Thêm battery info nếu là battery
+		if (batteryMap.has(post.id)) {
+			result.battery = batteryMap.get(post.id);
+		}
+
+		return result;
+	});
 }
