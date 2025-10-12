@@ -225,20 +225,7 @@ export async function createNewPost(
 	const conn = await pool.getConnection();
 	try {
 		await conn.beginTransaction();
-		const {
-			brand,
-			model,
-			price,
-			year,
-			description,
-			address,
-			warranty,
-			title,
-			image,
-			images,
-			category,
-			created_by,
-		} = postData;
+		const {brand, model, price, year, description, address, warranty, title, image, images, category, created_by} = postData;
 
 
 		const [rows]: any = await pool.query(
@@ -288,8 +275,6 @@ export async function createNewPost(
 		);
 
 		const insertId = (result as any).insertId;
-
-
 
 		// Lưu các ảnh phụ vào bảng product_imgs
 		if (images && Array.isArray(images) && images.length > 0) {

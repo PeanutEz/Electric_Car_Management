@@ -239,7 +239,7 @@ router.post('/login', login);
  *                   type: string
  *                   example: "Token làm mới không hợp lệ hoặc đã hết hạn"
  */
-router.post('/refresh-token', authenticateToken, refreshToken);
+router.post('/refresh-token', refreshToken);
 
 /**
  * @swagger
