@@ -122,11 +122,22 @@ Cho phép │    │Đủ tiền? │
 
 ```json
 {
-	"message": "Bạn không đủ credit. Vui lòng nạp thêm 50000 VND.",
+	"message": "Không đủ credit. Cần 50000 VND, hiện tại: 10000 VND. Vui lòng thanh toán.",
 	"needPayment": true,
-	"priceRequired": 50000
+	"priceRequired": 40000,
+	"checkoutUrl": "https://pay.payos.vn/web/abc123xyz",
+	"orderCode": 123456
 }
 ```
+
+**Flow sau khi nhận 402:**
+
+1. Frontend redirect user đến `checkoutUrl` (PayOS payment page)
+2. User hoàn tất thanh toán trên PayOS
+3. PayOS redirect về `returnUrl`: `/payment/success?type=service&orderCode=123456`
+4. Frontend gọi API `POST /api/service/process-service-payment` với `{ userId, orderCode }`
+5. Backend cập nhật credit và order status
+6. User có thể tạo post ngay sau đó
 
 ### 3. Create Battery Post
 
@@ -152,6 +163,36 @@ Cho phép │    │Đủ tiền? │
   "address": "TP.HCM",
   "image": File,
   "images": [File, File]
+}
+```
+
+### 4. Process Service Payment (After PayOS Success)
+
+**Endpoint:** `POST /api/service/process-service-payment`
+**Authentication:** Not Required (Called from success page)
+
+#### Request Body
+
+```json
+{
+	"userId": 123,
+	"orderCode": "456789"
+}
+```
+
+#### Response - Success (200)
+
+```json
+{
+	"message": "Xử lý thanh toán dịch vụ thành công",
+	"data": {
+		"user": {
+			"id": 123,
+			"total_credit": 50000
+		},
+		"canPost": true,
+		"message": "Thanh toán thành công. Bạn có thể tạo bài post ngay."
+	}
 }
 ```
 

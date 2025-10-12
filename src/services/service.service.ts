@@ -50,6 +50,9 @@ export async function checkAndProcessPostPayment(
 	needPayment: boolean;
 	message: string;
 	priceRequired?: number;
+	checkoutUrl?: string;
+	orderCode?: number;
+	payosResponse?: any; // ⭐ Thêm để debug PayOS response
 }> {
 	const conn = await pool.getConnection();
 	try {
@@ -60,6 +63,8 @@ export async function checkAndProcessPostPayment(
 			'SELECT amount FROM user_quota WHERE user_id = ? AND service_id = ? FOR UPDATE',
 			[userId, serviceId],
 		);
+		
+
 
 		// Nếu có quota và amount > 0
 		if (quotaRows.length > 0 && quotaRows[0].amount > 0) {
@@ -74,11 +79,79 @@ export async function checkAndProcessPostPayment(
 				needPayment: false,
 				message: 'Sử dụng quota thành công',
 			};
+		} else if (quotaRows.length == 0) {
+			await conn.query(
+				'INSERT INTO user_quota (user_id, service_id, amount) VALUES (?, ?, 0)',
+				[userId, serviceId],
+			);
+			await conn.commit();
+			// trả về link thanh toán
+			// Lấy thông tin service để biết giá
+			const [serviceRows]: any = await conn.query(
+				'SELECT cost, name FROM services WHERE id = ?',
+				[serviceId],
+			);
+			if (serviceRows.length === 0) {
+				return {
+					canPost: false,
+					needPayment: false,
+					message: 'Dịch vụ không tồn tại',
+				};
+			}
+			const serviceCost = parseFloat(serviceRows[0].cost);
+			const serviceName = serviceRows[0].name;
+			// Tạo payment link PayOS
+			const orderCode = Math.floor(Math.random() * 1000000);
+			// Tạo order trong database với status PENDING
+			await pool.query(
+				'INSERT INTO orders (code, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+				[
+					orderCode,
+					serviceId,
+					userId,
+					serviceCost,
+					'PENDING',
+					'PAYOS',
+				],
+			);
+			try {
+				// Tạo payment link PayOS
+				const paymentLinkRes = await payos.paymentRequests.create({
+					orderCode: orderCode,
+					amount: Math.round(serviceCost),
+					description: `Thanh toan dich vu`, // PayOS giới hạn 25 ký tự
+					returnUrl: `${
+						process.env.CLIENT_URL || 'http://localhost:3000'
+					}/payment/success?type=service&orderCode=${orderCode}`,
+					cancelUrl: `${
+						process.env.CLIENT_URL || 'http://localhost:3000'
+					}/payment/cancel`,
+				});
+				console.log('PayOS response:', paymentLinkRes);
+				return {
+					canPost: false,
+					needPayment: true,
+					message: `Bạn chưa có quota. Vui lòng thanh toán để nhận quota.`,
+					priceRequired: serviceCost,
+					checkoutUrl: paymentLinkRes.checkoutUrl,
+					orderCode: orderCode,
+					payosResponse: paymentLinkRes, // ⭐ Trả về toàn bộ response để debug
+				};
+			} catch (payosError: any) {
+				console.error('PayOS error:', payosError);
+				// Nếu PayOS fail, vẫn trả về response nhưng không có checkoutUrl
+				return {
+					canPost: false,
+					needPayment: true,
+					message: `Bạn chưa có quota. Lỗi tạo link thanh toán: ${payosError.message}`,
+					priceRequired: serviceCost,
+				};
+			}
 		}
 
 		// 2. Nếu không có quota hoặc amount = 0, kiểm tra total_credit
 		const [serviceRows]: any = await conn.query(
-			'SELECT cost FROM services WHERE id = ?',
+			'SELECT cost, name FROM services WHERE id = ?',
 			[serviceId],
 		);
 
@@ -92,6 +165,7 @@ export async function checkAndProcessPostPayment(
 		}
 
 		const serviceCost = parseFloat(serviceRows[0].cost);
+		const serviceName = serviceRows[0].name;
 
 		const [userRows]: any = await conn.query(
 			'SELECT total_credit FROM users WHERE id = ? FOR UPDATE',
@@ -112,12 +186,59 @@ export async function checkAndProcessPostPayment(
 		// 3. Kiểm tra credit có đủ không
 		if (userCredit < serviceCost) {
 			await conn.rollback();
-			return {
-				canPost: false,
-				needPayment: true,
-				message: `Không đủ credit. Cần ${serviceCost} VND, hiện tại: ${userCredit} VND`,
-				priceRequired: serviceCost - userCredit,
-			};
+
+			// Tạo payment link PayOS
+			const orderCode = Math.floor(Math.random() * 1000000);
+			const amountNeeded = serviceCost - userCredit;
+
+			// Tạo order trong database với status PENDING
+			await pool.query(
+				'INSERT INTO orders (code, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+				[
+					orderCode,
+					serviceId,
+					userId,
+					amountNeeded,
+					'PENDING',
+					'PAYOS',
+				],
+			);
+
+			try {
+				// Tạo payment link PayOS
+				const paymentLinkRes = await payos.paymentRequests.create({
+					orderCode: orderCode,
+					amount: Math.round(amountNeeded),
+					description: `Thanh toan dich vu`, // PayOS giới hạn 25 ký tự
+					returnUrl: `${
+						process.env.CLIENT_URL || 'http://localhost:3000'
+					}/payment/success?type=service&orderCode=${orderCode}`,
+					cancelUrl: `${
+						process.env.CLIENT_URL || 'http://localhost:3000'
+					}/payment/cancel`,
+				});
+
+				console.log('PayOS response:', paymentLinkRes);
+
+				return {
+					canPost: false,
+					needPayment: true,
+					message: `Không đủ credit. Cần ${serviceCost} VND, hiện tại: ${userCredit} VND. Vui lòng thanh toán.`,
+					priceRequired: amountNeeded,
+					checkoutUrl: paymentLinkRes.checkoutUrl,
+					orderCode: orderCode,
+					payosResponse: paymentLinkRes, // ⭐ Trả về toàn bộ response để debug
+				};
+			} catch (payosError: any) {
+				console.error('PayOS error:', payosError);
+				// Nếu PayOS fail, vẫn trả về response nhưng không có checkoutUrl
+				return {
+					canPost: false,
+					needPayment: true,
+					message: `Không đủ credit. Cần ${serviceCost} VND, hiện tại: ${userCredit} VND. Lỗi tạo link thanh toán: ${payosError.message}`,
+					priceRequired: amountNeeded,
+				};
+			}
 		}
 
 		// 4. Trừ credit
@@ -166,7 +287,7 @@ export async function createTopupPayment(payload: Payment) {
 		const response = await payos.paymentRequests.create({
 			orderCode,
 			amount: payload.amount,
-			description: payload.description || 'Nạp credit',
+			description: (payload.description || 'Nap credit').substring(0, 25),
 			returnUrl: `http://localhost:4000/payment-success?type=topup&orderCode=${orderCode}`,
 			cancelUrl: 'http://localhost:4000/payment-cancel',
 		});
@@ -260,7 +381,10 @@ export async function createPackagePayment(
 		const response = await payos.paymentRequests.create({
 			orderCode,
 			amount: cost,
-			description: payload.description || 'Mua gói dịch vụ',
+			description: (payload.description || 'Mua goi dich vu').substring(
+				0,
+				25,
+			),
 			returnUrl: `http://localhost:4000/payment-success?type=package&orderCode=${orderCode}`,
 			cancelUrl: 'http://localhost:4000/payment-cancel',
 		});
@@ -333,5 +457,57 @@ export async function purchasePackage(orderCode: string, user_id: number) {
 	return {
 		user: await getUserById(user_id),
 		//payment: paymentStatus.data.data
+	};
+}
+
+// Xử lý payment thành công cho service (post creation)
+export async function processServicePayment(orderCode: string, userId: number) {
+	const paymentStatus = await getPaymentStatus(orderCode);
+
+	// Kiểm tra user
+	const [userRows]: any = await pool.query(
+		'select * from users where id = ?',
+		[userId],
+	);
+	if (userRows.length === 0) {
+		throw new Error('User not found');
+	}
+
+	// Kiểm tra trạng thái order trong database
+	const [orderRows]: any = await pool.query(
+		'select status, price, service_id from orders where code = ?',
+		[orderCode],
+	);
+
+	if (orderRows.length === 0) {
+		throw new Error('Order not found');
+	}
+
+	const currentOrderStatus = orderRows[0].status;
+	const orderPrice = orderRows[0].price;
+	const serviceId = orderRows[0].service_id;
+
+	// Chỉ cập nhật nếu trạng thái payment là PAID và order chưa được xử lý
+	if (
+		paymentStatus.data.data.status === 'PAID' &&
+		currentOrderStatus !== 'PAID'
+	) {
+		// Update order status
+		await pool.query('update orders set status = ? where code = ?', [
+			'PAID',
+			orderCode,
+		]);
+
+		// Cộng tiền vào total_credit (để có thể post)
+		await pool.query(
+			'update users set total_credit = total_credit + ? where id = ?',
+			[orderPrice, userId],
+		);
+	}
+
+	return {
+		user: await getUserById(userId),
+		canPost: true,
+		message: 'Thanh toán thành công. Bạn có thể tạo bài post ngay.',
 	};
 }

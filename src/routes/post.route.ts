@@ -6,8 +6,6 @@ import {
 	updatePost,
 	createPost,
 	searchForPosts,
-	createVehiclePostController,
-	createBatteryPostController,
 } from '../controllers/post.controller';
 import {
 	authenticateToken,
@@ -317,8 +315,10 @@ router.put('/update-post-by-admin/:id', updatePost);
  * @swagger
  * /api/post/create-post:
  *   post:
- *     summary: Tạo bài viết mới với upload ảnh
+ *     summary: Tạo bài viết mới với upload ảnh (Kiểm tra quota/credit trước)
  *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
  *     consumes:
  *       - multipart/form-data
  *     requestBody:
@@ -328,12 +328,17 @@ router.put('/update-post-by-admin/:id', updatePost);
  *           schema:
  *             type: object
  *             required:
+ *               - serviceId
  *               - brand
  *               - model
  *               - price
  *               - title
  *               - category
  *             properties:
+ *               serviceId:
+ *                 type: integer
+ *                 example: 1
+ *                 description: ID của dịch vụ đăng bài để kiểm tra thanh toán
  *               brand:
  *                 type: string
  *                 example: Tesla
@@ -444,248 +449,35 @@ router.put('/update-post-by-admin/:id', updatePost);
  *                             example: "https://res.cloudinary.com/demo/image/upload/xyz789.jpg"
  *       400:
  *         description: Thiếu thông tin bắt buộc hoặc dữ liệu không hợp lệ
+ *       401:
+ *         description: Không có token xác thực
+ *       402:
+ *         description: Cần thanh toán hoặc nạp tiền
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Bạn không đủ credit. Vui lòng nạp thêm 50000 VND.
+ *                 needPayment:
+ *                   type: boolean
+ *                   example: true
+ *                 priceRequired:
+ *                   type: number
+ *                   example: 50000
  *       500:
  *         description: Lỗi server
  */
 router.post(
 	'/create-post',
+	authenticateToken,
 	upload.fields([
 		{ name: 'image', maxCount: 1 },
 		{ name: 'images', maxCount: 6 },
 	]),
 	createPost,
 );
-
-/**
- * @swagger
- * /api/post/create-post-vehicle:
- *   post:
- *     summary: Tạo bài viết xe với upload ảnh (Kiểm tra quota/credit trước)
- *     tags: [Posts]
- *     security:
- *       - bearerAuth: []
- *     consumes:
- *       - multipart/form-data
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             required:
- *               - serviceId
- *               - brand
- *               - model
- *               - price
- *               - title
- *               - category
- *               - power
- *               - seats
- *             properties:
- *               serviceId:
- *                 type: integer
- *                 example: 1
- *                 description: ID của dịch vụ đăng bài để kiểm tra thanh toán
- *               brand:
- *                 type: string
- *                 example: Tesla
- *               model:
- *                 type: string
- *                 example: Model 3
- *               price:
- *                 type: number
- *                 example: 800000000
- *               title:
- *                 type: string
- *                 example: Bán Tesla Model 3 2023 như mới
- *               year:
- *                 type: integer
- *                 example: 2023
- *               description:
- *                 type: string
- *                 example: Xe mới chạy 5000km, nội thất còn mới
- *               address:
- *                 type: string
- *                 example: Hà Nội
- *               category:
- *                 type: string
- *                 example: '{"id": 1}'
- *                 description: JSON string chứa thông tin category (type sẽ tự động set thành 'vehicle')
- *               power:
- *                 type: number
- *                 example: 283
- *                 description: Công suất (kW)
- *               mileage:
- *                 type: number
- *                 example: 5000
- *                 description: Số km đã đi
- *               seats:
- *                 type: integer
- *                 example: 5
- *                 description: Số ghế
- *               color:
- *                 type: string
- *                 example: Đen
- *                 description: Màu sắc
- *               image:
- *                 type: string
- *                 format: binary
- *                 description: Ảnh chính của xe
- *               images:
- *                 type: array
- *                 items:
- *                   type: string
- *                   format: binary
- *                 description: Các ảnh phụ (tối đa 6 ảnh)
- *     responses:
- *       201:
- *         description: Tạo bài viết xe thành công
- *       400:
- *         description: Thiếu thông tin bắt buộc
- *       401:
- *         description: Không có token xác thực
- *       402:
- *         description: Cần thanh toán hoặc nạp tiền
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Bạn không đủ credit. Vui lòng nạp thêm 50000 VND.
- *                 needPayment:
- *                   type: boolean
- *                   example: true
- *                 priceRequired:
- *                   type: number
- *                   example: 50000
- *       500:
- *         description: Lỗi server
- */
-router.post(
-	'/create-post-vehicle',
-	authenticateToken,
-	upload.fields([
-		{ name: 'image', maxCount: 1 },
-		{ name: 'images', maxCount: 6 },
-	]),
-	createVehiclePostController,
-);
-
-/**
- * @swagger
- * /api/post/create-post-battery:
- *   post:
- *     summary: Tạo bài viết pin với upload ảnh (Kiểm tra quota/credit trước)
- *     tags: [Posts]
- *     security:
- *       - bearerAuth: []
- *     consumes:
- *       - multipart/form-data
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             required:
- *               - serviceId
- *               - brand
- *               - model
- *               - price
- *               - title
- *               - category
- *               - capacity
- *               - voltage
- *             properties:
- *               serviceId:
- *                 type: integer
- *                 example: 1
- *                 description: ID của dịch vụ đăng bài để kiểm tra thanh toán
- *               brand:
- *                 type: string
- *                 example: Panasonic
- *               model:
- *                 type: string
- *                 example: NCR18650B
- *               price:
- *                 type: number
- *                 example: 5000000
- *               title:
- *                 type: string
- *                 example: Bán pin lithium 48V như mới
- *               year:
- *                 type: integer
- *                 example: 2023
- *               description:
- *                 type: string
- *                 example: Pin còn mới 95%, ít sử dụng
- *               address:
- *                 type: string
- *                 example: TP.HCM
- *               category:
- *                 type: string
- *                 example: '{"id": 2}'
- *                 description: JSON string chứa thông tin category (type sẽ tự động set thành 'battery')
- *               capacity:
- *                 type: number
- *                 example: 100
- *                 description: Dung lượng (Ah)
- *               voltage:
- *                 type: number
- *                 example: 48
- *                 description: Điện áp (V)
- *               health:
- *                 type: string
- *                 example: 95%
- *                 description: Tình trạng sức khỏe pin
- *               image:
- *                 type: string
- *                 format: binary
- *                 description: Ảnh chính của pin
- *               images:
- *                 type: array
- *                 items:
- *                   type: string
- *                   format: binary
- *                 description: Các ảnh phụ (tối đa 6 ảnh)
- *     responses:
- *       201:
- *         description: Tạo bài viết pin thành công
- *       400:
- *         description: Thiếu thông tin bắt buộc
- *       401:
- *         description: Không có token xác thực
- *       402:
- *         description: Cần thanh toán hoặc nạp tiền
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Bạn không đủ credit. Vui lòng nạp thêm 50000 VND.
- *                 needPayment:
- *                   type: boolean
- *                   example: true
- *                 priceRequired:
- *                   type: number
- *                   example: 50000
- *       500:
- *         description: Lỗi server
- */
-router.post(
-	'/create-post-battery',
-	authenticateToken,
-	upload.fields([
-		{ name: 'image', maxCount: 1 },
-		{ name: 'images', maxCount: 6 },
-	]),
-	createBatteryPostController,
-);
-
-// ==================== PRODUCT IMAGES ROUTES ====================
 
 export default router;

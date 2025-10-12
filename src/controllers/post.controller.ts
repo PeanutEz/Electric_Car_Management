@@ -10,8 +10,6 @@ import {
 	updatePostByAdmin,
 	createNewPost,
 	searchPosts,
-	createVehiclePost,
-	createBatteryPost,
 } from '../services/post.service';
 import { checkAndProcessPostPayment } from '../services/service.service';
 
@@ -135,22 +133,50 @@ export async function updatePost(req: Request, res: Response) {
 
 export async function createPost(req: Request, res: Response) {
 	try {
-		// lấy userId từ header : bearer token
-		// const authHeader = req.headers.authorization;
-		// if (!authHeader || !authHeader.startsWith('Bearer ')) {
-		// 	return res.status(401).json({ message: 'Unauthorized' });
-		// }
-		// const token = authHeader.split(' ')[1];
-		// const phone = (jwt.decode(token) as any).phone;
-		// if (!phone) {
-		// 	return res.status(403).json({ message: 'Vui lòng cập nhật số điện thoại trước khi tạo bài viết' });
-		// }
+		// Extract userId from JWT token
+		const authHeader = req.headers.authorization;
+		if (!authHeader || !authHeader.startsWith('Bearer ')) {
+			return res
+				.status(401)
+				.json({ message: 'Không tìm thấy token xác thực' });
+		}
+
+		const token = authHeader.split(' ')[1];
+		const id = (jwt.decode(token) as any).id;
+
+		const userId = id;
 
 		// Lấy dữ liệu từ form
 		const postData = req.body;
 		const files = req.files as {
 			[fieldname: string]: Express.Multer.File[];
 		};
+
+		// Validate serviceId for payment check
+		if (!postData.service_id) {
+			return res.status(400).json({
+				message: 'Thiếu serviceId để kiểm tra thanh toán',
+			});
+		}
+		console.log(postData.service_id);
+
+		// Check payment/quota before creating post
+		const paymentCheck = await checkAndProcessPostPayment(
+			userId,
+			parseInt(postData.service_id),
+		);
+
+		if (!paymentCheck.canPost) {
+			// User needs to pay or top up credit
+			return res.status(200).json({
+				message: paymentCheck.message,
+				needPayment: true,
+				priceRequired: paymentCheck.priceRequired,
+				checkoutUrl: paymentCheck.checkoutUrl,
+				orderCode: paymentCheck.orderCode,
+				payosResponse: paymentCheck.payosResponse, // ⭐ Debug PayOS
+			});
+		}
 
 		// Validate dữ liệu cơ bản
 		if (
@@ -220,264 +246,6 @@ export async function createPost(req: Request, res: Response) {
 		console.error('Lỗi khi tạo post:', error);
 		return res.status(500).json({
 			message: 'Lỗi khi tạo bài viết',
-			error: error.message,
-		});
-	}
-}
-
-// Tạo bài viết xe (vehicle)
-export async function createVehiclePostController(req: Request, res: Response) {
-	try {
-		const postData = req.body;
-		const files = req.files as {
-			[fieldname: string]: Express.Multer.File[];
-		};
-
-		// Extract userId from JWT token
-		const authHeader = req.headers.authorization;
-		if (!authHeader) {
-			return res.status(401).json({
-				message: 'Không tìm thấy token xác thực',
-			});
-		}
-
-		const token = authHeader.split(' ')[1];
-		const decoded = jwt.verify(
-			token,
-			process.env.JWT_SECRET || 'your-secret-key',
-		) as { userId: number };
-		const userId = decoded.userId;
-
-		// Validate serviceId for payment check
-		if (!postData.serviceId) {
-			return res.status(400).json({
-				message: 'Thiếu serviceId để kiểm tra thanh toán',
-			});
-		}
-
-		// Check payment/quota before creating post
-		const paymentCheck = await checkAndProcessPostPayment(
-			userId,
-			parseInt(postData.serviceId),
-		);
-
-		if (!paymentCheck.canPost) {
-			// User needs to pay or top up credit
-			return res.status(402).json({
-				message: paymentCheck.message,
-				needPayment: true,
-				priceRequired: paymentCheck.priceRequired,
-			});
-		}
-
-		// If canPost is true, proceed with post creation
-		// Validate dữ liệu cơ bản
-		if (
-			!postData.brand ||
-			!postData.model ||
-			!postData.price ||
-			!postData.title
-		) {
-			return res.status(400).json({
-				message:
-					'Thiếu thông tin bắt buộc (brand, model, price, title)',
-			});
-		}
-
-		// Validate trường riêng cho xe
-		if (!postData.power || !postData.seats) {
-			return res.status(400).json({
-				message: 'Thiếu thông tin xe (power, seats)',
-			});
-		}
-
-		// Parse category từ JSON string
-		let category;
-		try {
-			category =
-				typeof postData.category === 'string'
-					? JSON.parse(postData.category)
-					: postData.category;
-		} catch (error) {
-			return res.status(400).json({
-				message: 'Category phải là JSON hợp lệ',
-			});
-		}
-
-		if (!category || !category.id) {
-			return res.status(400).json({
-				message: 'Category phải có id',
-			});
-		}
-
-		// Force category type to vehicle
-		category.type = 'vehicle';
-
-		let imageUrl = '';
-		let imageUrls: string[] = [];
-
-		// Upload ảnh chính nếu có
-		if (files?.image && files.image[0]) {
-			const uploadResult = await uploadService.uploadImage(
-				files.image[0].buffer,
-			);
-			imageUrl = uploadResult.secure_url;
-		}
-
-		// Upload nhiều ảnh nếu có
-		if (files?.images && files.images.length > 0) {
-			const uploadResults = await uploadService.uploadImages(
-				files.images.map((file) => file.buffer),
-			);
-			imageUrls = uploadResults.map((result) => result.secure_url);
-		}
-
-		// Chuẩn bị dữ liệu để insert
-		const vehicleData = {
-			...postData,
-			category,
-			image: imageUrl,
-			images: imageUrls,
-		};
-
-		const newPost = await createVehiclePost(vehicleData);
-		return res.status(201).json({
-			message: 'Tạo bài viết xe thành công',
-			data: newPost,
-		});
-	} catch (error: any) {
-		console.error('Lỗi khi tạo bài viết xe:', error);
-		return res.status(500).json({
-			message: 'Lỗi khi tạo bài viết xe',
-			error: error.message,
-		});
-	}
-}
-
-// Tạo bài viết pin (battery)
-export async function createBatteryPostController(req: Request, res: Response) {
-	try {
-		const postData = req.body;
-		const files = req.files as {
-			[fieldname: string]: Express.Multer.File[];
-		};
-
-		// Extract userId from JWT token
-		const authHeader = req.headers.authorization;
-		if (!authHeader) {
-			return res.status(401).json({
-				message: 'Không tìm thấy token xác thực',
-			});
-		}
-
-		const token = authHeader.split(' ')[1];
-		const decoded = jwt.verify(
-			token,
-			process.env.JWT_SECRET || 'your-secret-key',
-		) as { userId: number };
-		const userId = decoded.userId;
-
-		// Validate serviceId for payment check
-		if (!postData.serviceId) {
-			return res.status(400).json({
-				message: 'Thiếu serviceId để kiểm tra thanh toán',
-			});
-		}
-
-		// Check payment/quota before creating post
-		const paymentCheck = await checkAndProcessPostPayment(
-			userId,
-			parseInt(postData.serviceId),
-		);
-
-		if (!paymentCheck.canPost) {
-			// User needs to pay or top up credit
-			return res.status(402).json({
-				message: paymentCheck.message,
-				needPayment: true,
-				priceRequired: paymentCheck.priceRequired,
-			});
-		}
-
-		// If canPost is true, proceed with post creation
-		// Validate dữ liệu cơ bản
-		if (
-			!postData.brand ||
-			!postData.model ||
-			!postData.price ||
-			!postData.title
-		) {
-			return res.status(400).json({
-				message:
-					'Thiếu thông tin bắt buộc (brand, model, price, title)',
-			});
-		}
-
-		// Validate trường riêng cho pin
-		if (!postData.capacity || !postData.voltage) {
-			return res.status(400).json({
-				message: 'Thiếu thông tin pin (capacity, voltage)',
-			});
-		}
-
-		// Parse category từ JSON string
-		let category;
-		try {
-			category =
-				typeof postData.category === 'string'
-					? JSON.parse(postData.category)
-					: postData.category;
-		} catch (error) {
-			return res.status(400).json({
-				message: 'Category phải là JSON hợp lệ',
-			});
-		}
-
-		if (!category || !category.id) {
-			return res.status(400).json({
-				message: 'Category phải có id',
-			});
-		}
-
-		// Force category type to battery
-		category.type = 'battery';
-
-		let imageUrl = '';
-		let imageUrls: string[] = [];
-
-		// Upload ảnh chính nếu có
-		if (files?.image && files.image[0]) {
-			const uploadResult = await uploadService.uploadImage(
-				files.image[0].buffer,
-			);
-			imageUrl = uploadResult.secure_url;
-		}
-
-		// Upload nhiều ảnh nếu có
-		if (files?.images && files.images.length > 0) {
-			const uploadResults = await uploadService.uploadImages(
-				files.images.map((file) => file.buffer),
-			);
-			imageUrls = uploadResults.map((result) => result.secure_url);
-		}
-
-		// Chuẩn bị dữ liệu để insert
-		const batteryData = {
-			...postData,
-			category,
-			image: imageUrl,
-			images: imageUrls,
-		};
-
-		const newPost = await createBatteryPost(batteryData);
-		return res.status(201).json({
-			message: 'Tạo bài viết pin thành công',
-			data: newPost,
-		});
-	} catch (error: any) {
-		console.error('Lỗi khi tạo bài viết pin:', error);
-		return res.status(500).json({
-			message: 'Lỗi khi tạo bài viết pin',
 			error: error.message,
 		});
 	}

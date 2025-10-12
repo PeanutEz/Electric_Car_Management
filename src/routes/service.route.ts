@@ -7,6 +7,7 @@ import {
 	createPackagePaymentController,
 	getServiceByTypeController,
 	checkPostPaymentController,
+	processServicePaymentController,
 } from '../controllers/service.controller';
 import { create } from 'domain';
 import { authenticateToken } from '../middleware/AuthMiddleware';
@@ -101,7 +102,7 @@ router.get(
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Không đủ credit. Cần 50000 VND, hiện tại: 10000 VND
+ *                   example: "Không đủ credit. Cần 50000 VND, hiện tại: 10000 VND"
  *                 data:
  *                   type: object
  *                   properties:
@@ -131,5 +132,6 @@ router.post('/create-topup-payment', createTopupPaymentController);
 router.post('/topup-credit', topupCreditController);
 router.post('/purchase-package', purchasePackageController);
 router.post('/create-package-payment', createPackagePaymentController);
+router.post('/process-service-payment', processServicePaymentController);
 
 export default router;

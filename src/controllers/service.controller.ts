@@ -8,6 +8,7 @@ import {
 	createTopupPayment,
 	getServicePostByProductType,
 	checkAndProcessPostPayment,
+	processServicePayment,
 } from '../services/service.service';
 
 export async function listServices(req: Request, res: Response) {
@@ -151,12 +152,15 @@ export async function checkPostPaymentController(req: Request, res: Response) {
 				},
 			});
 		} else if (result.needPayment) {
-			return res.status(402).json({
+			return res.status(200).json({
 				message: result.message,
 				data: {
 					canPost: false,
 					needPayment: true,
 					priceRequired: result.priceRequired,
+					checkoutUrl: result.checkoutUrl,
+					orderCode: result.orderCode,
+					payosResponse: result.payosResponse, // ⭐ Debug PayOS
 				},
 			});
 		} else {
@@ -168,6 +172,24 @@ export async function checkPostPaymentController(req: Request, res: Response) {
 				},
 			});
 		}
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
+		});
+	}
+}
+
+export async function processServicePaymentController(
+	req: Request,
+	res: Response,
+) {
+	try {
+		const { userId, orderCode } = req.body;
+		const result = await processServicePayment(orderCode, userId);
+		res.status(200).json({
+			message: 'Xử lý thanh toán dịch vụ thành công',
+			data: result,
+		});
 	} catch (error: any) {
 		res.status(500).json({
 			message: error.message,
