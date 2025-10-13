@@ -319,8 +319,6 @@ router.put('/update-post-by-admin/:id', updatePost);
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
- *     consumes:
- *       - multipart/form-data
  *     requestBody:
  *       required: true
  *       content:
@@ -328,14 +326,14 @@ router.put('/update-post-by-admin/:id', updatePost);
  *           schema:
  *             type: object
  *             required:
- *               - serviceId
+ *               - service_id
  *               - brand
  *               - model
  *               - price
  *               - title
- *               - category
+ *               - category_id
  *             properties:
- *               serviceId:
+ *               service_id:
  *                 type: integer
  *                 example: 1
  *                 description: ID của dịch vụ đăng bài để kiểm tra thanh toán
@@ -360,10 +358,10 @@ router.put('/update-post-by-admin/:id', updatePost);
  *               address:
  *                 type: string
  *                 example: Hà Nội
- *               category:
- *                 type: string
- *                 example: '{"id": 1, "type": "vehicle"}'
- *                 description: JSON string chứa thông tin category
+ *               category_id:
+ *                 type: integer
+ *                 example: 1
+ *                 description: ID của danh mục sản phẩm
  *               image:
  *                 type: string
  *                 format: binary
@@ -406,7 +404,7 @@ router.put('/update-post-by-admin/:id', updatePost);
  *                 description: Tình trạng sức khỏe pin
  *     responses:
  *       201:
- *         description: Tạo bài viết thành công
+ *         description: Tạo bài viết mới thành công
  *         content:
  *           application/json:
  *             schema:
@@ -417,36 +415,6 @@ router.put('/update-post-by-admin/:id', updatePost);
  *                   example: Tạo bài viết mới thành công
  *                 data:
  *                   type: object
- *                   properties:
- *                     id:
- *                       type: integer
- *                       example: 123
- *                     title:
- *                       type: string
- *                       example: Bán Tesla Model 3 2023 như mới
- *                     status:
- *                       type: string
- *                       example: pending
- *                     product:
- *                       type: object
- *                       properties:
- *                         brand:
- *                           type: string
- *                           example: Tesla
- *                         model:
- *                           type: string
- *                           example: Model 3
- *                         price:
- *                           type: number
- *                           example: 800000000
- *                         image:
- *                           type: string
- *                           example: "https://res.cloudinary.com/demo/image/upload/abc123.jpg"
- *                         images:
- *                           type: array
- *                           items:
- *                             type: string
- *                             example: "https://res.cloudinary.com/demo/image/upload/xyz789.jpg"
  *       400:
  *         description: Thiếu thông tin bắt buộc hoặc dữ liệu không hợp lệ
  *       401:
