@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import {createPayosPayment, getPaymentStatus} from '../services/payment.service';
-import { handlePayOSWebhook } from '../services/service.service';
+import { handlePayOSWebhook, processServicePayment } from '../services/service.service';
 import payos from '../config/payos';
 import pool from '../config/db';
 import crypto from 'crypto';
@@ -65,7 +65,9 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 
 		const paymentInfo = await getPaymentStatus(orderCode);
 
-		return res.json({ success: true, message: 'Webhook processed', paymentInfo: paymentInfo.data });
+		const paymentResult = processServicePayment(orderCode);
+
+		return res.json({ success: true, message: 'Webhook processed', paymentInfo: paymentInfo.data, processServicePayment: paymentResult });
 	}
 	catch (error: any) {
 		return res.status(500).json({ message: 'Xử lý webhook thất bại' });

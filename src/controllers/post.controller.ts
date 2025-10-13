@@ -140,7 +140,7 @@ export async function createPost(req: Request, res: Response) {
 				.status(401)
 				.json({ message: 'Không tìm thấy token xác thực' });
 		}
-		console.log("request: "+req);
+
 		const token = authHeader.split(' ')[1];
 		const id = (jwt.decode(token) as any).id;
 
@@ -158,7 +158,6 @@ export async function createPost(req: Request, res: Response) {
 				message: 'Thiếu serviceId để kiểm tra thanh toán',
 			});
 		}
-		console.log(postData.service_id);
 
 		// Check payment/quota before creating post
 		const paymentCheck = await checkAndProcessPostPayment(
