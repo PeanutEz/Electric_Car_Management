@@ -82,15 +82,15 @@ export async function handlePayOSWebhook(webhookData: any) {
 		await pool.query(
 			`INSERT INTO payos_webhooks_parsed (order_code, transaction_id, amount, status, payment_method, currency, customer_name, customer_email, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			[
-				data.orderCode,	
-				data.transactionId || null,
-				data.amount,
-				data.status,
+				data.data.orderCode,	
+				data.data.transactionId || null,
+				data.data.amount,
+				data.data.status,
 				paymentMethod,
-				data.currency || 'VND',
-				data.customerName || null,
-				data.customerEmail || null,
-				data.transactionDateTime
+				data.data.currency || 'VND',
+				data.data.customerName || null,
+				data.data.customerEmail || null,
+				data.data.transactionDateTime
 					? new Date(data.transactionDateTime)
 					: null,
 			],
