@@ -50,5 +50,53 @@ export async function getPaymentStatus(paymentId: string) {
 }
 
 
-
-
+// {
+//   "order_id": "12345",
+//   "transaction_id": "txn_987654321",
+//   "amount": 50000,
+//   "status": "SUCCESS",
+//   "payment_method": "Napas",
+//   "currency": "VND",
+//   "customer_name": "Nguyen Van A",
+//   "customer_email": "nguyenvana@gmail.com",
+//   "created_at": "2025-10-13T10:00:00Z"
+// }
+// Table
+// CREATE TABLE payos_webhooks_parsed (
+//     id INT AUTO_INCREMENT PRIMARY KEY,
+//     order_code VARCHAR(50),
+//     transaction_id VARCHAR(50),
+//     amount DECIMAL(18,2),
+//     status VARCHAR(50),
+//     payment_method VARCHAR(50),
+//     currency VARCHAR(10),
+//     customer_name VARCHAR(255),
+//     customer_email VARCHAR(255),
+//     created_at DATETIME,
+//     received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+// );
+export async function handlePayOSWebhook(webhookData: any) {
+	try {
+		const data = webhookData.data;
+		const paymentMethod = detectPaymentMethod(data.description || '');
+		await pool.query(
+			`INSERT INTO payos_webhooks_parsed (order_code, transaction_id, amount, status, payment_method, currency, customer_name, customer_email, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			[
+				data.orderCode,	
+				data.transactionId || null,
+				data.amount,
+				data.status,
+				paymentMethod,
+				data.currency || 'VND',
+				data.customerName || null,
+				data.customerEmail || null,
+				data.transactionDateTime
+					? new Date(data.transactionDateTime)
+					: null,
+			],
+		);
+	} catch (error) {
+		console.error('Error handling PayOS webhook:', error);
+		throw error;
+	}
+}
