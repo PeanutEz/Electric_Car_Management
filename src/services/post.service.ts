@@ -318,7 +318,6 @@ export async function createNewPost(
 		} else {
 			throw new Error('Unknown product type');
 		}
-
 		await conn.commit();
 		return data;
 	} catch (error) {
