@@ -479,7 +479,7 @@ export async function purchasePackage(orderCode: string, user_id: number) {
 // Xử lý payment thành công cho service (post creation)
 export async function processServicePayment(orderCode: string, userId: number) {
 	const paymentStatus = await getPaymentStatus(orderCode);
-
+   console.log('Payment status:', paymentStatus);
 	// Kiểm tra user
 	const [userRows]: any = await pool.query(
 		'select * from users where id = ?',
