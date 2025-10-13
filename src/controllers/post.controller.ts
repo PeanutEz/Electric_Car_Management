@@ -215,20 +215,20 @@ export async function createPost(req: Request, res: Response) {
 		let imageUrls: string[] = [];
 
 		// Upload ảnh chính nếu có
-		// if (files?.image && files.image[0]) {
-		// 	const uploadResult = await uploadService.uploadImage(
-		// 		files.image[0].buffer,
-		// 	);
-		// 	imageUrl = uploadResult.secure_url;
-		// }
+		if (files?.image && files.image[0]) {
+			const uploadResult = await uploadService.uploadImage(
+				files.image[0].buffer,
+			);
+			imageUrl = uploadResult.secure_url;
+		}
 
 		// Upload nhiều ảnh nếu có
-		// if (files?.images && files.images.length > 0) {
-		// 	const uploadResults = await uploadService.uploadImages(
-		// 		files.images.map((file) => file.buffer),
-		// 	);
-		// 	imageUrls = uploadResults.map((result) => result.secure_url);
-		// }
+		if (files?.images && files.images.length > 0) {
+			const uploadResults = await uploadService.uploadImages(
+				files.images.map((file) => file.buffer),
+			);
+			imageUrls = uploadResults.map((result) => result.secure_url);
+		}
 
 
 		// Chuẩn bị dữ liệu để insert

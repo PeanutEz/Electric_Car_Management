@@ -527,3 +527,149 @@ export async function processServicePayment(orderCode: string, userId: number) {
 		message: 'Thanh toán thành công. Bạn có thể tạo bài post ngay.',
 	};
 }
+
+// Xử lý PayOS webhook - Tự động cập nhật credit khi payment thành công
+export async function handlePayOSWebhook(webhookData: any) {
+	const conn = await pool.getConnection();
+	try {
+		await conn.beginTransaction();
+
+		const orderCode = webhookData.data?.orderCode || webhookData.orderCode;
+		const status = webhookData.data?.status || webhookData.status;
+		const amount = webhookData.data?.amount || webhookData.amount;
+
+		console.log('PayOS Webhook received:', { orderCode, status, amount });
+
+		if (!orderCode) {
+			throw new Error('Order code not found in webhook data');
+		}
+
+		// Kiểm tra trạng thái order trong database
+		const [orderRows]: any = await conn.query(
+			'SELECT id, status, price, buyer_id, service_id FROM orders WHERE code = ? FOR UPDATE',
+			[orderCode],
+		);
+
+		if (orderRows.length === 0) {
+			throw new Error(`Order not found: ${orderCode}`);
+		}
+
+		const order = orderRows[0];
+		const currentOrderStatus = order.status;
+		const orderPrice = parseFloat(order.price);
+		const userId = order.buyer_id;
+		const serviceId = order.service_id;
+
+		// Chỉ xử lý nếu payment status là PAID và order chưa được xử lý
+		if (status === 'PAID' && currentOrderStatus !== 'PAID') {
+			// 1. Update order status
+			await conn.query(
+				'UPDATE orders SET status = ?, updated_at = NOW() WHERE code = ?',
+				['PAID', orderCode],
+			);
+
+			// 2. Cộng tiền vào total_credit của user
+			await conn.query(
+				'UPDATE users SET total_credit = total_credit + ? WHERE id = ?',
+				[orderPrice, userId],
+			);
+
+			// 3. Nếu là service post/push/verify, cộng quota cho user
+			if (serviceId) {
+				const [serviceRows]: any = await conn.query(
+					'SELECT number_of_post, number_of_push, number_of_verify FROM services WHERE id = ?',
+					[serviceId],
+				);
+
+				if (serviceRows.length > 0) {
+					const service = serviceRows[0];
+					const numberOfPost = parseInt(service.number_of_post || 0);
+					const numberOfPush = parseInt(service.number_of_push || 0);
+					const numberOfVerify = parseInt(
+						service.number_of_verify || 0,
+					);
+
+					// Kiểm tra xem user_quota đã tồn tại chưa
+					const [quotaRows]: any = await conn.query(
+						'SELECT id FROM user_quota WHERE user_id = ? AND service_id = ?',
+						[userId, serviceId],
+					);
+
+					if (quotaRows.length > 0) {
+						// Update quota nếu đã tồn tại
+						if (numberOfPost > 0) {
+							await conn.query(
+								'UPDATE user_quota SET amount = amount + ? WHERE user_id = ? AND service_id = ?',
+								[numberOfPost, userId, serviceId],
+							);
+						}
+						if (numberOfPush > 0) {
+							await conn.query(
+								'UPDATE user_quota SET amount = amount + ? WHERE user_id = ? AND service_id = ?',
+								[numberOfPush, userId, serviceId],
+							);
+						}
+						if (numberOfVerify > 0) {
+							await conn.query(
+								'UPDATE user_quota SET amount = amount + ? WHERE user_id = ? AND service_id = ?',
+								[numberOfVerify, userId, serviceId],
+							);
+						}
+					} else {
+						// Insert quota mới nếu chưa tồn tại
+						const quotaAmount =
+							numberOfPost || numberOfPush || numberOfVerify;
+						if (quotaAmount > 0) {
+							await conn.query(
+								'INSERT INTO user_quota (user_id, service_id, amount) VALUES (?, ?, ?)',
+								[userId, serviceId, quotaAmount],
+							);
+						}
+					}
+				}
+			}
+
+			await conn.commit();
+
+			console.log(
+				`✅ Payment processed successfully for order ${orderCode}`,
+			);
+
+			return {
+				success: true,
+				message: 'Payment processed successfully',
+				orderCode: orderCode,
+				userId: userId,
+				amountAdded: orderPrice,
+			};
+		} else if (status === 'CANCELLED' && currentOrderStatus === 'PENDING') {
+			// Update order status to CANCELLED
+			await conn.query(
+				'UPDATE orders SET status = ?, updated_at = NOW() WHERE code = ?',
+				['CANCELLED', orderCode],
+			);
+			await conn.commit();
+
+			console.log(`❌ Payment cancelled for order ${orderCode}`);
+
+			return {
+				success: true,
+				message: 'Payment cancelled',
+				orderCode: orderCode,
+			};
+		} else {
+			await conn.rollback();
+			return {
+				success: false,
+				message: `Order already processed or invalid status. Current: ${currentOrderStatus}, Webhook: ${status}`,
+				orderCode: orderCode,
+			};
+		}
+	} catch (error: any) {
+		await conn.rollback();
+		console.error('PayOS webhook error:', error);
+		throw error;
+	} finally {
+		conn.release();
+	}
+}
