@@ -22,7 +22,42 @@ POST /api/payment/payos-webhook
 
 ## 📥 Webhook Data Structure
 
-PayOS sẽ gửi POST request với body:
+PayOS sẽ gửi POST request với body theo format chuẩn:
+
+```json
+{
+	"data": {
+		"orderCode": 123456789,
+		"status": "PAID",
+		"amount": 50000,
+		"description": "Thanh toán đơn hàng #123456789",
+		"transactionDateTime": "2025-10-13T10:35:00Z"
+	},
+	"signature": "abcxyz123checksum"
+}
+```
+
+### Required Fields:
+
+-   `data.orderCode` (number): Mã đơn hàng từ hệ thống của bạn
+-   `data.status` (string): Trạng thái thanh toán (PAID, CANCELLED, PENDING)
+-   `data.amount` (number): Số tiền thanh toán
+
+### Optional Fields:
+
+-   `data.description` (string): Mô tả giao dịch
+-   `data.transactionDateTime` (string): Thời gian giao dịch (ISO 8601)
+-   `signature` (string): Chữ ký HMAC SHA256 để xác thực webhook
+
+### Status Values:
+
+-   `PAID`: Thanh toán thành công
+-   `CANCELLED`: Thanh toán bị hủy
+-   `PENDING`: Đang chờ thanh toán
+
+### Example Payloads:
+
+**1. Full Format (Recommended):**
 
 ```json
 {
@@ -30,20 +65,38 @@ PayOS sẽ gửi POST request với body:
 		"orderCode": 741765,
 		"status": "PAID",
 		"amount": 50000,
-		"transactionDateTime": "2025-10-13T10:30:00.000Z",
-		"accountNumber": "12345678",
-		"reference": "FT25101310300000"
+		"description": "Thanh toán đơn hàng #741765",
+		"transactionDateTime": "2025-10-13T10:35:00Z"
+	},
+	"signature": "abc123xyz456"
+}
+```
+
+**2. Minimum Required:**
+
+```json
+{
+	"data": {
+		"orderCode": 152502,
+		"status": "PAID",
+		"amount": 3000
 	}
 }
 ```
 
-Hoặc format đơn giản hơn:
+**3. With Signature in Header (Alternative):**
 
-```json
+```
+Headers:
+  x-payos-signature: abc123xyz456
+
+Body:
 {
-	"orderCode": 741765,
-	"status": "PAID",
-	"amount": 50000
+  "data": {
+    "orderCode": 741765,
+    "status": "PAID",
+    "amount": 50000
+  }
 }
 ```
 
@@ -176,6 +229,8 @@ https://abc123.ngrok.io/api/payment/payos-webhook
 
 ### Test với cURL
 
+**Test Case 1: Payment Success (Full Format)**
+
 ```bash
 curl -X POST http://localhost:3000/api/payment/payos-webhook \
   -H "Content-Type: application/json" \
@@ -183,7 +238,38 @@ curl -X POST http://localhost:3000/api/payment/payos-webhook \
     "data": {
       "orderCode": 741765,
       "status": "PAID",
-      "amount": 50000
+      "amount": 50000,
+      "description": "Thanh toán đơn hàng #741765",
+      "transactionDateTime": "2025-10-13T10:35:00Z"
+    },
+    "signature": "abcxyz123checksum"
+  }'
+```
+
+**Test Case 2: Minimum Required Fields**
+
+```bash
+curl -X POST http://localhost:3000/api/payment/payos-webhook \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": {
+      "orderCode": 152502,
+      "status": "PAID",
+      "amount": 3000
+    }
+  }'
+```
+
+**Test Case 3: Payment Cancelled**
+
+```bash
+curl -X POST http://localhost:3000/api/payment/payos-webhook \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": {
+      "orderCode": 774448,
+      "status": "CANCELLED",
+      "amount": 3000
     }
   }'
 ```
@@ -202,10 +288,31 @@ curl -X POST http://localhost:3000/api/payment/payos-webhook \
     	"data": {
     		"orderCode": 741765,
     		"status": "PAID",
-    		"amount": 50000
-    	}
+    		"amount": 50000,
+    		"description": "Thanh toán đơn hàng #741765",
+    		"transactionDateTime": "2025-10-13T10:35:00Z"
+    	},
+    	"signature": "abcxyz123checksum"
     }
     ```
+
+### Test với PowerShell (Windows)
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/payment/payos-webhook" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{
+    "data": {
+      "orderCode": 741765,
+      "status": "PAID",
+      "amount": 50000,
+      "description": "Thanh toán đơn hàng #741765",
+      "transactionDateTime": "2025-10-13T10:35:00Z"
+    },
+    "signature": "abcxyz123checksum"
+  }'
+```
 
 ### Expected Response (Success)
 
@@ -270,30 +377,50 @@ WHERE user_id = 1;
 
 ### Common Issues
 
-| Issue                  | Cause                        | Solution                                  |
-| ---------------------- | ---------------------------- | ----------------------------------------- |
-| Webhook không được gọi | Ngrok chưa chạy hoặc URL sai | Kiểm tra ngrok running, copy đúng URL     |
-| Order not found        | OrderCode không tồn tại      | Kiểm tra lại orderCode trong database     |
-| Duplicate processing   | Webhook được gọi nhiều lần   | Hệ thống đã xử lý, check `status != PAID` |
-| User credit không tăng | Order status đã là PAID      | Chỉ xử lý khi order PENDING → PAID        |
+| Issue                   | Cause                        | Solution                                        |
+| ----------------------- | ---------------------------- | ----------------------------------------------- |
+| Webhook không được gọi  | Ngrok chưa chạy hoặc URL sai | Kiểm tra ngrok running, copy đúng URL           |
+| Invalid webhook format  | Thiếu field `data`           | Đảm bảo payload có structure: `{"data": {...}}` |
+| Order not found         | OrderCode không tồn tại      | Kiểm tra lại orderCode trong database           |
+| Duplicate processing    | Webhook được gọi nhiều lần   | Hệ thống đã xử lý, check `status != PAID`       |
+| User credit không tăng  | Order status đã là PAID      | Chỉ xử lý khi order PENDING → PAID              |
+| Invalid signature (401) | Signature không khớp         | Kiểm tra PAYOS_CHECKSUM_KEY trong .env          |
 
 ---
 
 ## 🔐 Security Notes
 
-### Webhook Verification (Recommended)
+### Environment Variables
 
-PayOS có thể gửi signature để verify webhook authenticity. Nên thêm verification:
+Thêm vào file `.env`:
+
+```env
+# PayOS Configuration
+PAYOS_CLIENT_ID=your_client_id
+PAYOS_API_KEY=your_api_key
+PAYOS_CHECKSUM_KEY=your_checksum_key
+
+# Application URLs
+CLIENT_URL=http://localhost:4000
+```
+
+### Webhook Signature Verification
+
+API đã tích hợp signature verification:
+
+**How it works:**
+
+1. PayOS gửi webhook với `signature` field hoặc `x-payos-signature` header
+2. Server tính toán HMAC SHA256 từ `data` object
+3. So sánh signature nhận được với signature tính toán
+4. Chỉ xử lý nếu signature hợp lệ
+
+**Implementation:**
 
 ```typescript
-import crypto from 'crypto';
-
-export const verifyPayOSSignature = (
-	webhookData: any,
-	signature: string,
-	secretKey: string,
-): boolean => {
-	const dataString = JSON.stringify(webhookData);
+const verifyPayOSSignature = (webhookData: any, signature: string): boolean => {
+	const secretKey = process.env.PAYOS_CHECKSUM_KEY;
+	const dataString = JSON.stringify(webhookData.data);
 	const hash = crypto
 		.createHmac('sha256', secretKey)
 		.update(dataString)
@@ -303,39 +430,131 @@ export const verifyPayOSSignature = (
 };
 ```
 
-Cập nhật controller:
+**⚠️ Development Mode:**
+
+-   Nếu không có `PAYOS_CHECKSUM_KEY`, signature verification bị skip
+-   Production phải enable signature verification
+
+### Payload Validation
+
+API validate các fields bắt buộc:
+
+-   ✅ `data` object must exist
+-   ✅ `data.orderCode` must exist
+-   ✅ `data.status` must exist
+-   ✅ `signature` (optional but recommended)
+
+**Validation Flow:**
 
 ```typescript
-export const payosWebhookHandler = async (req: Request, res: Response) => {
-	try {
-		const signature = req.headers['x-payos-signature'] as string;
-		const webhookData = req.body;
+if (!webhookData.data) {
+  return 400 Bad Request - "Invalid webhook format"
+}
 
-		// Verify signature
-		if (
-			!verifyPayOSSignature(
-				webhookData,
-				signature,
-				process.env.PAYOS_SECRET_KEY!,
-			)
-		) {
-			return res.status(401).json({ message: 'Invalid signature' });
-		}
+if (!orderCode || !status) {
+  return 400 Bad Request - "Missing required fields"
+}
 
-		// Process webhook...
-	} catch (error) {
-		// Handle error...
-	}
-};
+if (signature && PAYOS_CHECKSUM_KEY) {
+  if (!verifyPayOSSignature()) {
+    return 401 Unauthorized - "Invalid signature"
+  }
+}
 ```
 
----
+    ---
 
 ## 📚 Related Files
 
 -   **Service:** `src/services/service.service.ts` → `handlePayOSWebhook()`
--   **Controller:** `src/controllers/payment.controller.ts` → `payosWebhookHandler()`
+-   **Controller:** `src/controllers/payment.controller.ts` → `payosWebhookHandler()` + `verifyPayOSSignature()`
 -   **Route:** `src/routes/payment.route.ts` → `POST /payos-webhook`
+-   **Test Script:** `test-webhook.sh` → cURL commands
+-   **Documentation:** `PAYOS_WEBHOOK_GUIDE.md` → This file
+
+---
+
+## 🎯 Summary
+
+### Webhook Behavior
+
+✅ **Valid Request:**
+
+```json
+{
+	"data": {
+		"orderCode": 123456,
+		"status": "PAID",
+		"amount": 50000
+	},
+	"signature": "abc123"
+}
+```
+
+→ Response: 200 OK + Credit updated
+
+❌ **Invalid Format:**
+
+```json
+{
+	"orderCode": 123456,
+	"status": "PAID"
+}
+```
+
+→ Response: 400 Bad Request
+
+❌ **Invalid Signature:**
+
+```json
+{
+  "data": {...},
+  "signature": "wrong_signature"
+}
+```
+
+→ Response: 401 Unauthorized
+
+✅ **Already Processed:**
+
+```json
+{
+	"data": {
+		"orderCode": 123456, // Already PAID
+		"status": "PAID"
+	}
+}
+```
+
+→ Response: 200 OK (but no database changes)
+
+### Processing Flow
+
+```
+PayOS → POST /api/payment/payos-webhook
+        ↓
+    Validate structure (data field exists?)
+        ↓
+    Validate required fields (orderCode, status?)
+        ↓
+    Verify signature (if provided)
+        ↓
+    Check order exists in database
+        ↓
+    Check order not already processed
+        ↓
+    START TRANSACTION
+        ↓
+    Update order status → PAID
+        ↓
+    Add credit to user
+        ↓
+    Add quota (if service)
+        ↓
+    COMMIT TRANSACTION
+        ↓
+    Response 200 OK
+```
 
 ---
 
