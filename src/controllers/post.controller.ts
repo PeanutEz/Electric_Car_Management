@@ -168,7 +168,7 @@ export async function createPost(req: Request, res: Response) {
 
 		if (!paymentCheck.canPost) {
 			// User needs to pay or top up credit
-			return res.status(200).json({
+			return res.status(402).json({
 				message: paymentCheck.message,
 				needPayment: true,
 				priceRequired: paymentCheck.priceRequired,

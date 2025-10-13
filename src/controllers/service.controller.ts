@@ -152,7 +152,7 @@ export async function checkPostPaymentController(req: Request, res: Response) {
 				},
 			});
 		} else if (result.needPayment) {
-			return res.status(200).json({
+			return res.status(402).json({
 				message: result.message,
 				data: {
 					canPost: false,

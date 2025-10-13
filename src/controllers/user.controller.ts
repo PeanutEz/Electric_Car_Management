@@ -88,6 +88,8 @@ export async function register(req: Request, res: Response) {
 					full_name: user.full_name,
 					email: user.email,
 					phone: user.phone,
+					gender: user.gender,
+					address: user.address,
 					reputation: user.reputation,
 					total_credit: user.total_credit,
 					role: user.role,

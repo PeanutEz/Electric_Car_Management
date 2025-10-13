@@ -3,6 +3,8 @@ export interface User {
 	status?: string;
 	full_name?: string;
 	email: string;
+	gender?: string;
+	address?: string;
 	phone: string;
 	password: string;
 	reputation?: number;

@@ -141,7 +141,7 @@ export async function loginUser(email: string, password: string) {
 }
 
 export async function registerUser(userData: User) {
-	const { full_name, email, password, status } = userData;
+	const { full_name, email, gender, address, password, status } = userData;
 
 	const errors: { [key: string]: string } = {};
 
@@ -157,6 +157,9 @@ export async function registerUser(userData: User) {
 	}
 	if (!full_name || full_name.length < 6 || full_name.length > 160) {
 		errors.full_name = 'Họ tên phải từ 6 đến 160 ký tự';
+	}
+	if (address && address.length < 10) {
+		errors.address = 'Địa chỉ không được dưới 10 ký tự';
 	}
 
 	// Kiểm tra xem email đã tồn tại chưa
@@ -214,6 +217,8 @@ export async function registerUser(userData: User) {
 		full_name: full_name,
 		email: email,
 		phone: user.phone,
+		gender: user.gender,
+		address: user.address,
 		reputation: user.reputation,
 		total_credit: user.total_credit,
 		role: roleName[0][0].role,
