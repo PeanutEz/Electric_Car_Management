@@ -97,7 +97,7 @@ export async function handlePayOSWebhook(webhookData: any) {
 		);
 
 
-        await pool.query('insert into payos_webhooks_raw (payload) values (?)', [JSON.stringify(webhookData)]);
+        await pool.query('INSERT INTO payos_webhooks_parsed (order_code) values (?)', [JSON.stringify(webhookData)]);
 
 	} catch (error) {
 		console.error('Error handling PayOS webhook:', error);
