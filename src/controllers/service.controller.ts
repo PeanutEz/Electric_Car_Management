@@ -185,7 +185,7 @@ export async function processServicePaymentController(
 ) {
 	try {
 		const { userId, orderCode } = req.body;
-		const result = await processServicePayment(orderCode, userId);
+		const result = await processServicePayment(orderCode);
 		res.status(200).json({
 			message: 'Xử lý thanh toán dịch vụ thành công',
 			data: result,
