@@ -65,7 +65,7 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 
 		// const paymentInfo = await getPaymentStatus(orderCode);
 
-		await processServicePayment(orderCode);
+		// await processServicePayment(orderCode);
 
 		return res.json({ success: true, message: 'Webhook processed'});
 	}
