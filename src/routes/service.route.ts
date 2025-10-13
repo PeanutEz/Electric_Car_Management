@@ -1,10 +1,6 @@
 import Router from 'express';
 import {
-	createTopupPaymentController,
-	topupCreditController,
-	purchasePackageController,
 	listServices,
-	createPackagePaymentController,
 	getServiceByTypeController,
 	checkPostPaymentController,
 	processServicePaymentController,
@@ -128,10 +124,6 @@ router.post(
 	checkPostPaymentController,
 );
 
-router.post('/create-topup-payment', createTopupPaymentController);
-router.post('/topup-credit', topupCreditController);
-router.post('/purchase-package', purchasePackageController);
-router.post('/create-package-payment', createPackagePaymentController);
 router.post('/process-service-payment', processServicePaymentController);
 
 export default router;

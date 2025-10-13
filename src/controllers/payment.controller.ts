@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
 import {createPayosPayment, getPaymentStatus} from '../services/payment.service';
-import { handlePayOSWebhook, processServicePayment } from '../services/service.service';
-import payos from '../config/payos';
+import {  processServicePayment } from '../services/service.service';
 import pool from '../config/db';
-import crypto from 'crypto';
 
 export const createPaymentLink = async (req: Request, res: Response) => {
 	try {
@@ -57,7 +55,7 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 	try {
 		const payload = req.body;
 		await pool.query('INSERT INTO payos_webhooks_parsed (payload) values (?)', [JSON.stringify(payload)]);
-        const orderCode = payload.data.orderCode;
+      const orderCode = payload.data.orderCode;
 
 		if (!orderCode) {
 			return res.status(400).json({ message: 'Missing orderCode in webhook data' });
