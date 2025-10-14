@@ -594,7 +594,7 @@ router.put('/update-phone', authenticateToken, updateUserPhone);
 
 /**
  * @swagger
- * api/user/user-posts:
+ * /api/user/user-posts:
  *   get:
  *     summary: Lấy danh sách bài đăng của người dùng
  *     description: Trả về tất cả bài đăng (sản phẩm) mà người dùng đã tạo, bao gồm thông tin chi tiết về category, hình ảnh, và dữ liệu đặc thù (vehicle hoặc battery).
@@ -607,7 +607,7 @@ router.put('/update-phone', authenticateToken, updateUserPhone);
  *         name: status
  *         schema:
  *           type: string
- *           enum: [pending, active, rejected]
+ *           enum: [pending, approved, rejected]
  *         required: false
  *         description: Lọc bài đăng theo trạng thái
  *     responses:
