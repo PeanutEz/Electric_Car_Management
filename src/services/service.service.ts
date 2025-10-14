@@ -109,12 +109,14 @@ export async function checkAndProcessPostPayment(
 					orderCode: orderCode,
 					amount: Math.round(serviceCost),
 					description: `Thanh toan dich vu`, // PayOS giới hạn 25 ký tự
-					returnUrl: `${
-						process.env.CLIENT_URL || 'http://localhost:3000'
-					}/payment/success?type=service&orderCode=${orderCode}`,
-					cancelUrl: `${
-						process.env.CLIENT_URL || 'http://localhost:3000'
-					}/payment/cancel`,
+					// returnUrl: `${
+					// 	process.env.CLIENT_URL || 'http://localhost:3000'
+					// }/payment/success?type=service&orderCode=${orderCode}`,
+					// cancelUrl: `${
+					// 	process.env.CLIENT_URL || 'http://localhost:3000'
+					// }/payment/cancel`,
+					returnUrl: `${process.env.CLIENT_URL || 'http://localhost:3000'}/post?draft=true`,
+					cancelUrl: `${process.env.CLIENT_URL || 'http://localhost:3000'}/`,
 				});
 				console.log('PayOS response:', paymentLinkRes);
 				return {
@@ -238,10 +240,10 @@ export async function checkAndProcessPostPayment(
 					description: `Thanh toan dich vu`, // PayOS giới hạn 25 ký tự
 					returnUrl: `${
 						process.env.CLIENT_URL || 'http://localhost:3000'
-					}/payment/success?type=service&orderCode=${orderCode}`,
+					}/post?draft=true`,
 					cancelUrl: `${
 						process.env.CLIENT_URL || 'http://localhost:3000'
-					}/payment/cancel`,
+					}/`,
 				});
 
 				console.log('PayOS response:', paymentLinkRes);
