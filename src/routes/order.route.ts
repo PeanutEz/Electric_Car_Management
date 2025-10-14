@@ -1,6 +1,6 @@
 import Router from 'express';
 import { listOrders } from '../controllers/order.controller';
-
+import { authenticateToken } from '../middleware/AuthMiddleware';
 const router = Router();
 /**
  * @swagger
@@ -48,6 +48,6 @@ const router = Router();
  *       500:
  *         description: Lỗi server
 */
-router.get('/get-all', listOrders);
+router.post('/verify', authenticateToken,listOrders);
 
 export default router;
