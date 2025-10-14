@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getAllOrders } from '../services/order.service';
+import { getOrdersByUserIdAndCode } from '../services/order.service';
 import jwt from 'jsonwebtoken';
 
 export async function listOrders(req: Request, res: Response) {
@@ -13,7 +13,7 @@ export async function listOrders(req: Request, res: Response) {
       const userId = id;
 
       const orderCode = req.body.orderCode as string;
-      const orders = await getAllOrders(userId, orderCode);
+      const orders = await getOrdersByUserIdAndCode(userId, orderCode);
       res.status(200).json({
          message: 'Lấy danh sách đơn hàng thành công',
          data: orders,
