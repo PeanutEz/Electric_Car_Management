@@ -424,7 +424,7 @@ router.get('/user-detail', userDetail);
 
 /**
  * @swagger
- * /update-user:
+ * /api/user/update-user:
  *   put:
  *     summary: Cập nhật thông tin người dùng
  *     description: Cho phép người dùng cập nhật thông tin cá nhân của họ (bao gồm cả avatar nếu có).
@@ -594,7 +594,7 @@ router.put('/update-phone', authenticateToken, updateUserPhone);
 
 /**
  * @swagger
- * /user-posts:
+ * api/user/user-posts:
  *   get:
  *     summary: Lấy danh sách bài đăng của người dùng
  *     description: Trả về tất cả bài đăng (sản phẩm) mà người dùng đã tạo, bao gồm thông tin chi tiết về category, hình ảnh, và dữ liệu đặc thù (vehicle hoặc battery).
@@ -607,7 +607,7 @@ router.put('/update-phone', authenticateToken, updateUserPhone);
  *         name: status
  *         schema:
  *           type: string
- *           enum: [pending, active, expired, rejected]
+ *           enum: [pending, active, rejected]
  *         required: false
  *         description: Lọc bài đăng theo trạng thái
  *     responses:
