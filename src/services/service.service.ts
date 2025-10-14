@@ -329,7 +329,7 @@ export async function processServicePayment(orderCode: string) {
 
 	const currentOrderStatus = orderRows[0].status;
 	const orderPrice = orderRows[0].price;
-	// const serviceId = orderRows[0].service_id;
+	//const serviceId = orderRows[0].service_id;
 
 	// Chỉ cập nhật nếu trạng thái payment là PAID và order chưa được xử lý
 	if (
