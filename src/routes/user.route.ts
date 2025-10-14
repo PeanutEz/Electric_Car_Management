@@ -380,6 +380,12 @@ router.get('/get-all-users', authorizeRoles, listUsers);
  *                   avatar:
  *                     type: string
  *                     example: "https://example.com/avatar.jpg"
+ *                   gender:
+ *                     type: string
+ *                     example: "male"
+ *                 address:
+ *                   type: string
+ *                   example: "123 Main St, Anytown, USA"
  *                 reputation:
  *                   type: integer
  *                   example: 0
