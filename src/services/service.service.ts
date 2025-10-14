@@ -3,6 +3,7 @@ import { Service } from '../models/service.model';
 import { getUserById } from '../services/user.service';
 import payos from '../config/payos';
 import {getPaymentStatus}  from './payment.service';
+import { buildUrl } from '../utils/url';
 
 export async function getAllServices(): Promise<Service[]> {
 	const [rows] = await pool.query(
@@ -104,6 +105,7 @@ export async function checkAndProcessPostPayment(
 				[orderCode, serviceId, userId, serviceCost, 'PENDING', 'PAYOS'],
 			);
 			try {
+				const envAppUrl = process.env.APP_URL || 'http://localhost:3000';
 				// Tạo payment link PayOS
 				const paymentLinkRes = await payos.paymentRequests.create({
 					orderCode: orderCode,
@@ -115,8 +117,8 @@ export async function checkAndProcessPostPayment(
 					// cancelUrl: `${
 					// 	process.env.CLIENT_URL || 'http://localhost:3000'
 					// }/payment/cancel`,
-					returnUrl: `http://localhost:3000/post?draft=true`,
-					cancelUrl: `http://localhost:3000/`,
+					returnUrl: buildUrl(envAppUrl, '/payment/result', { provider: 'payos', next: '/post?draft=true' }),
+					cancelUrl: buildUrl(envAppUrl, '/payment/result', { provider: 'payos', next: '/' }),
 				});
 				console.log('PayOS response:', paymentLinkRes);
 				return {
@@ -233,13 +235,14 @@ export async function checkAndProcessPostPayment(
 			);
 
 			try {
+				const envAppUrl = process.env.APP_URL || 'http://localhost:3000';
 				// Tạo payment link PayOS
 				const paymentLinkRes = await payos.paymentRequests.create({
 					orderCode: orderCode,
 					amount: Math.round(amountNeeded),
 					description: `Thanh toan dich vu`, // PayOS giới hạn 25 ký tự
-					returnUrl: `http://localhost:3000/post?draft=true`,
-					cancelUrl: `http://localhost:3000/`,
+					returnUrl: buildUrl(envAppUrl, '/payment/result', { provider: 'payos', next: '/post?draft=true' }),
+					cancelUrl: buildUrl(envAppUrl, '/payment/result', { provider: 'payos', next: '/' }),
 				});
 
 				console.log('PayOS response:', paymentLinkRes);

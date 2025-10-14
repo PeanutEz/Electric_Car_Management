@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { getAllOrders } from '../services/order.service';
-import { getAllBrands } from '../services/brand.service';
 import jwt from 'jsonwebtoken';
 
 export async function listOrders(req: Request, res: Response) {

@@ -255,3 +255,71 @@ if (response.ok) {
 	}
 }
 ```
+# FE base URL
+APP_URL=http://localhost:3000
+# APP_URL=https://yourapp.com   # production
+
+// utils/url.ts
+export function buildUrl(base: string, path: string, params: Record<string, string>) {
+  const url = new URL(path, base) // tự xử lý dấu /
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
+  return url.toString()
+}
+
+// Chặn open-redirect (chỉ cho phép next là path nội bộ)
+export function safeNext(next?: string) {
+  if (!next) return '/post?draft=true'
+  try {
+    // Nếu là absolute URL hoặc bắt đầu bằng // → chặn
+    if (/^https?:\/\//i.test(next) || /^\/\//.test(next)) return '/post?draft=true'
+    // Chỉ cho phép bắt đầu bằng '/'
+    return next.startsWith('/') ? next : '/post?draft=true'
+  } catch {
+    return '/post?draft=true'
+  }
+}
+
+
+// controllers/payment.controller.ts
+import type { Request, Response } from 'express'
+import payos from '../libs/payos' // SDK bạn đã khởi tạo
+import { buildUrl, safeNext } from '../utils/url'
+
+const APP_URL = process.env.APP_URL || 'http://localhost:3000'
+
+export async function createPayOSLink(req: Request, res: Response) {
+  try {
+    const { amountNeeded, orderCode, next: nextFromClient } = req.body
+    // next có thể FE gửi lên; nếu không có, ta fallback
+    const next = safeNext(nextFromClient) // ví dụ: '/post?draft=true'
+
+    // 2 URL callback có marker để FE nhận diện chính xác là PayOS
+    const returnUrl = buildUrl(APP_URL, '/payment/result', {
+      provider: 'payos',
+      next
+    })
+    const cancelUrl = buildUrl(APP_URL, '/payment/result', {
+      provider: 'payos',
+      next
+    })
+
+    // Tạo link PayOS
+    const paymentLinkRes = await payos.paymentRequests.create({
+      orderCode,
+      amount: Math.round(Number(amountNeeded)),
+      description: 'Thanh toan dich vu', // ≤ 25 ký tự theo PayOS
+      returnUrl,
+      cancelUrl
+    })
+
+    return res.json({
+      ok: true,
+      checkoutUrl: paymentLinkRes.checkoutUrl,
+      orderCode,
+      returnUrl,
+      cancelUrl
+    })
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, message: err?.message || 'Create PayOS link failed' })
+  }
+}
