@@ -260,6 +260,8 @@ export async function updateUserInfo(req: Request, res: Response) {
 					phone: user?.phone,
 					full_name: user?.full_name,
 					avatar: user?.avatar,
+					gender: user?.gender,
+					address: user?.address,
 				},
 			},
 		});
@@ -330,13 +332,13 @@ export async function getUserPosts(req: Request, res: Response) {
 		}
 		const token = authHeader.split(' ')[1];
 		const id = (jwt.decode(token) as any).id;
-		console.log('id user from token:', id);
+		const status = req.query.status as string | undefined;
 		if (!id) {
 			return res.status(403).json({
 				message: 'Vui lòng đăng nhập để xem bài viết của bạn',
 			});
 		}
-		const posts = await getPostByUserId(id);
+		const posts = await getPostByUserId(id, status);
 		res.status(200).json({
 			message: 'Lấy danh sách bài viết của người dùng thành công',
 			data: posts,

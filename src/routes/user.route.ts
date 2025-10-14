@@ -424,11 +424,12 @@ router.get('/user-detail', userDetail);
 
 /**
  * @swagger
- * /api/user/update-user:
+ * /update-user:
  *   put:
  *     summary: Cập nhật thông tin người dùng
+ *     description: Cho phép người dùng cập nhật thông tin cá nhân của họ (bao gồm cả avatar nếu có).
  *     tags:
- *       - Users
+ *       - User
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -440,17 +441,29 @@ router.get('/user-detail', userDetail);
  *             properties:
  *               full_name:
  *                 type: string
- *                 description: Tên đầy đủ của người dùng
- *                 example: "John Doe"
+ *                 example: "Phạm Vũ Gia Kiệt"
+ *                 description: Họ và tên (6–160 ký tự)
+ *               phone:
+ *                 type: string
+ *                 example: "0912345678"
+ *                 description: Số điện thoại (10 ký tự)
  *               email:
  *                 type: string
- *                 format: email
- *                 description: Email của người dùng
- *                 example: "john.doe@example.com"
+ *                 example: "kietpham@example.com"
+ *                 description: Email hợp lệ (5–160 ký tự)
+ *               gender:
+ *                 type: string
+ *                 enum: [male, female, other]
+ *                 example: "male"
+ *                 description: Giới tính của người dùng
+ *               address:
+ *                 type: string
+ *                 example: "123 Đường Lê Lợi, Quận 1, TP.HCM"
+ *                 description: Địa chỉ người dùng
  *               avatar:
  *                 type: string
  *                 format: binary
- *                 description: Ảnh đại diện của người dùng
+ *                 description: Ảnh đại diện (tùy chọn)
  *     responses:
  *       200:
  *         description: Cập nhật thông tin người dùng thành công
@@ -459,68 +472,62 @@ router.get('/user-detail', userDetail);
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
  *                   example: "Cập nhật thông tin người dùng thành công"
  *                 data:
  *                   type: object
  *                   properties:
- *                     id:
- *                       type: integer
- *                       example: 1
- *                     status:
- *                       type: string
- *                       example: "active"
- *                     full_name:
- *                       type: string
- *                       example: "John Doe"
- *                     email:
- *                       type: string
- *                       example: "john.doe@example.com"
- *                     avatar:
- *                       type: string
- *                       example: "https://example.com/avatar.jpg"
- *                     phone:
- *                       type: string
- *                       nullable: true
- *                       example: "+1234567890"
- *                     reputation:
- *                       type: integer
- *                       example: 0
- *                     total_credit:
- *                       type: number
- *                       example: 0.00
- *                     role:
- *                       type: string
- *                       example: "staff"
- *       400:
- *         description: Yêu cầu không hợp lệ
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                           example: 1
+ *                         email:
+ *                           type: string
+ *                           example: "kietpham@example.com"
+ *                         phone:
+ *                           type: string
+ *                           example: "0912345678"
+ *                         full_name:
+ *                           type: string
+ *                           example: "Phạm Vũ Gia Kiệt"
+ *                         avatar:
+ *                           type: string
+ *                           example: "https://example.com/uploads/avatar.jpg"
+ *                         gender:
+ *                           type: string
+ *                           example: "male"
+ *                         address:
+ *                           type: string
+ *                           example: "123 Đường Lê Lợi, Quận 1, TP.HCM"
+ *       401:
+ *         description: Thiếu hoặc token không hợp lệ
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Chưa cung cấp token xác thực"
+ *       422:
+ *         description: Dữ liệu không hợp lệ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
  *                 message:
  *                   type: string
  *                   example: "Dữ liệu không hợp lệ"
- *       401:
- *         description: Không được phép - token không hợp lệ hoặc thiếu
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Không được phép"
+ *                 data:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: string
  *       500:
- *         description: Lỗi máy chủ nội bộ
+ *         description: Lỗi khi tải lên ảnh
  *         content:
  *           application/json:
  *             schema:
@@ -531,7 +538,7 @@ router.get('/user-detail', userDetail);
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Lỗi máy chủ nội bộ"
+ *                   example: "Lỗi khi tải lên ảnh: Cannot connect to storage"
  */
 router.put('/update-user', authenticateToken, upload.single('avatar'), updateUserInfo);
 
@@ -587,16 +594,25 @@ router.put('/update-phone', authenticateToken, updateUserPhone);
 
 /**
  * @swagger
- * /api/user/user-posts:
+ * /user-posts:
  *   get:
- *     summary: Lấy danh sách bài viết của người dùng
+ *     summary: Lấy danh sách bài đăng của người dùng
+ *     description: Trả về tất cả bài đăng (sản phẩm) mà người dùng đã tạo, bao gồm thông tin chi tiết về category, hình ảnh, và dữ liệu đặc thù (vehicle hoặc battery).
  *     tags:
- *       - Users
+ *       - Post
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, active, expired, rejected]
+ *         required: false
+ *         description: Lọc bài đăng theo trạng thái
  *     responses:
  *       200:
- *         description: Lấy danh sách bài viết thành công
+ *         description: Lấy danh sách bài đăng thành công
  *         content:
  *           application/json:
  *             schema:
@@ -604,7 +620,7 @@ router.put('/update-phone', authenticateToken, updateUserPhone);
  *               properties:
  *                 message:
  *                   type: string
- *                   example: "Lấy danh sách bài viết của người dùng thành công"
+ *                   example: "Lấy danh sách bài đăng thành công"
  *                 data:
  *                   type: array
  *                   items:
@@ -615,14 +631,136 @@ router.put('/update-phone', authenticateToken, updateUserPhone);
  *                         example: 1
  *                       title:
  *                         type: string
- *                         example: "Bài viết đầu tiên"
- *                       content:
+ *                         example: "Xe điện VinFast VF3"
+ *                       brand:
  *                         type: string
- *                         example: "Nội dung bài viết đầu tiên"
+ *                         example: "VinFast"
+ *                       model:
+ *                         type: string
+ *                         example: "VF3"
+ *                       description:
+ *                         type: string
+ *                         example: "Xe mới 100%, chưa sử dụng."
+ *                       year:
+ *                         type: integer
+ *                         example: 2025
+ *                       address:
+ *                         type: string
+ *                         example: "123 Nguyễn Văn Cừ, Quận 5, TP.HCM"
+ *                       image:
+ *                         type: string
+ *                         example: "https://example.com/img/vf3.jpg"
+ *                       end_date:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-12-31T00:00:00Z"
+ *                       warranty:
+ *                         type: integer
+ *                         example: 24
+ *                       priority:
+ *                         type: integer
+ *                         example: 1
+ *                       price:
+ *                         type: number
+ *                         example: 450000000
+ *                       status:
+ *                         type: string
+ *                         example: "active"
  *                       created_at:
  *                         type: string
  *                         format: date-time
- *                         example: "2023-01-01T00:00:00Z"
+ *                         example: "2025-10-10T12:00:00Z"
+ *                       updated_at:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-13T12:00:00Z"
+ *                       category:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                             example: 2
+ *                           name:
+ *                             type: string
+ *                             example: "Xe điện"
+ *                           type:
+ *                             type: string
+ *                             example: "vehicle"
+ *                           slug:
+ *                             type: string
+ *                             example: "xe-dien"
+ *                       images:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                           example: "https://example.com/img/vf3-1.jpg"
+ *                       vehicle:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           color:
+ *                             type: string
+ *                             example: "Trắng"
+ *                           seats:
+ *                             type: integer
+ *                             example: 4
+ *                           mileage_km:
+ *                             type: number
+ *                             example: 12000
+ *                           battery_capacity:
+ *                             type: number
+ *                             example: 50
+ *                           license_plate:
+ *                             type: string
+ *                             example: "51H-12345"
+ *                           engine_number:
+ *                             type: string
+ *                             example: "ENG12345678"
+ *                           power:
+ *                             type: number
+ *                             example: 85
+ *                           is_verified:
+ *                             type: boolean
+ *                             example: true
+ *                       battery:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           capacity:
+ *                             type: number
+ *                             example: 100
+ *                           health:
+ *                             type: string
+ *                             example: "90%"
+ *                           chemistry:
+ *                             type: string
+ *                             example: "Lithium-ion"
+ *                           voltage:
+ *                             type: number
+ *                             example: 400
+ *                           dimension:
+ *                             type: string
+ *                             example: "200x150x100mm"
+ *       401:
+ *         description: Thiếu hoặc token không hợp lệ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Chưa cung cấp token xác thực"
+ *       500:
+ *         description: Lỗi máy chủ khi truy vấn dữ liệu
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Lỗi khi lấy danh sách bài đăng"
  */
 router.get('/user-posts', authenticateToken, getUserPosts);
 

@@ -7,7 +7,7 @@ import { access } from 'fs';
 
 export async function getUserById(id: number): Promise<User | null> {
 	const [rows]: any = await pool.query(
-		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?',
+		'select u.id,u.status,u.full_name,u.email, u.gender, u.address, u.phone,u.reputation,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?',
 		[id],
 	);
 
@@ -40,6 +40,8 @@ export async function getUserById(id: number): Promise<User | null> {
 		full_name: user.full_name,
 		email: user.email,
 		phone: user.phone,
+		gender: user.gender,
+		address: user.address,
 		reputation: user.reputation,
 		total_credit: user.total_credit,
 		total_posts: totalPosts[0][0].total,
@@ -254,7 +256,7 @@ export async function refreshToken(refreshToken: string) {
 }
 
 export async function updateUser(userId: number, userData: Partial<User>) {
-	const { full_name, phone, email, avatar } = userData;
+	const { full_name, phone, email, gender, address, avatar } = userData;
 	const reg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 	const errors: { [key: string]: string } = {};
 	if (!reg.test(email as string)) {
@@ -271,8 +273,8 @@ export async function updateUser(userId: number, userData: Partial<User>) {
 	}
 
 	const [updateUser] = await pool.query(
-		'UPDATE users SET full_name = ?, phone = ?, email = ?, avatar = ? WHERE id = ?',
-		[full_name, phone, email, avatar, userId],
+		'UPDATE users SET full_name = ?, phone = ?, email = ?, avatar = ?, gender = ?, address = ? WHERE id = ?',
+		[full_name, phone, email, avatar, gender, address, userId],
 	);
 
 	if (updateUser === undefined) {
@@ -340,7 +342,7 @@ export async function updatePhoneUser(userId: number, phone: string) {
 	};
 }
 
-export async function getPostByUserId(userId: number) {
+export async function getPostByUserId(userId: number, status?: string) {
 	// Lấy tất cả products của user với thông tin category
 	const [posts]: any = await pool.query(
 		`SELECT 
@@ -366,8 +368,9 @@ export async function getPostByUserId(userId: number) {
 		FROM products p 
 		INNER JOIN product_categories pc ON p.product_category_id = pc.id 
 		WHERE p.created_by = ? 
+		${status ? 'AND p.status = ?' : ''}
 		ORDER BY p.created_at DESC`,
-		[userId],
+		[userId, status],
 	);
 
 	// Lấy IDs của products
