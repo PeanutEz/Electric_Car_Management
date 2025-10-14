@@ -61,11 +61,11 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 			return res.status(400).json({ message: 'Missing orderCode in webhook data' });
 		}
 
-		const paymentInfo = await getPaymentStatus(orderCode);
-		await pool.query('INSERT INTO payos_webhooks_parsed (payload) values (?)', [JSON.stringify(paymentInfo)]);
+		// const paymentInfo = await getPaymentStatus(orderCode);
+		
 		await processServicePayment(orderCode);
 
-		return res.json({ success: true, message: 'Webhook processed', paymentInfo: paymentInfo.data });
+		return res.json({ success: true, message: 'Webhook processed' });
 	}
 	catch (error: any) {
 		return res.status(500).json({ message: 'Xử lý webhook thất bại' });

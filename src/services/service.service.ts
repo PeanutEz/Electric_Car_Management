@@ -347,8 +347,11 @@ export async function processServicePayment(orderCode: string) {
 			'update users set total_credit = total_credit + ? where id = ?',
 			[orderPrice, userId],
 		);
-	} else if (paymentStatus.data.data.status === 'CANCELLED' && currentOrderStatus !== 'CANCELLED') {
-		// Nếu payment bị hủy, cập nhật trạng thái order
+	} else if (
+		paymentStatus.data.data.status === 'CANCELLED' &&
+		currentOrderStatus !== 'CANCELLED'
+	) {
+		// Update order status thành CANCELLED
 		await pool.query('update orders set status = ? where code = ?', [
 			'CANCELLED',
 			orderCode,
