@@ -10,6 +10,7 @@ import {
 	updatePostByAdmin,
 	createNewPost,
 	searchPosts,
+	getAllPosts,
 } from '../services/post.service';
 import { checkAndProcessPostPayment } from '../services/service.service';
 
@@ -31,6 +32,42 @@ export async function listPosts(req: Request, res: Response) {
 			1,
 			10000,
 			status,
+			year,
+			category_type,
+		); // Lấy tất cả để tính tổng
+		res.status(200).json({
+			message: 'Lấy danh sách bài viết thành công',
+			data: {
+				posts: posts,
+				pagination: {
+					page: page,
+					limit: limit,
+					page_size: Math.ceil(totalPosts.length / limit),
+				},
+			},
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
+		});
+	}
+}
+
+export async function getPostStatusApproved(req: Request, res: Response) {
+	try {
+		const page = parseInt(req.query.page as string) || 1;
+		const limit = parseInt(req.query.limit as string) || 10;
+		const year = parseInt(req.query.year as string);
+		const category_type = (req.query.category_type as string) || '';
+		const posts = await getAllPosts(
+			page,
+			limit,
+			year,
+			category_type,
+		);
+		const totalPosts = await getAllPosts(
+			1,
+			10000,
 			year,
 			category_type,
 		); // Lấy tất cả để tính tổng
@@ -182,7 +219,7 @@ export async function createPost(req: Request, res: Response) {
 			!postData.brand ||
 			!postData.model ||
 			!postData.price ||
-			!postData.title || 
+			!postData.title ||
 			!postData.category_id
 		) {
 			return res.status(400).json({
@@ -228,7 +265,6 @@ export async function createPost(req: Request, res: Response) {
 			);
 			imageUrls = uploadResults.map((result) => result.secure_url);
 		}
-
 
 		// Chuẩn bị dữ liệu để insert
 		const postDataWithImages = {

@@ -9,6 +9,7 @@ import UploadRouter from './upload.route';
 import  GeminiRouter from './gemini.route';
 import PackageRouter from './package.route';
 import ServiceRouter from './service.route';
+import OrderRouter from './order.route';
 
 const routes = Router();
 
@@ -22,5 +23,6 @@ routes.use('/api/upload', UploadRouter);
 routes.use('/api/gemini', GeminiRouter); // For multiple uploads
 routes.use('/api/package', PackageRouter);
 routes.use('/api/service', ServiceRouter);
+routes.use('/api/order', OrderRouter);
 
 export default routes;

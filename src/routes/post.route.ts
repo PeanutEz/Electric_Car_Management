@@ -6,6 +6,7 @@ import {
 	updatePost,
 	createPost,
 	searchForPosts,
+	getPostStatusApproved,
 } from '../controllers/post.controller';
 import {
 	authenticateToken,
@@ -142,6 +143,20 @@ const router = Router();
  *         description: Lỗi server
  */
 router.get('/get-all', listPosts);
+
+/**
+ * @swagger
+ * /api/post/get-all-approved:
+ *   get:
+ *     summary: Lấy danh sách bài viết đã được phê duyệt
+ *     tags: [Posts]
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách bài viết thành công
+ *       500:
+ *         description: Lỗi server
+ */
+router.get('/get-all-approved', getPostStatusApproved);
 
 /**
  * @swagger

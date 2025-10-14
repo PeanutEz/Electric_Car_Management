@@ -67,6 +67,70 @@ export async function paginatePosts(
 	}));
 }
 
+export async function getAllPosts(
+	page: number,
+	limit: number,
+	year?: number,
+	category_type?: string,
+): Promise<Post[]> {
+	const offset = (page - 1) * limit;
+	const [rows] = await pool.query(
+		`SELECT p.id, p.title, p.priority,
+      p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at, p.address,p.status,
+      pc.slug as slug, pc.name as category_name, pc.id as category_id
+		FROM products p
+		INNER JOIN product_categories pc ON pc.id = p.product_category_id
+      where p.status = 'approved'  
+		and pc.slug like '%${category_type}%'
+      and (p.year is null or p.year = ${year || 'p.year'})
+      ORDER BY p.created_at DESC
+		LIMIT ? OFFSET ?`,
+		[limit, offset],
+	);
+
+	// Lấy IDs của products
+	const productIds = (rows as any[]).map((r: any) => r.id);
+
+	// Lấy images cho tất cả products một lần
+	let images: any[] = [];
+	if (productIds.length > 0) {
+		const [imageRows] = await pool.query(
+			`SELECT * FROM product_imgs WHERE product_id IN (${productIds
+				.map(() => '?')
+				.join(',')})`,
+			productIds,
+		);
+		images = imageRows as any[];
+	}
+
+	return (rows as any).map((r: any) => ({
+		id: r.id,
+		title: r.title,
+		created_at: r.created_at,
+		updated_at: r.updated_at,
+		description: r.description,
+		priority: r.priority,
+		status: r.status,
+		product: {
+			id: r.product_id,
+			brand: r.brand,
+			model: r.model,
+			price: r.price,
+			year: r.year,
+			address: r.address,
+			image: r.image,
+			images: images
+				.filter((img) => img.product_id === r.id)
+				.map((img) => img.url),
+			category: {
+				id: r.category_id,
+				typeSlug: r.slug,
+				name: r.category_name,
+			},
+		},
+	}));
+}
+
 export async function searchPosts(title: string): Promise<Post[]> {
 	const searchTerm = `%${title}%`;
 	const [rows] = await pool.query(
