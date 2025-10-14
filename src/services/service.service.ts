@@ -2,7 +2,7 @@ import pool from '../config/db';
 import { Service } from '../models/service.model';
 import { getUserById } from '../services/user.service';
 import payos from '../config/payos';
-import {getPaymentStatus}  from './payment.service';
+import { getPaymentStatus } from './payment.service';
 import { buildUrl } from '../utils/url';
 
 export async function getAllServices(): Promise<Service[]> {
@@ -105,7 +105,8 @@ export async function checkAndProcessPostPayment(
 				[orderCode, serviceId, userId, serviceCost, 'PENDING', 'PAYOS'],
 			);
 			try {
-				const envAppUrl = process.env.APP_URL || 'http://localhost:3000';
+				const envAppUrl =
+					process.env.APP_URL || 'http://localhost:3000';
 				// Tạo payment link PayOS
 				const paymentLinkRes = await payos.paymentRequests.create({
 					orderCode: orderCode,
@@ -117,8 +118,14 @@ export async function checkAndProcessPostPayment(
 					// cancelUrl: `${
 					// 	process.env.CLIENT_URL || 'http://localhost:3000'
 					// }/payment/cancel`,
-					returnUrl: buildUrl(envAppUrl, '/payment/result', { provider: 'payos', next: '/post?draft=true' }),
-					cancelUrl: buildUrl(envAppUrl, '/payment/result', { provider: 'payos', next: '/' }),
+					returnUrl: buildUrl(envAppUrl, '/payment/result', {
+						provider: 'payos',
+						next: '/post?draft=true',
+					}),
+					cancelUrl: buildUrl(envAppUrl, '/payment/result', {
+						provider: 'payos',
+						next: '/',
+					}),
 				});
 				console.log('PayOS response:', paymentLinkRes);
 				return {
@@ -235,14 +242,21 @@ export async function checkAndProcessPostPayment(
 			);
 
 			try {
-				const envAppUrl = process.env.APP_URL || 'http://localhost:3000';
+				const envAppUrl =
+					process.env.APP_URL || 'http://localhost:3000';
 				// Tạo payment link PayOS
 				const paymentLinkRes = await payos.paymentRequests.create({
 					orderCode: orderCode,
 					amount: Math.round(amountNeeded),
 					description: `Thanh toan dich vu`, // PayOS giới hạn 25 ký tự
-					returnUrl: buildUrl(envAppUrl, '/payment/result', { provider: 'payos', next: '/post?draft=true' }),
-					cancelUrl: buildUrl(envAppUrl, '/payment/result', { provider: 'payos', next: '/' }),
+					returnUrl: buildUrl(envAppUrl, '/payment/result', {
+						provider: 'payos',
+						next: '/post?draft=true',
+					}),
+					cancelUrl: buildUrl(envAppUrl, '/payment/result', {
+						provider: 'payos',
+						next: '/',
+					}),
 				});
 
 				console.log('PayOS response:', paymentLinkRes);
@@ -287,7 +301,7 @@ export async function checkAndProcessPostPayment(
 export async function processServicePayment(orderCode: string) {
 	const paymentStatus = await getPaymentStatus(orderCode);
 
-    const[checkUser]: any = await pool.query(
+	const [checkUser]: any = await pool.query(
 		'select buyer_id from orders where code = ?',
 		[orderCode],
 	);
@@ -333,6 +347,12 @@ export async function processServicePayment(orderCode: string) {
 			'update users set total_credit = total_credit + ? where id = ?',
 			[orderPrice, userId],
 		);
+	} else if (paymentStatus.data.data.status === 'CANCELLED' && currentOrderStatus !== 'CANCELLED') {
+		// Nếu payment bị hủy, cập nhật trạng thái order
+		await pool.query('update orders set status = ? where code = ?', [
+			'CANCELLED',
+			orderCode,
+		]);
 	}
 
 	return {
@@ -341,4 +361,3 @@ export async function processServicePayment(orderCode: string) {
 		message: 'Thanh toán thành công. Bạn có thể tạo bài post ngay.',
 	};
 }
-
