@@ -345,14 +345,6 @@ router.get('/get-all-users', authorizeRoles, listUsers);
  *   get:
  *     summary: Get user by ID
  *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: User ID
- *         example: 1
  *     responses:
  *       200:
  *         description: Tìm thấy người dùng thành công
@@ -435,7 +427,7 @@ router.get('/user-detail', userDetail);
  *     summary: Cập nhật thông tin người dùng
  *     description: Cho phép người dùng cập nhật thông tin cá nhân của họ (bao gồm cả avatar nếu có).
  *     tags:
- *       - User
+ *       - Users
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -605,7 +597,7 @@ router.put('/update-phone', authenticateToken, updateUserPhone);
  *     summary: Lấy danh sách bài đăng của người dùng
  *     description: Trả về tất cả bài đăng (sản phẩm) mà người dùng đã tạo, bao gồm thông tin chi tiết về category, hình ảnh, và dữ liệu đặc thù (vehicle hoặc battery).
  *     tags:
- *       - Post
+ *       - Posts
  *     security:
  *       - bearerAuth: []
  *     parameters:

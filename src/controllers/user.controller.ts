@@ -236,7 +236,7 @@ export async function updateUserInfo(req: Request, res: Response) {
 		}
 		const token = authHeader.split(' ')[1];
 		const id = (jwt.decode(token) as any).id;
-		const userData = req.body;
+		const userData = req.body; // dữ liệu từ client gửi lên
 
 		// Handle avatar upload if a file is provided
 		if (req.file) {
