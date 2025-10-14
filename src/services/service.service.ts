@@ -95,58 +95,57 @@ export async function checkAndProcessPostPayment(
 					message: 'Dịch vụ không tồn tại',
 				};
 			}
-			const serviceCost = parseFloat(serviceRows[0].cost);
-			const serviceName = serviceRows[0].name;
-			// Tạo payment link PayOS
-			const orderCode = Math.floor(Math.random() * 1000000);
-			// Tạo order trong database với status PENDING
-			await pool.query(
-				'INSERT INTO orders (code, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-				[orderCode, serviceId, userId, serviceCost, 'PENDING', 'PAYOS'],
-			);
-			try {
-				const envAppUrl =
-					process.env.APP_URL || 'http://localhost:3000';
-				// Tạo payment link PayOS
-				const paymentLinkRes = await payos.paymentRequests.create({
-					orderCode: orderCode,
-					amount: Math.round(serviceCost),
-					description: `Thanh toan dich vu`, // PayOS giới hạn 25 ký tự
-					// returnUrl: `${
-					// 	process.env.CLIENT_URL || 'http://localhost:3000'
-					// }/payment/success?type=service&orderCode=${orderCode}`,
-					// cancelUrl: `${
-					// 	process.env.CLIENT_URL || 'http://localhost:3000'
-					// }/payment/cancel`,
-					returnUrl: buildUrl(envAppUrl, '/payment/result', {
-						provider: 'payos',
-						next: '/post?draft=true',
-					}),
-					cancelUrl: buildUrl(envAppUrl, '/payment/result', {
-						provider: 'payos',
-						next: '/',
-					}),
-				});
-				console.log('PayOS response:', paymentLinkRes);
-				return {
-					canPost: false,
-					needPayment: true,
-					message: `Bạn chưa có quota. Vui lòng thanh toán để nhận quota.`,
-					priceRequired: serviceCost,
-					checkoutUrl: paymentLinkRes.checkoutUrl,
-					orderCode: orderCode,
-					payosResponse: paymentLinkRes, // ⭐ Trả về toàn bộ response để debug
-				};
-			} catch (payosError: any) {
-				console.error('PayOS error:', payosError);
-				// Nếu PayOS fail, vẫn trả về response nhưng không có checkoutUrl
-				return {
-					canPost: false,
-					needPayment: true,
-					message: `Bạn chưa có quota. Lỗi tạo link thanh toán: ${payosError.message}`,
-					priceRequired: serviceCost,
-				};
-			}
+			// const serviceCost = parseFloat(serviceRows[0].cost);
+			// const serviceName = serviceRows[0].name;
+			// // Tạo payment link PayOS
+			// const orderCode = Math.floor(Math.random() * 1000000);
+			// // Tạo order trong database với status PENDING
+			// await pool.query(
+			// 	'INSERT INTO orders (code, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+			// 	[orderCode, serviceId, userId, serviceCost, 'PENDING', 'PAYOS'],
+			// );
+			// try {
+			// 	const envAppUrl =
+			// 		process.env.APP_URL || 'http://localhost:3000';
+			// 	// Tạo payment link PayOS
+			// 	const paymentLinkRes = await payos.paymentRequests.create({
+			// 		orderCode: orderCode,
+			// 		amount: Math.round(serviceCost),
+			// 		description: `Thanh toan dich vu`, // PayOS giới hạn 25 ký tự
+			// 		// returnUrl: `${
+			// 		// 	process.env.CLIENT_URL || 'http://localhost:3000'
+			// 		// }/payment/success?type=service&orderCode=${orderCode}`,
+			// 		// cancelUrl: `${
+			// 		// 	process.env.CLIENT_URL || 'http://localhost:3000'
+			// 		// }/payment/cancel`,
+			// 		returnUrl: buildUrl(envAppUrl, '/payment/result', {
+			// 			provider: 'payos',
+			// 			next: '/post?draft=true',
+			// 		}),
+			// 		cancelUrl: buildUrl(envAppUrl, '/payment/result', {
+			// 			provider: 'payos',
+			// 			next: '/',
+			// 		}),
+			// 	});
+			// 	return {
+			// 		canPost: false,
+			// 		needPayment: true,
+			// 		message: `Bạn chưa có quota. Vui lòng thanh toán để nhận quota.`,
+			// 		priceRequired: serviceCost,
+			// 		checkoutUrl: paymentLinkRes.checkoutUrl,
+			// 		orderCode: orderCode,
+			// 		payosResponse: paymentLinkRes,
+			// 	};
+			// } catch (payosError: any) {
+			// 	console.error('PayOS error:', payosError);
+			// 	// Nếu PayOS fail, vẫn trả về response nhưng không có checkoutUrl
+			// 	return {
+			// 		canPost: false,
+			// 		needPayment: true,
+			// 		message: `Bạn chưa có quota. Lỗi tạo link thanh toán: ${payosError.message}`,
+			// 		priceRequired: serviceCost,
+			// 	};
+			// }
 		}
 
 		// 2. Nếu không có quota hoặc amount = 0, kiểm tra total_credit
