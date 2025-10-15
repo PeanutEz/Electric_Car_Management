@@ -127,6 +127,7 @@ export async function login(req: Request, res: Response) {
 					reputation: user.reputation,
 					total_credit: user.total_credit,
 					role: user.role,
+					avatar: user.avatar,
 				},
 				access_token: user.access_token,
 				expired_access_token: user.expired_access_token,
@@ -309,6 +310,7 @@ export async function updateUserPhone(req: Request, res: Response) {
 					reputation: user.reputation,
 					total_credit: user.total_credit,
 					role: user.role,
+					avatar: user.avatar,
 				},
 				access_token: user.access_token,
 				expired_access_token: 3600, // 1 hour in seconds

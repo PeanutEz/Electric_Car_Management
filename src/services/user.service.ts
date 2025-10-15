@@ -88,7 +88,7 @@ export async function getAllUsers(): Promise<User[]> {
 
 export async function loginUser(email: string, password: string) {
 	const [rows]: any = await pool.query(
-		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?',
+		'select u.id,u.status,u.full_name,u.avatar,u.email,u.phone,u.reputation,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?',
 		[email],
 	);
 
@@ -110,7 +110,6 @@ export async function loginUser(email: string, password: string) {
 
 	// Lưu refresh token vào database
 	await JWTService.saveRefreshToken(user.id, tokens.refreshToken);
-
 	if (user.phone === null || user.phone === '') {
 		return {
 			id: user.id,
@@ -120,6 +119,7 @@ export async function loginUser(email: string, password: string) {
 			reputation: user.reputation,
 			total_credit: user.total_credit,
 			role: user.role,
+			avatar: user.avatar,
 			access_token: 'Bearer ' + tokens.accessToken,
 			expired_access_token: 3600, // 1 hour in seconds
 			refresh_token: 'Bearer ' + tokens.refreshToken,
@@ -135,6 +135,7 @@ export async function loginUser(email: string, password: string) {
 			reputation: user.reputation,
 			total_credit: user.total_credit,
 			role: user.role,
+			avatar: user.avatar,
 			access_token: 'Bearer ' + tokens.accessToken,
 			expired_access_token: 3600, // 1 hour in seconds
 			refresh_token: 'Bearer ' + tokens.refreshToken,
@@ -318,7 +319,7 @@ export async function updatePhoneUser(userId: number, phone: string) {
 	]);
 
 	const [user1]: any = await pool.query(
-		'select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?',
+		'select u.id,u.status,u.full_name,u.email,u.phone,u.avatar,u.reputation,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?',
 		[userId],
 	);
 
@@ -336,6 +337,7 @@ export async function updatePhoneUser(userId: number, phone: string) {
 		reputation: user1[0].reputation,
 		total_credit: user1[0].total_credit,
 		role: user1[0].role,
+		avatar: user1[0].avatar,
 		expired_access_token: 3600, // 1 hour in seconds
 		access_token: 'Bearer ' + token.accessToken,
 		refresh_token: 'Bearer ' + token.refreshToken,
@@ -345,6 +347,9 @@ export async function updatePhoneUser(userId: number, phone: string) {
 
 export async function getPostByUserId(userId: number, status?: string) {
 	// Lấy tất cả products của user với thông tin category
+	if (status === 'all') {
+		status = undefined;
+	}
 	const [posts]: any = await pool.query(
 		`SELECT 
 			p.id, 
