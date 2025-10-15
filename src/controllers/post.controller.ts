@@ -273,8 +273,7 @@ export async function createPost(req: Request, res: Response) {
 			image: imageUrl,
 			images: imageUrls,
 		};
-
-		const newPost = await createNewPost(postDataWithImages);
+		const newPost = await createNewPost(userId, postDataWithImages);
 		return res.status(201).json({
 			message: 'Tạo bài viết mới thành công',
 			data: newPost,

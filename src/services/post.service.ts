@@ -283,13 +283,13 @@ export async function updatePostByAdmin(
 //vehicle: brand, model, power, warranty, mileage_km, seats, year, color, price, address, title, description, images
 
 //nếu user tạo post mà chưa có số điện thoại thì không cho tạo
-export async function createNewPost(
+export async function createNewPost(userId: number,
 	postData: Partial<Vehicle> | Partial<Battery>,
 ) {
 	const conn = await pool.getConnection();
 	try {
 		await conn.beginTransaction();
-		const {brand, model, price, year, description, address, warranty, title, image, images, category, category_id, created_by} = postData;
+		const {brand, model, price, year, description, address, warranty, title, image, images, category, category_id} = postData;
 
 
 		// const [rows]: any = await pool.query(
@@ -305,13 +305,14 @@ export async function createNewPost(
 
 
 		console.log("service " + category_id + " type: " + category_type);
+		console.log(userId);
 
 		if (rows.length === 0) {
 			throw new Error('Invalid category ID');
 		}
 
 		const [result] = await conn.query(
-			'INSERT INTO products (product_category_id, brand, model, price, year, warranty, description, address, title, image, status, created_at, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+			'INSERT INTO products (product_category_id, brand, model, price, year, warranty, description, address, title, image, status, created_by, created_at, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
 			[
 				category_id,
 				brand,
@@ -324,6 +325,7 @@ export async function createNewPost(
 				title,
 				image,
 				'pending', // trạng thái mặc định là 'pending'
+				userId,
 				1, // priority mặc định là 1
 			],
 		);
