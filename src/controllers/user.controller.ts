@@ -9,6 +9,7 @@ import {
 	updateUser,
 	updatePhoneUser,
 	getPostByUserId,
+	getOrderByUserId,
 } from '../services/user.service';
 import jwt from 'jsonwebtoken';
 import * as uploadService from '../services/upload.service';
@@ -349,6 +350,45 @@ export async function getUserPosts(req: Request, res: Response) {
 			data: posts,
 		});
 	} catch (error: any) {
+		res.status(422).json({
+			message: error.message,
+			data: error.data,
+		});
+	}
+}
+
+export async function getUserOrders(req: Request, res: Response) {
+	try {
+		// lấy userId trong header Authorization: token decode
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res
+				.status(401)
+				.json({ message: 'Chưa cung cấp token xác thực' });
+		}
+		const token = authHeader.split(' ')[1];
+		const id = (jwt.decode(token) as any).id;
+		if (!id) {
+			return res.status(403).json({
+				message: 'Vui lòng đăng nhập để xem đơn hàng của bạn',
+			});
+		}
+		const page = req.query.page ? parseInt(req.query.page as string) : 1;
+		const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+		const orders = await getOrderByUserId(id, page, limit);
+		res.status(200).json({
+			message: 'Lấy danh sách đơn hàng của người dùng thành công',
+			data: {
+				orders: orders,
+				pagination: {
+					page: page,
+					limit: limit,
+					page_size: Math.ceil(orders.length / limit),
+				},
+			},
+		});
+	}
+	catch (error: any) {
 		res.status(422).json({
 			message: error.message,
 			data: error.data,

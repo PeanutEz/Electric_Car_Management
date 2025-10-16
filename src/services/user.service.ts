@@ -71,10 +71,7 @@ export async function getUserById(id: number): Promise<User | null> {
 export function getTokenById(user: User): any {
 	const tokens = JWTService.generateTokens({
 		id: user.id as number,
-		full_name: user.full_name,
-		email: user.email,
-		phone: user.phone,
-		role: user.role,
+		role: user.role as string,
 	});
 	return tokens;
 }
@@ -206,9 +203,6 @@ export async function registerUser(userData: User) {
 
 	const tokens = JWTService.generateTokens({
 		id: user.id,
-		email: user.email,
-		full_name: user.full_name,
-		phone: user.phone,
 		role: user.role_name,
 	});
 
@@ -477,4 +471,12 @@ export async function getPostByUserId(userId: number, status?: string) {
 
 		return result;
 	});
+}
+
+export async function getOrderByUserId(userId: number, page: number, limit: number) {
+	const [orders]: any = await pool.query(
+		'SELECT * FROM orders WHERE buyer_id = ? ORDER BY created_at DESC LIMIT ?, ?',
+		[userId, (page - 1) * limit, limit],
+	);
+	return orders;
 }

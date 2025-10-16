@@ -9,7 +9,8 @@ import {
 	logout,
 	updateUserInfo,
 	updateUserPhone,
-	getUserPosts
+	getUserPosts,
+	getUserOrders
 } from '../controllers/user.controller';
 import { authenticateToken, authorizeRoles } from '../middleware/AuthMiddleware';
 
@@ -762,5 +763,7 @@ router.put('/update-phone', authenticateToken, updateUserPhone);
  */
 router.get('/user-posts', authenticateToken, getUserPosts);
 
+
+router.get('/order-by-user', authenticateToken, getUserOrders);
 
 export default router;

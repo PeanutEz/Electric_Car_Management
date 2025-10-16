@@ -6,9 +6,9 @@ dotenv.config();
 
 export interface TokenPayload {
 	id: number;
-	full_name?: string;
-	email: string;
-	phone?: string;
+	// full_name?: string;
+	// email: string;
+	// phone?: string;
 	role?: string;
 }
 
@@ -168,7 +168,7 @@ export class JWTService {
 			// Tạo access token mới
 			const newAccessToken = this.generateAccessToken({
 				id: payload.id,
-				email: payload.email,
+				// email: payload.email,
 			});
 
 			return { accessToken: newAccessToken };
