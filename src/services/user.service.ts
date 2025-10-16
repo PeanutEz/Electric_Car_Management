@@ -273,22 +273,20 @@ export async function updateUser(userId: number, userData: Partial<User>) {
 	if (!phone || phone.length !== 10) {
 		errors.phone = 'Số điện thoại phải 10 ký tự';
 	}
-
-	const [updateUser] = await pool.query(
-		'UPDATE users SET full_name = ?, phone = ?, email = ?, avatar = ?, gender = ?, address = ? WHERE id = ?',
-		[full_name, phone, email, avatar, gender, address, userId],
-	);
-
-	if (updateUser === undefined) {
-		errors.update = 'Cập nhật người dùng thất bại';
-	}
-
 	if (Object.keys(errors).length > 0) {
 		const error = new Error('Dữ liệu không hợp lệ');
 		(error as any).data = errors;
 		throw error;
 	}
-
+	
+	const [updateUser] = await pool.query(
+		'UPDATE users SET full_name = ?, phone = ?, email = ?, avatar = ?, gender = ?, address = ? WHERE id = ?',
+		[full_name, phone, email, avatar, gender, address, userId],
+	);
+	
+	if (updateUser === undefined) {
+		errors.update = 'Cập nhật người dùng thất bại';
+	}
 	return getUserById(userId);
 }
 
