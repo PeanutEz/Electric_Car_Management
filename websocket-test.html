@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="vi">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>WebSocket Test - Real-time Posts</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+				min-height: 100vh;
+				padding: 20px;
+			}
+
+			.container {
+				max-width: 1200px;
+				margin: 0 auto;
+			}
+
+			.header {
+				background: white;
+				padding: 30px;
+				border-radius: 10px;
+				box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+				margin-bottom: 20px;
+				text-align: center;
+			}
+
+			.header h1 {
+				color: #667eea;
+				margin-bottom: 10px;
+			}
+
+			.status {
+				display: inline-block;
+				padding: 10px 20px;
+				border-radius: 20px;
+				font-weight: bold;
+				margin-top: 10px;
+			}
+
+			.status.connected {
+				background: #10b981;
+				color: white;
+			}
+
+			.status.disconnected {
+				background: #ef4444;
+				color: white;
+			}
+
+			.status.connecting {
+				background: #f59e0b;
+				color: white;
+			}
+
+			.stats {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+				gap: 20px;
+				margin-bottom: 20px;
+			}
+
+			.stat-card {
+				background: white;
+				padding: 20px;
+				border-radius: 10px;
+				box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+				text-align: center;
+			}
+
+			.stat-value {
+				font-size: 2.5em;
+				font-weight: bold;
+				color: #667eea;
+			}
+
+			.stat-label {
+				color: #6b7280;
+				margin-top: 5px;
+			}
+
+			.posts-container {
+				background: white;
+				padding: 30px;
+				border-radius: 10px;
+				box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+			}
+
+			.posts-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 20px;
+				padding-bottom: 15px;
+				border-bottom: 2px solid #e5e7eb;
+			}
+
+			.posts-header h2 {
+				color: #1f2937;
+			}
+
+			.clear-btn {
+				background: #ef4444;
+				color: white;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 5px;
+				cursor: pointer;
+				font-weight: bold;
+				transition: background 0.3s;
+			}
+
+			.clear-btn:hover {
+				background: #dc2626;
+			}
+
+			.post-card {
+				background: #f9fafb;
+				border: 2px solid #e5e7eb;
+				border-radius: 8px;
+				padding: 20px;
+				margin-bottom: 15px;
+				animation: slideIn 0.3s ease-out;
+				transition: transform 0.2s, box-shadow 0.2s;
+			}
+
+			.post-card:hover {
+				transform: translateY(-2px);
+				box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+			}
+
+			.post-card.new {
+				border-color: #10b981;
+				background: #ecfdf5;
+			}
+
+			@keyframes slideIn {
+				from {
+					opacity: 0;
+					transform: translateX(-20px);
+				}
+				to {
+					opacity: 1;
+					transform: translateX(0);
+				}
+			}
+
+			.post-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: start;
+				margin-bottom: 10px;
+			}
+
+			.post-title {
+				font-size: 1.3em;
+				font-weight: bold;
+				color: #1f2937;
+				margin-bottom: 5px;
+			}
+
+			.post-badge {
+				background: #10b981;
+				color: white;
+				padding: 5px 10px;
+				border-radius: 5px;
+				font-size: 0.8em;
+				font-weight: bold;
+			}
+
+			.post-info {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+				gap: 10px;
+				margin: 15px 0;
+			}
+
+			.info-item {
+				display: flex;
+				align-items: center;
+				gap: 5px;
+			}
+
+			.info-label {
+				font-weight: bold;
+				color: #6b7280;
+			}
+
+			.info-value {
+				color: #1f2937;
+			}
+
+			.post-time {
+				color: #9ca3af;
+				font-size: 0.9em;
+				margin-top: 10px;
+			}
+
+			.no-posts {
+				text-align: center;
+				padding: 40px;
+				color: #6b7280;
+			}
+
+			.no-posts-icon {
+				font-size: 3em;
+				margin-bottom: 10px;
+			}
+
+			.logs-container {
+				background: #1f2937;
+				color: #10b981;
+				padding: 20px;
+				border-radius: 10px;
+				margin-top: 20px;
+				max-height: 300px;
+				overflow-y: auto;
+				font-family: 'Courier New', monospace;
+				font-size: 0.9em;
+			}
+
+			.log-entry {
+				margin-bottom: 5px;
+				padding: 5px;
+				border-left: 3px solid #10b981;
+				padding-left: 10px;
+			}
+
+			.log-time {
+				color: #9ca3af;
+			}
+
+			.controls {
+				background: white;
+				padding: 20px;
+				border-radius: 10px;
+				box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+				margin-top: 20px;
+			}
+
+			.btn-group {
+				display: flex;
+				gap: 10px;
+				flex-wrap: wrap;
+			}
+
+			.btn {
+				padding: 10px 20px;
+				border: none;
+				border-radius: 5px;
+				cursor: pointer;
+				font-weight: bold;
+				transition: all 0.3s;
+			}
+
+			.btn-primary {
+				background: #667eea;
+				color: white;
+			}
+
+			.btn-primary:hover {
+				background: #5568d3;
+			}
+
+			.btn-danger {
+				background: #ef4444;
+				color: white;
+			}
+
+			.btn-danger:hover {
+				background: #dc2626;
+			}
+
+			.btn-success {
+				background: #10b981;
+				color: white;
+			}
+
+			.btn-success:hover {
+				background: #059669;
+			}
+
+			@media (max-width: 768px) {
+				.post-info {
+					grid-template-columns: 1fr;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<!-- Header -->
+			<div class="header">
+				<h1>🔌 WebSocket Real-time Posts Monitor</h1>
+				<p>Theo dõi bài viết mới được tạo trong thời gian thực</p>
+				<div id="connectionStatus" class="status connecting">
+					Đang kết nối...
+				</div>
+				<div style="margin-top: 10px">
+					<small>Socket ID: <span id="socketId">-</span></small>
+				</div>
+			</div>
+
+			<!-- Statistics -->
+			<div class="stats">
+				<div class="stat-card">
+					<div class="stat-value" id="totalPosts">0</div>
+					<div class="stat-label">Tổng bài viết</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-value" id="newPosts">0</div>
+					<div class="stat-label">Bài mới (session)</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-value" id="updatedPosts">0</div>
+					<div class="stat-label">Bài cập nhật</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-value" id="connectionTime">0s</div>
+					<div class="stat-label">Thời gian kết nối</div>
+				</div>
+			</div>
+
+			<!-- Controls -->
+			<div class="controls">
+				<h3 style="margin-bottom: 15px">⚙️ Điều khiển</h3>
+				<div class="btn-group">
+					<button class="btn btn-primary" onclick="reconnectSocket()">
+						🔄 Kết nối lại
+					</button>
+					<button class="btn btn-danger" onclick="disconnectSocket()">
+						❌ Ngắt kết nối
+					</button>
+					<button class="btn btn-success" onclick="testPing()">
+						📡 Test Ping
+					</button>
+					<button class="btn btn-primary" onclick="clearLogs()">
+						🗑️ Xóa logs
+					</button>
+				</div>
+			</div>
+
+			<!-- Posts Container -->
+			<div class="posts-container">
+				<div class="posts-header">
+					<h2>📝 Bài viết mới nhất</h2>
+					<button class="clear-btn" onclick="clearPosts()">
+						Xóa tất cả
+					</button>
+				</div>
+				<div id="postsList">
+					<div class="no-posts">
+						<div class="no-posts-icon">📭</div>
+						<p>Chưa có bài viết mới nào</p>
+						<p style="font-size: 0.9em; margin-top: 5px">
+							Đang chờ realtime updates...
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- Logs Container -->
+			<div class="logs-container" id="logsContainer">
+				<strong>📋 Event Logs:</strong>
+				<div id="logs"></div>
+			</div>
+		</div>
+
+		<!-- Socket.IO Client -->
+		<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+		<script>
+			let socket;
+			let posts = [];
+			let newPostsCount = 0;
+			let updatedPostsCount = 0;
+			let connectionStartTime;
+			let connectionTimeInterval;
+
+			// Initialize Socket.IO connection
+			function initSocket() {
+				addLog('🔌 Đang kết nối đến WebSocket server...');
+
+				socket = io('http://localhost:3000', {
+					transports: ['websocket', 'polling'],
+					reconnection: true,
+					reconnectionDelay: 1000,
+					reconnectionAttempts: 5,
+				});
+
+				// Connection successful
+				socket.on('connect', () => {
+					addLog('✅ Kết nối thành công!');
+					updateConnectionStatus('connected');
+					document.getElementById('socketId').textContent = socket.id;
+					connectionStartTime = Date.now();
+					startConnectionTimer();
+				});
+
+				// Welcome message
+				socket.on('connection:success', (data) => {
+					addLog(`🎉 ${data.message} (ID: ${data.socketId})`);
+				});
+
+				// New post created
+				socket.on('post:created', (data) => {
+					addLog(
+						`🆕 Bài viết mới: ${
+							data.post.title || data.post.brand
+						}`,
+					);
+					addPost(data.post, true);
+					newPostsCount++;
+					updateStats();
+				});
+
+				// Post updated
+				socket.on('post:updated', (data) => {
+					addLog(
+						`🔄 Bài viết cập nhật: ${
+							data.post.title || 'Post #' + data.post.id
+						}`,
+					);
+					updatePost(data.post);
+					updatedPostsCount++;
+					updateStats();
+				});
+
+				// Post deleted
+				socket.on('post:deleted', (data) => {
+					addLog(`🗑️ Bài viết đã xóa: ID ${data.postId}`);
+					removePost(data.postId);
+					updateStats();
+				});
+
+				// Pong response
+				socket.on('pong', (data) => {
+					addLog(`🏓 Pong nhận được: ${data.timestamp}`);
+				});
+
+				// Disconnection
+				socket.on('disconnect', (reason) => {
+					addLog(`❌ Ngắt kết nối: ${reason}`);
+					updateConnectionStatus('disconnected');
+					stopConnectionTimer();
+				});
+
+				// Connection error
+				socket.on('connect_error', (error) => {
+					addLog(`⚠️ Lỗi kết nối: ${error.message}`);
+					updateConnectionStatus('disconnected');
+				});
+
+				// Reconnecting
+				socket.on('reconnect_attempt', (attemptNumber) => {
+					addLog(`🔄 Đang thử kết nối lại (lần ${attemptNumber})...`);
+					updateConnectionStatus('connecting');
+				});
+
+				// Reconnected
+				socket.on('reconnect', (attemptNumber) => {
+					addLog(`✅ Đã kết nối lại sau ${attemptNumber} lần thử`);
+					updateConnectionStatus('connected');
+				});
+			}
+
+			// Add post to list
+			function addPost(post, isNew = false) {
+				posts.unshift(post);
+				renderPosts();
+			}
+
+			// Update existing post
+			function updatePost(updatedPost) {
+				const index = posts.findIndex((p) => p.id === updatedPost.id);
+				if (index !== -1) {
+					posts[index] = updatedPost;
+				} else {
+					posts.unshift(updatedPost);
+				}
+				renderPosts();
+			}
+
+			// Remove post
+			function removePost(postId) {
+				posts = posts.filter((p) => p.id !== postId);
+				renderPosts();
+			}
+
+			// Render posts
+			function renderPosts() {
+				const postsList = document.getElementById('postsList');
+
+				if (posts.length === 0) {
+					postsList.innerHTML = `
+                    <div class="no-posts">
+                        <div class="no-posts-icon">📭</div>
+                        <p>Chưa có bài viết mới nào</p>
+                        <p style="font-size: 0.9em; margin-top: 5px;">Đang chờ realtime updates...</p>
+                    </div>
+                `;
+					return;
+				}
+
+				postsList.innerHTML = posts
+					.map((post, index) => {
+						const isNew = index === 0;
+						return `
+                    <div class="post-card ${isNew ? 'new' : ''}">
+                        <div class="post-header">
+                            <div>
+                                <div class="post-title">${
+									post.title ||
+									post.brand + ' ' + post.model ||
+									'Bài viết mới'
+								}</div>
+                                ${
+									isNew
+										? '<span class="post-badge">MỚI</span>'
+										: ''
+								}
+                            </div>
+                        </div>
+                        <div class="post-info">
+                            <div class="info-item">
+                                <span class="info-label">🏢 Thương hiệu:</span>
+                                <span class="info-value">${
+									post.brand || '-'
+								}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">🚗 Model:</span>
+                                <span class="info-value">${
+									post.model || '-'
+								}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">💰 Giá:</span>
+                                <span class="info-value">${
+									post.price
+										? new Intl.NumberFormat('vi-VN').format(
+												post.price,
+										  ) + ' VNĐ'
+										: '-'
+								}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">📅 Năm:</span>
+                                <span class="info-value">${
+									post.year || '-'
+								}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">📍 Địa chỉ:</span>
+                                <span class="info-value">${
+									post.address || '-'
+								}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">🎯 Trạng thái:</span>
+                                <span class="info-value">${
+									post.status || 'pending'
+								}</span>
+                            </div>
+                        </div>
+                        ${
+							post.description
+								? `<div style="color: #6b7280; margin-top: 10px;">${post.description}</div>`
+								: ''
+						}
+                        <div class="post-time">⏰ ${new Date().toLocaleString(
+							'vi-VN',
+						)}</div>
+                    </div>
+                `;
+					})
+					.join('');
+			}
+
+			// Update statistics
+			function updateStats() {
+				document.getElementById('totalPosts').textContent =
+					posts.length;
+				document.getElementById('newPosts').textContent = newPostsCount;
+				document.getElementById('updatedPosts').textContent =
+					updatedPostsCount;
+			}
+
+			// Update connection status
+			function updateConnectionStatus(status) {
+				const statusEl = document.getElementById('connectionStatus');
+				statusEl.className = `status ${status}`;
+
+				const statusText = {
+					connected: '✅ Đã kết nối',
+					disconnected: '❌ Đã ngắt kết nối',
+					connecting: '🔄 Đang kết nối...',
+				};
+
+				statusEl.textContent = statusText[status] || status;
+			}
+
+			// Add log entry
+			function addLog(message) {
+				const logsDiv = document.getElementById('logs');
+				const time = new Date().toLocaleTimeString('vi-VN');
+				const logEntry = document.createElement('div');
+				logEntry.className = 'log-entry';
+				logEntry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+				logsDiv.insertBefore(logEntry, logsDiv.firstChild);
+
+				// Keep only last 50 logs
+				while (logsDiv.children.length > 50) {
+					logsDiv.removeChild(logsDiv.lastChild);
+				}
+			}
+
+			// Clear posts
+			function clearPosts() {
+				if (confirm('Xóa tất cả bài viết?')) {
+					posts = [];
+					newPostsCount = 0;
+					updatedPostsCount = 0;
+					renderPosts();
+					updateStats();
+					addLog('🗑️ Đã xóa tất cả bài viết');
+				}
+			}
+
+			// Clear logs
+			function clearLogs() {
+				document.getElementById('logs').innerHTML = '';
+				addLog('🗑️ Đã xóa logs');
+			}
+
+			// Reconnect
+			function reconnectSocket() {
+				if (socket) {
+					socket.disconnect();
+				}
+				addLog('🔄 Đang kết nối lại...');
+				setTimeout(initSocket, 500);
+			}
+
+			// Disconnect
+			function disconnectSocket() {
+				if (socket) {
+					socket.disconnect();
+					addLog('❌ Đã ngắt kết nối');
+				}
+			}
+
+			// Test ping
+			function testPing() {
+				if (socket && socket.connected) {
+					socket.emit('ping');
+					addLog('📡 Đã gửi ping...');
+				} else {
+					addLog('⚠️ Chưa kết nối đến server');
+				}
+			}
+
+			// Connection timer
+			function startConnectionTimer() {
+				connectionTimeInterval = setInterval(() => {
+					const seconds = Math.floor(
+						(Date.now() - connectionStartTime) / 1000,
+					);
+					const minutes = Math.floor(seconds / 60);
+					const remainingSeconds = seconds % 60;
+					document.getElementById('connectionTime').textContent =
+						minutes > 0
+							? `${minutes}m ${remainingSeconds}s`
+							: `${seconds}s`;
+				}, 1000);
+			}
+
+			function stopConnectionTimer() {
+				if (connectionTimeInterval) {
+					clearInterval(connectionTimeInterval);
+				}
+			}
+
+			// Initialize on page load
+			window.onload = () => {
+				initSocket();
+				updateStats();
+			};
+
+			// Cleanup on page unload
+			window.onbeforeunload = () => {
+				if (socket) {
+					socket.disconnect();
+				}
+			};
+		</script>
+	</body>
+</html>

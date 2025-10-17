@@ -13,6 +13,7 @@ import {
 	getAllPosts,
 } from '../services/post.service';
 import { checkAndProcessPostPayment } from '../services/service.service';
+import { emitToAll } from '../config/socket';
 
 export async function listPosts(req: Request, res: Response) {
 	try {
@@ -86,18 +87,8 @@ export async function getPostStatusApproved(req: Request, res: Response) {
 		const limit = parseInt(req.query.limit as string) || 10;
 		const year = parseInt(req.query.year as string);
 		const category_type = (req.query.category_type as string) || '';
-		const posts = await getAllPosts(
-			page,
-			limit,
-			year,
-			category_type,
-		);
-		const totalPosts = await getAllPosts(
-			1,
-			10000,
-			year,
-			category_type,
-		); // Lấy tất cả để tính tổng
+		const posts = await getAllPosts(page, limit, year, category_type);
+		const totalPosts = await getAllPosts(1, 10000, year, category_type); // Lấy tất cả để tính tổng
 		res.status(200).json({
 			message: 'Lấy danh sách bài viết thành công',
 			data: {
@@ -186,6 +177,19 @@ export async function updatePost(req: Request, res: Response) {
 		if (!updatedPost) {
 			return res.status(404).json({ message: 'Không tìm thấy bài viết' });
 		}
+
+		// 🔥 Emit WebSocket event for real-time update
+		try {
+			emitToAll('post:updated', {
+				post: updatedPost,
+				message: 'Bài viết đã được cập nhật',
+				timestamp: new Date().toISOString(),
+			});
+			console.log('📡 WebSocket event emitted: post:updated');
+		} catch (socketError) {
+			console.error('⚠️ Failed to emit WebSocket event:', socketError);
+		}
+
 		return res.status(200).json({
 			message: 'Cập nhật trạng thái bài viết thành công',
 			data: updatedPost,
@@ -300,7 +304,25 @@ export async function createPost(req: Request, res: Response) {
 			image: imageUrl,
 			images: imageUrls,
 		};
-		const newPost = await createNewPost(userId, parseInt(postData.service_id), postDataWithImages);
+		const newPost = await createNewPost(
+			userId,
+			parseInt(postData.service_id),
+			postDataWithImages,
+		);
+
+		// 🔥 Emit WebSocket event for real-time update
+		try {
+			emitToAll('post:created', {
+				post: newPost,
+				message: 'Bài viết mới đã được tạo',
+				timestamp: new Date().toISOString(),
+			});
+			console.log('📡 WebSocket event emitted: post:created');
+		} catch (socketError) {
+			// Log error but don't fail the request
+			console.error('⚠️ Failed to emit WebSocket event:', socketError);
+		}
+
 		return res.status(201).json({
 			message: 'Tạo bài viết mới thành công',
 			data: newPost,
