@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { getOrdersByUserIdAndCode } from '../services/order.service';
 import jwt from 'jsonwebtoken';
 
-export async function listOrders(req: Request, res: Response) {
+export async function getOrdersByUserIdAndCodeController(req: Request, res: Response) {
    try {
       const authHeader = req.headers.authorization;
       if (!authHeader) {

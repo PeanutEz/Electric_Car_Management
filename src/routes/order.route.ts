@@ -1,5 +1,5 @@
 import Router from 'express';
-import { listOrders } from '../controllers/order.controller';
+import { getOrdersByUserIdAndCodeController } from '../controllers/order.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 const router = Router();
 /**
@@ -48,6 +48,6 @@ const router = Router();
  *       500:
  *         description: Lỗi server
 */
-router.post('/verify', authenticateToken,listOrders);
+router.post('/verify', authenticateToken,getOrdersByUserIdAndCodeController);
 
 export default router;

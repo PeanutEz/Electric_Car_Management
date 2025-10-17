@@ -4,8 +4,8 @@ import {
 	getServiceByTypeController,
 	checkPostPaymentController,
 	processServicePaymentController,
+	listPackages,
 } from '../controllers/service.controller';
-import { create } from 'domain';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 
 const router = Router();
@@ -125,5 +125,42 @@ router.post(
 );
 
 router.post('/process-service-payment', processServicePaymentController);
+
+/**
+ * @swagger
+ * /api/service/packages:
+ *   get:
+ *     summary: Get list of service packages
+ *     description: Retrieve all service packages filtered by `type` and `productType`.
+ *     tags:
+ *       - Packages
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The type of service (e.g., "post", "push", "verify").
+ *       - in: query
+ *         name: productType
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The product type related to the service (e.g., "vehicle", "battery").
+ *     responses:
+ *       200:
+ *         description: List of service packages.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Service'
+ *       400:
+ *         description: Invalid query parameters.
+ *       500:
+ *         description: Internal server error.
+ */
+router.get('/packages', listPackages);
 
 export default router;

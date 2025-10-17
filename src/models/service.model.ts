@@ -3,4 +3,9 @@ export interface Service {
    name: string;
    type: string;
    description: string;
+   cost: number;
+   number_of_post: number;
+   number_of_push: number;
+   number_of_verify: number;
+   service_ref: string;
 }
