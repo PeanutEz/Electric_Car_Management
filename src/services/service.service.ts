@@ -215,9 +215,16 @@ export async function checkAndProcessPostPayment(
 
 			// Tạo order để tracking
 			const orderCode = Math.floor(Math.random() * 1000000);
-			await conn.query(
+			const [row] = await conn.query(
 				'INSERT INTO orders (code, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
 				[orderCode, serviceId, userId, serviceCost, 'PAID', 'CREDIT'],
+			);
+
+			const insertedOrderId = (row as any).insertId;
+
+			await pool.query(
+				'insert into transaction_detail (order_id, user_id, unit, type, credits) values (?, ?, ?, ?, ?)',
+				[insertedOrderId, userId, 'VND', 'Decrease', serviceCost],
 			);
 
 			await conn.commit();
@@ -313,7 +320,7 @@ export async function processServicePayment(orderCode: string) {
 		[orderCode],
 	);
 	const orderId = checkUser[0].id;
-   const price = checkUser[0].price;
+	const price = checkUser[0].price;
 	const userId = checkUser[0].buyer_id;
 
 	// Kiểm tra user
@@ -355,7 +362,7 @@ export async function processServicePayment(orderCode: string) {
 			'update users set total_credit = total_credit + ? where id = ?',
 			[orderPrice, userId],
 		);
-		console.log("orderId, userId, price:", orderId, userId, price);
+		console.log('orderId, userId, price:', orderId, userId, price);
 
 		await pool.query(
 			'insert into transaction_detail (order_id, user_id, unit, type, credits) values (?, ?, ?, ?, ?)',
