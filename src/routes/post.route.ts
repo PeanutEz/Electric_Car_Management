@@ -13,6 +13,7 @@ import {
 	authorizeRoles,
 } from '../middleware/AuthMiddleware';
 import multer from 'multer';
+import { updateUserPost } from '../services/post.service';
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 const router = Router();
@@ -475,5 +476,7 @@ router.post(
 	]),
 	createPost,
 );
+
+router.get('/update-post', authenticateToken, updateUserPost);
 
 export default router;

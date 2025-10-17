@@ -535,3 +535,91 @@ export async function createNewPost(
 		conn.release();
 	}
 }
+
+export async function updateUserPost(
+	postData: Partial<Vehicle> | Partial<Battery>,
+) {
+	const product_category_id = postData.category_id;
+	const [rows]: any = await pool.query(
+		'SELECT type as category_type FROM product_categories WHERE id = ?',
+		[product_category_id],
+	);
+	const category_type = rows[0]?.category_type;
+	if (rows.length === 0) {
+		throw new Error('Invalid category ID');
+	}
+	if (category_type === 'vehicle') {
+		const {
+			brand,
+			model,
+			price,
+			year,
+			description,
+			address,
+			warranty,
+			title,
+			color,
+			seats,
+			mileage,
+			power,
+			image,
+			id,
+		} = postData as Partial<Vehicle>;
+		const [result] = await pool.query(
+			`UPDATE products p inner join vehicles v on v.product_id = p.id
+			SET p.brand = ?, p.model = ?, p.price = ?, p.year = ?, 
+			p.description = ?, p.address = ?, p.warranty = ?, p.title = ?, v.color = ?, v.seats = ?, v.mileage_km = ?, v.power = ? WHERE p.id = ?`,
+			[
+				brand,
+				model,
+				price,
+				year,
+				description,
+				address,
+				warranty,
+				title,
+				color,
+				seats,
+				mileage,
+				power,
+				image,
+				id,
+			],
+		);
+	} else if (category_type === 'battery') {
+		const {
+			brand,
+			model,
+			price,
+			year,
+			description,
+			address,
+			warranty,
+			title,
+			id,
+			capacity,
+			voltage,
+			health,
+		} = postData as Partial<Battery>;
+		const [result] = await pool.query(
+			`UPDATE products p inner join batteries b on b.product_id = p.id
+			SET p.brand = ?, p.model = ?, p.price = ?, p.year = ?, 
+			p.description = ?, p.address = ?, p.warranty = ?, p.title = ?, b.capacity = ?, b.health = ?, b.voltage =? WHERE p.id = ?`,
+			[
+				brand,
+				model,
+				price,
+				year,
+				description,
+				address,
+				warranty,
+				title,
+				capacity,
+				health,
+				voltage,
+				id,
+			],
+		);
+	}
+	return getPostsById(postData.id!);
+}

@@ -130,30 +130,60 @@ router.post('/process-service-payment', processServicePaymentController);
  * @swagger
  * /api/service/packages:
  *   get:
- *     summary: Get list of service packages
- *     description: Retrieve all service packages filtered by `product_type`.
+ *     summary: Lấy danh sách gói dịch vụ hoặc chi tiết gói theo ID
+ *     description: Trả về danh sách các gói dịch vụ theo loại sản phẩm (product_type). Nếu truyền thêm `id`, sẽ trả về thông tin chi tiết gói dịch vụ đó.
  *     tags:
- *       - Packages
+ *       - Service Packages
  *     parameters:
  *       - in: query
+ *         name: id
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: ID của gói dịch vụ (nếu không truyền, sẽ trả về toàn bộ gói theo productType)
+ *         example: 2
+ *       - in: query
  *         name: product_type
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: The product type related to the service (e.g., "vehicle", "battery").
+ *           enum: [vehicle, battery]
+ *         description: Loại sản phẩm cần lấy gói dịch vụ
+ *         example: vehicle
  *     responses:
  *       200:
- *         description: List of service packages.
+ *         description: Thành công — Trả về danh sách hoặc chi tiết gói dịch vụ
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Service'
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     example: 1
+ *                   type:
+ *                     type: string
+ *                     example: "Pro"
+ *                   cost:
+ *                     type: number
+ *                     example: 199000
+ *                   description:
+ *                     type: string
+ *                     example: "Dành cho người dùng thường xuyên muốn tăng lượt tiếp cận."
+ *                   features:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                     example: ["Đăng tối đa 15 tin/tháng", "Tin nổi bật trên trang chủ"]
+ *                   product_type:
+ *                     type: string
+ *                     example: "vehicle"
  *       400:
- *         description: Invalid query parameters.
+ *         description: Tham số đầu vào không hợp lệ
  *       500:
- *         description: Internal server error.
+ *         description: Lỗi máy chủ nội bộ
  */
 router.get('/packages', listPackages);
 

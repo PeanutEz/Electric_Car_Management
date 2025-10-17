@@ -4,6 +4,7 @@ import { getUserById } from '../services/user.service';
 import payos from '../config/payos';
 import { getPaymentStatus } from './payment.service';
 import { buildUrl } from '../utils/url';
+import e from 'express';
 
 export async function getAllServices(): Promise<Service[]> {
 	const [rows] = await pool.query(
@@ -12,10 +13,17 @@ export async function getAllServices(): Promise<Service[]> {
 	return rows as Service[];
 }
 
-export async function getPackage(productType: string): Promise<Service[]> {
+export async function getPackage(id: number, productType: string): Promise<Service[]> {
+	if (isNaN(id)) {
+		const [rows] = await pool.query(
+			'select * from services where product_type = ? and type = "package"',
+			[productType],
+		);
+		return rows as Service[];
+	}
 	const [rows] = await pool.query(
-		'select * from services where type = "package" and product_type = ?',
-		[productType],
+		'select * from services where id = ? and product_type = ? and type = "package"',
+		[id, productType],
 	);
 	return rows as Service[];
 }

@@ -11,6 +11,7 @@ import {
 	createNewPost,
 	searchPosts,
 	getAllPosts,
+	updateUserPost,
 } from '../services/post.service';
 import { checkAndProcessPostPayment } from '../services/service.service';
 import { emitToAll } from '../config/socket';
@@ -333,5 +334,22 @@ export async function createPost(req: Request, res: Response) {
 			message: 'Lỗi khi tạo bài viết',
 			error: error.message,
 		});
+	}
+}
+
+export async function editPost(req: Request, res: Response) {
+	try {
+		const postData = req.body;
+		const updatedPost = await updateUserPost(postData);
+		if (!updatedPost) {
+			return res.status(404).json({ message: 'Không tìm thấy bài viết' });
+		}
+		return res.status(200).json({
+			message: 'Cập nhật bài viết thành công',
+			data: updatedPost,
+		});
+	}
+	catch (error: any) {
+		return res.status(500).json({ message: error.message });
 	}
 }
