@@ -5,27 +5,107 @@ import { Battery, Vehicle } from '../models/product.model';
 export async function paginatePosts(
 	page: number,
 	limit: number,
-	status?: string,
 	year?: number,
+	capacity?: number,
+	health?: number,
+	voltage?: number,
+	color?: string,
+	seats?: number,
+	mileage_km?: number,
+	power?: number,
+	title?: string,
+	min?: number,
+	max?: number,
 	category_type?: string,
 ): Promise<Post[]> {
 	const offset = (page - 1) * limit;
-	const [rows] = await pool.query(
-		`SELECT p.id, p.title, p.priority,
-      p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at, p.address,p.status,
-      pc.slug as slug, pc.name as category_name, pc.id as category_id
-		FROM products p
-		INNER JOIN product_categories pc ON pc.id = p.product_category_id
-      where p.status like '%${status}%'  
-		and pc.slug like '%${category_type}%'
-      and (p.year is null or p.year = ${year || 'p.year'})
-      ORDER BY p.created_at DESC
-		LIMIT ? OFFSET ?`,
-		[limit, offset],
-	);
+
+	// Validate và sanitize các tham số số
+	const validYear = year && !isNaN(year) ? year : null;
+	const validCapacity = capacity && !isNaN(capacity) ? capacity : null;
+	const validHealth = health && !isNaN(health) ? health : null;
+	const validVoltage = voltage && !isNaN(voltage) ? voltage : null;
+	const validSeats = seats && !isNaN(seats) ? seats : null;
+	const validMileage = mileage_km && !isNaN(mileage_km) ? mileage_km : null;
+	const validPower = power && !isNaN(power) ? power : null;
+	const validMin = min && !isNaN(min) ? min : null;
+	const validMax = max && !isNaN(max) ? max : null;
+	const validTitle = title?.trim() || null;
+	const validColor = color?.trim() || null;
+
+	let rows: any[];
+
+	if (category_type === 'battery') {
+		const [result] = await pool.query(
+			`SELECT p.id, p.title, p.priority, p.warranty, p.pushed_at, p.end_date, p.created_by,
+			p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at, p.updated_at, p.address, p.status,
+			pc.slug as slug, pc.name as category_name, pc.id as category_id, 
+			b.capacity, b.health, b.voltage, b.chemistry, b.dimension
+			FROM products p
+			INNER JOIN product_categories pc ON pc.id = p.product_category_id
+			INNER JOIN batteries b on b.product_id = p.id
+			WHERE p.status LIKE '%approved%'  
+			AND pc.slug LIKE '%battery%'
+			${validYear ? `AND p.year = ${validYear}` : ''}
+			${validCapacity ? `AND b.capacity = ${validCapacity}` : ''}
+			${validHealth ? `AND b.health = ${validHealth}` : ''}
+			${validVoltage ? `AND b.voltage = ${validVoltage}` : ''}
+			${validTitle ? `AND p.title LIKE '%${validTitle}%'` : ''}
+			${validMin && validMax ? `AND p.price BETWEEN ${validMin} AND ${validMax}` : ''}
+			ORDER BY p.priority DESC, p.created_at DESC
+			LIMIT ? OFFSET ?`,
+			[limit, offset],
+		);
+		rows = result as any[];
+	} else if (category_type === 'vehicle') {
+		const [result] = await pool.query(
+			`SELECT p.id, p.title, p.priority, p.warranty, p.pushed_at, p.end_date, p.created_by,
+			p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at, p.updated_at, p.address, p.status,
+			pc.slug as slug, pc.name as category_name, pc.id as category_id, 
+			v.color, v.seats, v.mileage_km, v.power, v.license_plate, v.engine_number, v.battery_capacity
+			FROM products p
+			INNER JOIN product_categories pc ON pc.id = p.product_category_id
+			INNER JOIN vehicles v on v.product_id = p.id
+			WHERE p.status LIKE '%approved%'  
+			AND pc.slug LIKE '%vehicle%'
+			${validYear ? `AND p.year = ${validYear}` : ''}
+			${validColor ? `AND v.color = '${validColor}'` : ''}
+			${validSeats ? `AND v.seats = ${validSeats}` : ''}
+			${validMileage ? `AND v.mileage_km = ${validMileage}` : ''}
+			${validPower ? `AND v.power = ${validPower}` : ''}
+			${validTitle ? `AND p.title LIKE '%${validTitle}%'` : ''}
+			${validMin && validMax ? `AND p.price BETWEEN ${validMin} AND ${validMax}` : ''}
+			ORDER BY p.priority DESC, p.created_at DESC
+			LIMIT ? OFFSET ?`,
+			[limit, offset],
+		);
+		rows = result as any[];
+	} else {
+		// Default query khi không có category_type
+		const [result] = await pool.query(
+			`SELECT p.id, p.title, p.priority, p.warranty, p.pushed_at, p.end_date, p.created_by,
+			p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at, p.updated_at, p.address, p.status,
+			pc.slug as slug, pc.name as category_name, pc.id as category_id
+			FROM products p
+			INNER JOIN product_categories pc ON pc.id = p.product_category_id
+			WHERE p.status LIKE '%approved%'
+			${validYear ? `AND p.year = ${validYear}` : ''}
+			${validTitle ? `AND p.title LIKE '%${validTitle}%'` : ''}
+			${validMin && validMax ? `AND p.price BETWEEN ${validMin} AND ${validMax}` : ''}
+			ORDER BY p.priority DESC, p.created_at DESC
+			LIMIT ? OFFSET ?`,
+			[limit, offset],
+		);
+		rows = result as any[];
+	}
+
+	// Nếu không có kết quả, trả về mảng rỗng
+	if (!rows || rows.length === 0) {
+		return [];
+	}
 
 	// Lấy IDs của products
-	const productIds = (rows as any[]).map((r: any) => r.id);
+	const productIds = rows.map((r: any) => r.id);
 
 	// Lấy images cho tất cả products một lần
 	let images: any[] = [];
@@ -39,7 +119,7 @@ export async function paginatePosts(
 		images = imageRows as any[];
 	}
 
-	return (rows as any).map((r: any) => ({
+	return rows.map((r: any) => ({
 		id: r.id,
 		title: r.title,
 		created_at: r.created_at,
@@ -47,23 +127,59 @@ export async function paginatePosts(
 		description: r.description,
 		priority: r.priority,
 		status: r.status,
+		end_date: r.end_date || null,
+		review_by: r.reviewed_by || null,
+		created_by: r.created_by || null,
+		pushed_at: r.pushed_at || null,
+		category: {
+			id: r.category_id,
+			type: r.slug,
+			name: r.category_name,
+			slug: r.slug,
+			count: 0,
+		},
+		brand: {
+			name: r.brand,
+			type: r.slug, // Sử dụng slug của category làm type
+		},
 		product: {
-			id: r.product_id,
+			id: r.id,
 			brand: r.brand,
 			model: r.model,
 			price: r.price,
 			year: r.year,
 			address: r.address,
 			image: r.image,
+			description: r.description,
+			warranty: r.warranty,
+			priority: r.priority,
+			pushed_at: r.pushed_at,
+			// Vehicle specific fields
+			color: r.color || undefined,
+			seats: r.seats || undefined,
+			mileage_km: r.mileage_km || undefined,
+			mileage: r.mileage_km || undefined, // Alias for compatibility
+			power: r.power || undefined,
+			license_plate: r.license_plate || undefined,
+			engine_number: r.engine_number || undefined,
+			battery_capacity: r.battery_capacity || undefined,
+			// Battery specific fields
+			capacity: r.capacity || undefined,
+			health: r.health || undefined,
+			voltage: r.voltage || undefined,
+			chemistry: r.chemistry || undefined,
+			dimension: r.dimension || undefined,
 			images: images
 				.filter((img) => img.product_id === r.id)
 				.map((img) => img.url),
 			category: {
 				id: r.category_id,
-				typeSlug: r.slug,
+				type: r.slug,
 				name: r.category_name,
+				slug: r.slug,
+				count: 0,
 			},
-		},
+		} as any, // Type assertion to avoid strict type checking issues
 	}));
 }
 
@@ -283,14 +399,39 @@ export async function updatePostByAdmin(
 //vehicle: brand, model, power, warranty, mileage_km, seats, year, color, price, address, title, description, images
 
 //nếu user tạo post mà chưa có số điện thoại thì không cho tạo
-export async function createNewPost(userId: number,
+export async function createNewPost(
+	userId: number,
+	serviceId: number,
 	postData: Partial<Vehicle> | Partial<Battery>,
 ) {
 	const conn = await pool.getConnection();
 	try {
 		await conn.beginTransaction();
-		const {brand, model, price, year, description, address, warranty, title, image, images, category, category_id} = postData;
+		const {
+			brand,
+			model,
+			price,
+			year,
+			description,
+			address,
+			warranty,
+			title,
+			image,
+			images,
+			category,
+			category_id,
+		} = postData;
 
+		const [duration]: any = await conn.query(
+			'SELECT duration FROM services WHERE id = ?',
+			[serviceId],
+		);
+
+		const milisecondsInDay = 24 * 60 * 60 * 1000;
+		const now = new Date();
+		const endDate = new Date(
+			now.getTime() + duration[0]?.duration * milisecondsInDay,
+		);
 
 		// const [rows]: any = await pool.query(
 		// 	'SELECT * FROM product_categories WHERE id = ? AND type = ?',
@@ -303,8 +444,7 @@ export async function createNewPost(userId: number,
 		);
 		const category_type = rows[0]?.category_type;
 
-
-		console.log("service " + category_id + " type: " + category_type);
+		console.log('service ' + category_id + ' type: ' + category_type);
 		console.log(userId);
 
 		if (rows.length === 0) {
@@ -312,7 +452,7 @@ export async function createNewPost(userId: number,
 		}
 
 		const [result] = await conn.query(
-			'INSERT INTO products (product_category_id, brand, model, price, year, warranty, description, address, title, image, status, created_by, created_at, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+			'INSERT INTO products (product_category_id, brand, model, price, year, warranty, description, address, title, image, status, created_by, created_at, end_date, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
 			[
 				category_id,
 				brand,
@@ -326,6 +466,8 @@ export async function createNewPost(userId: number,
 				image,
 				'pending', // trạng thái mặc định là 'pending'
 				userId,
+				now,
+				endDate,
 				1, // priority mặc định là 1
 			],
 		);

@@ -18,21 +18,48 @@ export async function listPosts(req: Request, res: Response) {
 	try {
 		const page = parseInt(req.query.page as string) || 1;
 		const limit = parseInt(req.query.limit as string) || 10;
-		const status = (req.query.status as string) || '';
 		const year = parseInt(req.query.year as string);
+		const capacity = parseInt(req.query.capacity as string);
+		const health = parseInt(req.query.health as string);
+		const voltage = parseInt(req.query.voltage as string);
+		const color = (req.query.color as string) || '';
+		const seats = parseInt(req.query.seats as string);
+		const mileage_km = parseInt(req.query.mileage_km as string);
+		const power = parseInt(req.query.power as string);
+		const title = (req.query.title as string) || '';
+		const min = parseInt(req.query.min as string);
+		const max = parseInt(req.query.max as string);
 		const category_type = (req.query.category_type as string) || '';
 		const posts = await paginatePosts(
 			page,
 			limit,
-			status,
 			year,
+			capacity,
+			health,
+			voltage,
+			color,
+			seats,
+			mileage_km,
+			power,
+			title,
+			min,
+			max,
 			category_type,
 		);
 		const totalPosts = await paginatePosts(
 			1,
 			10000,
-			status,
 			year,
+			capacity,
+			health,
+			voltage,
+			color,
+			seats,
+			mileage_km,
+			power,
+			title,
+			min,
+			max,
 			category_type,
 		); // Lấy tất cả để tính tổng
 		res.status(200).json({
@@ -273,7 +300,7 @@ export async function createPost(req: Request, res: Response) {
 			image: imageUrl,
 			images: imageUrls,
 		};
-		const newPost = await createNewPost(userId, postDataWithImages);
+		const newPost = await createNewPost(userId, parseInt(postData.service_id), postDataWithImages);
 		return res.status(201).json({
 			message: 'Tạo bài viết mới thành công',
 			data: newPost,
