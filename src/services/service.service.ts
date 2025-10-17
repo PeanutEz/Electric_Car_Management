@@ -224,7 +224,7 @@ export async function checkAndProcessPostPayment(
 
 			await pool.query(
 				'insert into transaction_detail (order_id, user_id, unit, type, credits) values (?, ?, ?, ?, ?)',
-				[insertedOrderId, userId, 'VND', 'Decrease', serviceCost],
+				[insertedOrderId, userId, 'CREDIT', 'Decrease', serviceCost],
 			);
 
 			await conn.commit();
@@ -366,7 +366,7 @@ export async function processServicePayment(orderCode: string) {
 
 		await pool.query(
 			'insert into transaction_detail (order_id, user_id, unit, type, credits) values (?, ?, ?, ?, ?)',
-			[orderId, userId, 'VND', 'Increase', price],
+			[orderId, userId, 'CREDIT', 'Increase', price],
 		);
 	} else if (
 		paymentStatus.data.data.status === 'CANCELLED' &&
