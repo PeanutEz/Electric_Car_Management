@@ -309,10 +309,11 @@ export async function processServicePayment(orderCode: string) {
 	const paymentStatus = await getPaymentStatus(orderCode);
 
 	const [checkUser]: any = await pool.query(
-		'select buyer_id from orders where code = ?',
+		'select buyer_id, id, price from orders where code = ?',
 		[orderCode],
 	);
-
+	const orderId = checkUser[0].id;
+   const price = checkUser[0].price;
 	const userId = checkUser[0].buyer_id;
 
 	// Kiểm tra user
@@ -353,6 +354,12 @@ export async function processServicePayment(orderCode: string) {
 		await pool.query(
 			'update users set total_credit = total_credit + ? where id = ?',
 			[orderPrice, userId],
+		);
+		console.log("orderId, userId, price:", orderId, userId, price);
+
+		await pool.query(
+			'insert into transaction_detail (order_id, user_id, unit, type, credits) values (?, ?, ?, ?, ?)',
+			[orderId, userId, 'VND', 'Increase', price],
 		);
 	} else if (
 		paymentStatus.data.data.status === 'CANCELLED' &&
