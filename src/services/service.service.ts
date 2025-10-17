@@ -12,10 +12,10 @@ export async function getAllServices(): Promise<Service[]> {
 	return rows as Service[];
 }
 
-export async function getPackage(type: string, productType: string): Promise<Service[]> {
+export async function getPackage(productType: string): Promise<Service[]> {
 	const [rows] = await pool.query(
-		'select * from services where type = ? and product_type = ?',
-		[type, productType],
+		'select * from services where type = "package" and product_type = ?',
+		[productType],
 	);
 	return rows as Service[];
 }

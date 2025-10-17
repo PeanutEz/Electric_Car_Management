@@ -26,9 +26,8 @@ export async function listServices(req: Request, res: Response) {
 
 export async function listPackages(req: Request, res: Response) {
 	try {
-		const type = req.query.type as string;
 		const productType = req.query.product_type as string;
-		const packages = await getPackage(type, productType);
+		const packages = await getPackage(productType);
 		res.status(200).json({
 			message: 'Lấy danh sách gói dịch vụ thành công',
 			data: {

@@ -131,18 +131,12 @@ router.post('/process-service-payment', processServicePaymentController);
  * /api/service/packages:
  *   get:
  *     summary: Get list of service packages
- *     description: Retrieve all service packages filtered by `type` and `productType`.
+ *     description: Retrieve all service packages filtered by `product_type`.
  *     tags:
  *       - Packages
  *     parameters:
  *       - in: query
- *         name: type
- *         schema:
- *           type: string
- *         required: true
- *         description: The type of service (e.g., "post", "push", "verify").
- *       - in: query
- *         name: productType
+ *         name: product_type
  *         schema:
  *           type: string
  *         required: true
