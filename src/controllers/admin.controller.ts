@@ -4,7 +4,8 @@ import {
 	getAllServices,
 	updateService,
 	deleteService,
-   getOrder
+   getOrder,
+   getTransactions
 } from '../services/admin.service';
 
 export const listServices = async (req: Request, res: Response) => {
@@ -81,4 +82,19 @@ export const listOrders = async (req: Request, res: Response) => {
          message: error.message,
       });
    }
+};
+
+export const getOrderTransactions = async (req: Request, res: Response) => {
+	try {
+		const orderId = parseInt(req.query.orderId as string);
+		const transactions = await getTransactions(orderId);
+		res.status(200).json({
+			message: 'Lấy danh sách giao dịch thành công',
+			data: transactions,
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
+		});
+	}
 };

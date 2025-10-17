@@ -1,6 +1,7 @@
 import pool from '../config/db';
 import { Service } from '../models/service.model';
 import { Order } from '../models/order.model';
+import { Transaction } from '../models/transaction.model';
 
 
 // ## 📦 Table: `services`
@@ -39,3 +40,11 @@ export async function getOrder(page: number, limit: number): Promise<{orders: Or
    const total = (countRows as any)[0].count as number;
    return { orders: rows as Order[], total };
 }
+
+export async function getTransactions(orderId: number): Promise<Transaction[]> {
+   if (!orderId) throw new Error('Invalid order ID');
+   const [rows]:any = await pool.query('SELECT * FROM transaction_detail WHERE order_id = ?', [orderId]);
+   if (!rows || rows.length === 0) throw new Error('No transactions found');
+   return rows as Transaction[];
+}
+

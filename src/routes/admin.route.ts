@@ -1,5 +1,5 @@
 import Router from 'express';
-import { addService,editService, listServices, removeService,listOrders } from '../controllers/admin.controller';
+import { addService,editService, listServices, removeService,listOrders, getOrderTransactions } from '../controllers/admin.controller';
 
 const router = Router();
 
@@ -52,6 +52,38 @@ const router = Router();
  *         description: Lỗi máy chủ nội bộ.
  */
 router.get('/list-orders', listOrders);
+
+/**
+ * @swagger
+ * /api/admin/transactions:
+ *  get:
+ *    summary: Lấy thông tin giao dịch của một đơn hàng
+ *    description: Trả về danh sách các giao dịch của một đơn hàng cụ thể.
+ *    tags: [Admin]
+ *    parameters:
+ *      - in: query
+ *        name: orderId
+ *        required: true
+ *        schema:
+ *          type: integer
+ *          example: 1
+ *        description: ID của đơn hàng cần lấy thông tin giao dịch.
+ *    responses:
+ *      200:
+ *        description: Danh sách giao dịch được trả về thành công.
+ *        content:
+ *          application/json:
+ *            schema:
+ *              type: object
+ *              properties:
+ *                transactions:
+ *                  type: array
+ *                  items:
+ *                    $ref: '#/components/schemas/Transaction'
+ *      500:
+ *        description: Lỗi máy chủ nội bộ.
+ */
+router.get('/transactions', getOrderTransactions);
 
 router.get('/list-services', listServices);
 router.post('/create-service', addService);
