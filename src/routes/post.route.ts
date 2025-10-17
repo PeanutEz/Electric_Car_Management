@@ -28,36 +28,101 @@ const router = Router();
  * @swagger
  * /api/post/get-all:
  *   get:
- *     summary: Lấy danh sách bài viết (có phân trang)
- *     tags: [Posts]
+ *     summary: Lấy danh sách bài viết (paginate + filter)
+ *     description: Trả về danh sách bài viết được phân trang và lọc theo loại sản phẩm (vehicle hoặc battery) cùng các thuộc tính chi tiết.
+ *     tags:
+ *       - Posts
  *     parameters:
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
- *           example: 1
- *         description: Trang hiện tại
+ *           default: 1
+ *         required: true
+ *         description: Số trang hiện tại.
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *           example: 4
- *         description: Số lượng bài viết trên mỗi trang
+ *           default: 20
+ *         required: true
+ *         description: Số lượng bài viết mỗi trang.
  *       - in: query
- *         name: status
+ *         name: category_type
  *         schema:
  *           type: string
- *           example: approved
- *         description: Lọc bài viết theo trạng thái (approved, pending, rejected)
+ *           enum: [vehicle, battery]
+ *         required: false
+ *         description: Loại danh mục sản phẩm (`vehicle` hoặc `battery`).
  *       - in: query
  *         name: year
  *         schema:
  *           type: integer
- *           example: 2024
- *         description: Lọc bài viết theo năm sản xuất của sản phẩm
+ *         required: false
+ *         description: Năm sản xuất của sản phẩm.
+ *       - in: query
+ *         name: title
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Tiêu đề bài viết (tìm kiếm gần đúng).
+ *       - in: query
+ *         name: min
+ *         schema:
+ *           type: number
+ *         required: false
+ *         description: Giá tối thiểu.
+ *       - in: query
+ *         name: max
+ *         schema:
+ *           type: number
+ *         required: false
+ *         description: Giá tối đa.
+ *       - in: query
+ *         name: color
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Màu sắc (áp dụng cho vehicle).
+ *       - in: query
+ *         name: seats
+ *         schema:
+ *           type: integer
+ *         required: false
+ *         description: Số ghế (áp dụng cho vehicle).
+ *       - in: query
+ *         name: mileage_km
+ *         schema:
+ *           type: integer
+ *         required: false
+ *         description: Số km đã đi (áp dụng cho vehicle).
+ *       - in: query
+ *         name: power
+ *         schema:
+ *           type: integer
+ *         required: false
+ *         description: Công suất động cơ (áp dụng cho vehicle).
+ *       - in: query
+ *         name: capacity
+ *         schema:
+ *           type: integer
+ *         required: false
+ *         description: Dung lượng pin (áp dụng cho battery).
+ *       - in: query
+ *         name: health
+ *         schema:
+ *           type: integer
+ *         required: false
+ *         description: Tình trạng pin (áp dụng cho battery).
+ *       - in: query
+ *         name: voltage
+ *         schema:
+ *           type: integer
+ *         required: false
+ *         description: Điện áp pin (áp dụng cho battery).
  *     responses:
  *       200:
- *         description: Lấy danh sách bài viết thành công
+ *         description: Lấy danh sách bài viết thành công.
  *         content:
  *           application/json:
  *             schema:
@@ -69,62 +134,10 @@ const router = Router();
  *                 data:
  *                   type: object
  *                   properties:
- *                     post:
+ *                     posts:
  *                       type: array
  *                       items:
- *                         type: object
- *                         properties:
- *                           id:
- *                             type: integer
- *                             example: 1
- *                           title:
- *                             type: string
- *                             example: "Bài viết demo"
- *                           status:
- *                             type: string
- *                             example: "approved"
- *                           end_date:
- *                             type: string
- *                             format: date-time
- *                             example: "2025-10-07T17:00:00.000Z"
- *                           year:
- *                             type: integer
- *                             example: 2024
- *                           priority:
- *                             type: integer
- *                             example: 2
- *                           pushed_at:
- *                             type: string
- *                             format: date-time
- *                             example: "2025-10-01T08:30:00.000Z"
- *                           product:
- *                             type: object
- *                             properties:
- *                               model:
- *                                 type: string
- *                                 example: "Taycan Turbo S"
- *                               price:
- *                                 type: string
- *                                 example: "180000.00"
- *                               description:
- *                                 type: string
- *                                 example: "Xe điện Porsche Taycan Turbo S, bản cao cấp."
- *                               image:
- *                                 type: string
- *                                 nullable: true
- *                                 example: "taycan.jpg"
- *                               brand:
- *                                 type: string
- *                                 example: "BYD"
- *                               category:
- *                                 type: object
- *                                 properties:
- *                                   type:
- *                                     type: string
- *                                     example: "Sedan"
- *                                   name:
- *                                     type: string
- *                                     example: "Xe điện cao cấp"
+ *                         $ref: '#/components/schemas/Post'
  *                     pagination:
  *                       type: object
  *                       properties:
@@ -133,14 +146,14 @@ const router = Router();
  *                           example: 1
  *                         limit:
  *                           type: integer
- *                           example: 4
+ *                           example: 20
  *                         page_size:
  *                           type: integer
- *                           example: 4
+ *                           example: 1
  *       400:
- *         description: Tham số không hợp lệ
+ *         description: Tham số không hợp lệ.
  *       500:
- *         description: Lỗi server
+ *         description: Lỗi máy chủ.
  */
 router.get('/get-all', listPosts);
 
