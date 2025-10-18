@@ -138,17 +138,6 @@ export async function getPostApproved(
 		review_by: r.reviewed_by || null,
 		created_by: r.created_by || null,
 		pushed_at: r.pushed_at || null,
-		category: {
-			id: r.category_id,
-			type: r.slug,
-			name: r.category_name,
-			slug: r.slug,
-			count: 0,
-		},
-		brand: {
-			name: r.brand,
-			type: r.slug, // Sử dụng slug của category làm type
-		},
 		product: {
 			id: r.id,
 			brand: r.brand,
@@ -186,7 +175,7 @@ export async function getPostApproved(
 				slug: r.slug,
 				count: 0,
 			},
-		} as any, // Type assertion to avoid strict type checking issues
+		}
 	}));
 }
 
