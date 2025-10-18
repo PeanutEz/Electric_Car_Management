@@ -2,7 +2,7 @@ import pool from '../config/db';
 import { Post } from '../models/post.model';
 import { Battery, Vehicle } from '../models/product.model';
 
-export async function paginatePosts(
+export async function getPostApproved(
 	page: number,
 	limit: number,
 	year?: number,
@@ -183,6 +183,71 @@ export async function paginatePosts(
 	}));
 }
 
+export async function paginatePosts(
+	page: number,
+	limit: number,
+	status?: string,
+	year?: number,
+	category_type?: string,
+): Promise<Post[]> {
+	const offset = (page - 1) * limit;
+	const [rows] = await pool.query(
+		`SELECT p.id, p.title, p.priority,
+      p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at, p.address,p.status,
+      pc.slug as slug, pc.name as category_name, pc.id as category_id
+		FROM products p
+		INNER JOIN product_categories pc ON pc.id = p.product_category_id
+      where p.status like '%${status}%'  
+		and pc.slug like '%${category_type}%'
+      and (p.year is null or p.year = ${year || 'p.year'})
+      ORDER BY p.created_at DESC
+		LIMIT ? OFFSET ?`,
+		[limit, offset],
+	);
+
+	// Lấy IDs của products
+	const productIds = (rows as any[]).map((r: any) => r.id);
+
+	// Lấy images cho tất cả products một lần
+	let images: any[] = [];
+	if (productIds.length > 0) {
+		const [imageRows] = await pool.query(
+			`SELECT * FROM product_imgs WHERE product_id IN (${productIds
+				.map(() => '?')
+				.join(',')})`,
+			productIds,
+		);
+		images = imageRows as any[];
+	}
+
+	return (rows as any).map((r: any) => ({
+		id: r.id,
+		title: r.title,
+		created_at: r.created_at,
+		updated_at: r.updated_at,
+		description: r.description,
+		priority: r.priority,
+		status: r.status,
+		product: {
+			id: r.product_id,
+			brand: r.brand,
+			model: r.model,
+			price: r.price,
+			year: r.year,
+			address: r.address,
+			image: r.image,
+			images: images
+				.filter((img) => img.product_id === r.id)
+				.map((img) => img.url),
+			category: {
+				id: r.category_id,
+				typeSlug: r.slug,
+				name: r.category_name,
+			},
+		},
+	}));
+}
+
 export async function getAllPosts(
 	page: number,
 	limit: number,
@@ -288,14 +353,21 @@ export async function searchPosts(title: string): Promise<Post[]> {
 export async function getPostsById(id: number): Promise<Post[]> {
 	// Lấy thông tin sản phẩm
 	const [rows] = await pool.query(
-		'SELECT p.id, p.status, p.brand, p.model, p.price, p.address, p.description, p.year, p.address,' +
+		'SELECT p.id, p.status, p.brand, p.model, p.price, p.address,p.created_at,p.updated_at, p.description, p.year,p.warranty, p.address,' +
 			'p.image, pc.name AS category_name, pc.id AS category_id, ' +
-			'pc.type AS category_type, v.mileage_km, v.seats, v.color, bat.capacity, bat.voltage, bat.health, ' +
+			'pc.slug AS category_type, v.mileage_km, v.seats, v.color,v.power, bat.capacity, bat.voltage, bat.health, ' +
 			'p.end_date, p.title, p.pushed_at, p.priority ' +
 			'FROM products p ' +
 			'LEFT JOIN product_categories pc ON p.product_category_id = pc.id ' +
 			'LEFT JOIN vehicles v ON v.product_id = p.id ' +
 			'LEFT JOIN batteries bat ON bat.product_id = p.id ' +
+			'WHERE p.id = ?',
+		[id],
+	);
+
+	const [seller]: any[] = await pool.query(
+		'SELECT u.id, u.name, u.email, u.phone FROM users u ' +
+			'INNER JOIN products p ON p.created_by = u.id ' +
 			'WHERE p.id = ?',
 		[id],
 	);
@@ -311,52 +383,61 @@ export async function getPostsById(id: number): Promise<Post[]> {
 	return (rows as any).map((r: any) => ({
 		id: r.id,
 		title: r.title,
-		status: r.status,
-		end_date: r.end_date,
-		reviewed_by: r.reviewed_by,
-		created_by: r.created_by,
-		created_at: r.created_at,
 		priority: r.priority,
-		pushed_at: r.pushed_at,
-		address: r.address,
+		created_at: r.created_at,
+		updated_at: r.updated_at,
+		end_date: r.end_date,
 		product:
-			r.category_type === 'car'
+			r.category_type === 'vehicle'
 				? {
-						id: r.product_id,
-						brand: r.brand_name,
+						brand: r.brand,
 						model: r.model,
-						//power: number;
+						price: r.price,
 						description: r.description,
+						status: r.status,
+						year: r.year,
+						created_by: r.created_by,
+						warranty: r.warranty,
+						address: r.address,
+						color: r.color,
 						seats: r.seats,
 						mileage: r.mileage_km,
-						price: r.price,
-						year: r.year,
+						power: r.power,
 						category: {
 							id: r.category_id,
 							name: r.category_name,
-							type: r.category_type,
+							typeSlug: r.category_type,
 						},
 						image: r.image,
 						images: images, // Lấy từ bảng product_imgs
 				  }
 				: {
-						id: r.product_id,
-						brand: r.brand_name,
+						brand: r.brand,
 						model: r.model,
-						capacity: r.capacity,
+						price: r.price,
 						description: r.description,
+						status: r.status,
+						year: r.year,
+						created_by: r.created_by,
+						warranty: r.warranty,
+						address: r.address,
+						capacity: r.capacity,
 						voltage: r.voltage,
 						health: r.health,
-						price: r.price,
-						year: r.year,
 						category: {
 							id: r.category_id,
 							name: r.category_name,
-							type: r.category_type,
+							typeSlug: r.category_type,
 						},
 						image: r.image,
 						images: images, // Lấy từ bảng product_imgs
 				  },
+		// seller: {
+		// 	id: seller[0].id,
+		// 	name: seller[0].name,
+		// 	email: seller[0].email,
+		// 	phone: seller[0].phone,
+		// }
 	}));
 }
 

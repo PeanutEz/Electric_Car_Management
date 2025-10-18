@@ -11,7 +11,7 @@ import { setupSwagger } from './utils/swagger';
 dotenv.config();
 
 const app = express();
-const httpServer = createServer(app); // Create HTTP server for Socket.IO
+//const httpServer = createServer(app); // Create HTTP server for Socket.IO
 
 app.use(bodyParser.json());
 const PORT = process.env.PORT || 3006;
@@ -31,13 +31,20 @@ app.use(routes);
 setupSwagger(app);
 
 // Initialize WebSocket server
-initializeSocket(httpServer);
+//initializeSocket(httpServer);
 
 // Start server with HTTP server (instead of app.listen)
-httpServer.listen(PORT, async () => {
+// httpServer.listen(PORT, async () => {
+// 	await testConnection();
+
+// 	console.log(`🚀 Server pham gia lac running on http://localhost:${PORT}`);
+// 	console.log(`📄 Swagger UI available at http://localhost:${PORT}/api-docs`);
+// 	console.log(`🔌 WebSocket server ready on ws://localhost:${PORT}`);
+// });
+
+app.listen(PORT, async () => {
 	await testConnection();
 
-	console.log(`🚀 Server pham gia lac running on http://localhost:${PORT}`);
+	console.log(`🚀 Server SWP391 running on http://localhost:${PORT}`);
 	console.log(`📄 Swagger UI available at http://localhost:${PORT}/api-docs`);
-	console.log(`🔌 WebSocket server ready on ws://localhost:${PORT}`);
 });

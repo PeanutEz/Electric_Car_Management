@@ -12,11 +12,12 @@ import {
 	searchPosts,
 	getAllPosts,
 	updateUserPost,
+	getPostApproved
 } from '../services/post.service';
 import { checkAndProcessPostPayment } from '../services/service.service';
 import { emitToAll } from '../config/socket';
 
-export async function listPosts(req: Request, res: Response) {
+export async function getPostApprovedController(req: Request, res: Response) {
 	try {
 		const page = parseInt(req.query.page as string) || 1;
 		const limit = parseInt(req.query.limit as string) || 10;
@@ -32,7 +33,7 @@ export async function listPosts(req: Request, res: Response) {
 		const min = parseInt(req.query.min as string);
 		const max = parseInt(req.query.max as string);
 		const category_type = (req.query.category_type as string) || '';
-		const posts = await paginatePosts(
+		const posts = await getPostApproved(
 			page,
 			limit,
 			year,
@@ -48,7 +49,7 @@ export async function listPosts(req: Request, res: Response) {
 			max,
 			category_type,
 		);
-		const totalPosts = await paginatePosts(
+		const totalPosts = await getPostApproved(
 			1,
 			10000,
 			year,
@@ -82,14 +83,27 @@ export async function listPosts(req: Request, res: Response) {
 	}
 }
 
-export async function getPostStatusApproved(req: Request, res: Response) {
+export async function listPosts(req: Request, res: Response) {
 	try {
 		const page = parseInt(req.query.page as string) || 1;
 		const limit = parseInt(req.query.limit as string) || 10;
+		const status = (req.query.status as string) || '';
 		const year = parseInt(req.query.year as string);
 		const category_type = (req.query.category_type as string) || '';
-		const posts = await getAllPosts(page, limit, year, category_type);
-		const totalPosts = await getAllPosts(1, 10000, year, category_type); // Lấy tất cả để tính tổng
+		const posts = await paginatePosts(
+			page,
+			limit,
+			status,
+			year,
+			category_type
+		);
+		const totalPosts = await paginatePosts(
+			1,
+			10000,
+			status,
+			year,
+			category_type
+		); // Lấy tất cả để tính tổng
 		res.status(200).json({
 			message: 'Lấy danh sách bài viết thành công',
 			data: {

@@ -6,7 +6,7 @@ import {
 	updatePost,
 	createPost,
 	searchForPosts,
-	getPostStatusApproved,
+	getPostApprovedController
 } from '../controllers/post.controller';
 import {
 	authenticateToken,
@@ -170,7 +170,7 @@ router.get('/get-all', listPosts);
  *       500:
  *         description: Lỗi server
  */
-router.get('/get-all-approved', getPostStatusApproved);
+router.get('/get-all-approved', getPostApprovedController);
 
 /**
  * @swagger
