@@ -6,8 +6,8 @@ const router = Router();
 /**
  * @swagger
  * tags:
- *   name: Order
- *   description: API quản lý đơn hàng
+ *   name: Transaction
+ *   description: API quản lý giao dịch
  */
 
 
