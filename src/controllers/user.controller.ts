@@ -340,13 +340,23 @@ export async function getUserPosts(req: Request, res: Response) {
 		}
 		const token = authHeader.split(' ')[1];
 		const id = (jwt.decode(token) as any).id;
+		const page = parseInt(req.query.page as string) || 1;
+		const limit = parseInt(req.query.limit as string) || 10;
 		const status = req.query.status as string | undefined;
+		const status_verify = req.query.status_verify as string | undefined;
+
 		if (!id) {
 			return res.status(403).json({
 				message: 'Vui lòng đăng nhập để xem bài viết của bạn',
 			});
 		}
-		const posts = await getPostByUserId(id, status);
+
+		const posts = await getPostByUserId(id,
+			                                status,
+											status_verify,
+											page,
+											limit);
+
 		res.status(200).json({
 			message: 'Lấy danh sách bài viết của người dùng thành công',
 			data: {
@@ -356,9 +366,15 @@ export async function getUserPosts(req: Request, res: Response) {
 					rejected: posts.filter((p: any) => p.status === 'rejected').length,
 					pending: posts.filter((p: any) => p.status === 'pending').length,
 					approved: posts.filter((p: any) => p.status === 'approved').length,
-					is_verified: posts.filter((p: any) => p.is_verified === 'yes').length,
-					unverified: posts.filter((p: any) => p.is_verified === 'none').length,
-				}
+					verified: posts.filter((p: any) => p.status_verify === 'verified').length,
+					verifying: posts.filter((p: any) => p.status_verify === 'verifying').length,
+					unverified: posts.filter((p: any) => p.status_verify === 'unverified').length,
+				},
+				pagination: {
+					page: page,
+					limit: limit,
+					page_size: Math.ceil(posts.length / limit),
+				},
 			},
 		});
 	} catch (error: any) {

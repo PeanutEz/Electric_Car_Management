@@ -337,13 +337,47 @@ export async function updatePhoneUser(userId: number, phone: string) {
 	};
 }
 
-export async function getPostByUserId(userId: number, status?: string) {
-	// Lấy tất cả products của user với thông tin category
-	if (status === 'all') {
-		status = undefined;
-	}
-	const [posts]: any = await pool.query(
-		`SELECT 
+export async function getPostByUserId(userId: number, status?: string, status_verify?: string, page: number = 1, limit: number = 20) {
+    const offset = (page - 1) * limit;
+
+	if (status === 'all') status = undefined;
+	if (status_verify === 'all') status_verify = undefined;
+	
+	// const [posts]: any = await pool.query(
+	// 	`SELECT 
+	// 		p.id, 
+	// 		p.title,
+	// 		p.brand, 
+	// 		p.model,
+	// 		p.description,
+	// 		p.year,
+	// 		p.address,
+	// 		p.image,
+	// 		p.end_date,
+	// 		p.warranty,
+	// 		p.priority,
+	// 		p.price, 
+	// 		p.status_verify,
+	// 		p.color,
+	// 		p.status, 
+	// 		p.created_at,
+	// 		p.updated_at,
+	// 		pc.id as category_id,
+	// 		pc.name as category,
+	// 		pc.type as category_type,
+	// 		pc.slug as category_slug
+	// 	FROM products p 
+	// 	INNER JOIN product_categories pc ON p.product_category_id = pc.id 
+	// 	WHERE p.created_by = ? 
+	// 	${status ? 'AND p.status = ?' : ''}
+	// 	${status_verify ? 'AND p.status_verify = ?' : ''}
+	// 	ORDER BY p.created_at DESC
+	// 	LIMIT ? OFFSET ?`,
+	// 	[userId, status, status_verify, limit, offset],
+	// );
+
+	let query = `
+		SELECT 
 			p.id, 
 			p.title,
 			p.brand, 
@@ -356,37 +390,55 @@ export async function getPostByUserId(userId: number, status?: string) {
 			p.warranty,
 			p.priority,
 			p.price, 
-			p.is_verified,
+			p.status_verify,
 			p.color,
 			p.status, 
 			p.created_at,
 			p.updated_at,
-			pc.id as category_id,
-			pc.name as category,
-			pc.type as category_type,
-			pc.slug as category_slug
+			pc.id AS category_id,
+			pc.name AS category,
+			pc.type AS category_type,
+			pc.slug AS category_slug
 		FROM products p 
 		INNER JOIN product_categories pc ON p.product_category_id = pc.id 
-		WHERE p.created_by = ? 
-		${status ? 'AND p.status = ?' : ''}
-		ORDER BY p.created_at DESC`,
-		[userId, status],
-	);
+		WHERE p.created_by = ?
+	`;
+
+	const params: any[] = [userId];
+
+	// Thêm điều kiện nếu có status
+	if (status) {
+		query += ' AND p.status = ?';
+		params.push(status);
+	}
+
+	// Thêm điều kiện nếu có status_verify
+	if (status_verify) {
+		query += ' AND p.status_verify = ?';
+		params.push(status_verify);
+	}
+
+	// Cuối cùng, thêm phần sắp xếp và phân trang
+	query += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
+	params.push(limit, offset);
+
+	// Thực thi query
+	const [posts]: any = await pool.query(query, params);
 
 	const countAll = posts.length;
 
-	const [rejectedCount]: any = await pool.query(
-		'SELECT COUNT(*) as rejected_count FROM products WHERE created_by = ? AND status = "rejected"',
-		[userId],
-	);
-	const [pendingCount]: any = await pool.query(
-		'SELECT COUNT(*) as pending_count FROM products WHERE created_by = ? AND status = "pending"',
-		[userId],
-	);
-	const [approvedCount]: any = await pool.query(
-		'SELECT COUNT(*) as approved_count FROM products WHERE created_by = ? AND status = "approved"',
-		[userId],
-	);
+	// const [rejectedCount]: any = await pool.query(
+	// 	'SELECT COUNT(*) as rejected_count FROM products WHERE created_by = ? AND status = "rejected"',
+	// 	[userId],
+	// );
+	// const [pendingCount]: any = await pool.query(
+	// 	'SELECT COUNT(*) as pending_count FROM products WHERE created_by = ? AND status = "pending"',
+	// 	[userId],
+	// );
+	// const [approvedCount]: any = await pool.query(
+	// 	'SELECT COUNT(*) as approved_count FROM products WHERE created_by = ? AND status = "approved"',
+	// 	[userId],
+	// );
 
 
 	// Lấy IDs của products
@@ -464,7 +516,7 @@ export async function getPostByUserId(userId: number, status?: string) {
 			warranty: post.warranty,
 			priority: post.priority,
 			price: post.price,
-			is_verified: post.is_verified,
+			status_verify: post.status_verify,
 			status: post.status,
 			created_at: post.created_at,
 			updated_at: post.updated_at,
