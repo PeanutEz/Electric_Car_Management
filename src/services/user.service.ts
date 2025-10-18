@@ -486,11 +486,23 @@ export async function getPostByUserId(
 	};
 }
 
-
 export async function getOrderByUserId(userId: number, page: number, limit: number) {
 	const [orders]: any = await pool.query(
 		'SELECT * FROM orders WHERE buyer_id = ? ORDER BY created_at DESC LIMIT ?, ?',
 		[userId, (page - 1) * limit, limit],
 	);
 	return orders;
+}
+
+export async function changePassword(userId: number, newPassword: string) {
+	if (!newPassword || newPassword.length < 6 || newPassword.length > 160) {
+		const error = new Error('Mật khẩu phải từ 6 đến 160 ký tự');
+		throw error;
+	}
+	const hashedPassword = await bcrypt.hash(newPassword, 10);
+	await pool.query('UPDATE users SET password = ? WHERE id = ?', [
+		hashedPassword,
+		userId,
+	]);
+	return true;
 }

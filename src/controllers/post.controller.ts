@@ -23,19 +23,30 @@ export async function getPostApprovedController(req: Request, res: Response) {
 		const limit = parseInt(req.query.limit as string) || 10;
 		const year = parseInt(req.query.year as string);
 		const capacity = parseInt(req.query.capacity as string);
-		const health = parseInt(req.query.health as string);
-		const voltage = parseInt(req.query.voltage as string);
+		const health = req.query.health as string || '';
+		const voltage = req.query.voltage as string || '';
 		const color = (req.query.color as string) || '';
 		const seats = parseInt(req.query.seats as string);
-		const mileage_km = parseInt(req.query.mileage_km as string);
+		const mileage_km = req.query.mileage_km as string || '';
 		const power = parseInt(req.query.power as string);
 		const title = (req.query.title as string) || '';
 		const sort_by = (req.query.sort_by as string);
 		const order = (req.query.order as string) as 'asc' | 'desc';
-		const min = parseInt(req.query.min as string);
-		const max = parseInt(req.query.max as string);
+		let min = parseInt(req.query.price_min as string);
+		let max = parseInt(req.query.price_max as string);
 		const category_type = (req.query.category_type as string) || '';
-		
+		if(min === undefined || isNaN(min)){
+			min = 0;
+		}
+		if(max === undefined || isNaN(max)){
+			max = 9999999999;
+		}
+		if(min > max && max !== 0){
+			return res.status(400).json({
+				message: 'Giá trị min không được lớn hơn max',
+			});
+		}
+
 		const posts = await getPostApproved(
 			page,
 			limit,
@@ -81,6 +92,7 @@ export async function getPostApprovedController(req: Request, res: Response) {
 				pagination: {
 					page: page,
 					limit: limit,
+					//length: posts.length,
 					page_size: Math.ceil(totalPosts.length / limit),
 				},
 			},

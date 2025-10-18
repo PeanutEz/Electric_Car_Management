@@ -10,7 +10,8 @@ import {
 	updateUserInfo,
 	updateUserPhone,
 	getUserPosts,
-	getUserOrders
+	getUserOrders,
+	changeUserPassword
 } from '../controllers/user.controller';
 import { authenticateToken, authorizeRoles } from '../middleware/AuthMiddleware';
 
@@ -763,7 +764,51 @@ router.put('/update-phone', authenticateToken, updateUserPhone);
  */
 router.get('/user-posts', authenticateToken, getUserPosts);
 
-
 router.get('/order-by-user', authenticateToken, getUserOrders);
+
+/**
+ * @swagger
+ * /change-password:
+ *   put:
+ *     summary: Đổi mật khẩu người dùng
+ *     description: API cho phép người dùng đổi mật khẩu mới (yêu cầu đăng nhập bằng token hợp lệ).
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newPassword
+ *             properties:
+ *               newPassword:
+ *                 type: string
+ *                 example: "newStrongPassword123"
+ *                 description: Mật khẩu mới (6–160 ký tự)
+ *     responses:
+ *       200:
+ *         description: Đổi mật khẩu thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Password changed successfully"
+ *       400:
+ *         description: Mật khẩu không hợp lệ (ít hơn 6 ký tự hoặc dài hơn 160 ký tự)
+ *       401:
+ *         description: Token không hợp lệ hoặc chưa đăng nhập
+ *       500:
+ *         description: Lỗi server
+ */
+router.put('/change-password', authenticateToken, changeUserPassword);
 
 export default router;

@@ -10,6 +10,7 @@ import {
 	updatePhoneUser,
 	getPostByUserId,
 	getOrderByUserId,
+	changePassword
 } from '../services/user.service';
 import jwt from 'jsonwebtoken';
 import * as uploadService from '../services/upload.service';
@@ -351,13 +352,15 @@ export async function getUserPosts(req: Request, res: Response) {
 			});
 		}
 
-		const posts = await getPostByUserId(id,
-			                                status,
-											status_verify,
-											page,
-											limit);
-        
-        const totalItems = posts.counts.all || 0;
+		const posts = await getPostByUserId(
+			id,
+			status,
+			status_verify,
+			page,
+			limit,
+		);
+
+		const totalItems = posts.counts.all || 0;
 		const totalPages = Math.ceil(totalItems / limit);
 		const pageItem = posts.posts.length;
 
@@ -398,7 +401,9 @@ export async function getUserOrders(req: Request, res: Response) {
 			});
 		}
 		const page = req.query.page ? parseInt(req.query.page as string) : 1;
-		const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+		const limit = req.query.limit
+			? parseInt(req.query.limit as string)
+			: 10;
 		const orders = await getOrderByUserId(id, page, limit);
 		res.status(200).json({
 			message: 'Lấy danh sách đơn hàng của người dùng thành công',
@@ -410,6 +415,36 @@ export async function getUserOrders(req: Request, res: Response) {
 					page_size: Math.ceil(orders.length / limit),
 				},
 			},
+		});
+	} catch (error: any) {
+		res.status(422).json({
+			message: error.message,
+			data: error.data,
+		});
+	}
+}
+
+export async function changeUserPassword(req: Request, res: Response) {
+	try {
+		// lấy userId trong header Authorization: token decode
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res
+				.status(401)
+				.json({ message: 'Chưa cung cấp token xác thực' });
+		}
+		const token = authHeader.split(' ')[1];
+		const id = (jwt.decode(token) as any).id;
+		const { newPassword } = req.body;
+
+		if (!id) {
+			return res.status(403).json({
+				message: 'Vui lòng đăng nhập để đổi mật khẩu',
+			});
+		}
+		await changePassword(id, newPassword);
+		res.status(200).json({
+			message: 'Đổi mật khẩu thành công',
 		});
 	}
 	catch (error: any) {

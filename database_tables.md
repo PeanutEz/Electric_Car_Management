@@ -36,6 +36,7 @@ id  user_id  service_id  amount
 
 
 
+## 📦 Table: `products`
 | id | product_category_id | brand    | status   | model   | price      | title                 | description                              | year address        |
 +----+------------------+-----------+----------+---------+------------+-----------------------------------------+------------------------------------------+------+----------------+
 | 25 | 1                | vinfast   | approved | vf9     | 820000.00  | ẻwkfhwif                               | NULL                                     | 1900 | ufuhfwihufwi   |
