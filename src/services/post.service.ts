@@ -1,6 +1,7 @@
 import pool from '../config/db';
 import { Post } from '../models/post.model';
 import { Battery, Vehicle } from '../models/product.model';
+import { generateText } from '../services/gemini.service';
 
 export async function getPostApproved(
 	page: number,
@@ -21,6 +22,8 @@ export async function getPostApproved(
 	category_type?: string,
 ): Promise<Post[]> {
 	const offset = (page - 1) * limit;
+
+	if (sort_by === 'recommend') sort_by = undefined;
 
 	// Validate và sanitize các tham số số
 	const validYear = year && !isNaN(year) ? year : null;
@@ -356,8 +359,8 @@ export async function searchPosts(title: string): Promise<Post[]> {
 
 export async function getPostsById(id: number): Promise<Post[]> {
 	// Lấy thông tin sản phẩm
-	const [rows] = await pool.query(
-		'SELECT p.id, p.status, p.brand, p.model, p.price, p.address,p.created_at,p.updated_at, p.description, p.year,p.warranty, p.address,' +
+	const [rows]: any[] = await pool.query(
+		'SELECT p.id, p.status, p.brand, p.model, p.price, p.address,p.created_by,p.created_at,p.updated_at, p.description, p.year,p.warranty, p.address,' +
 			'p.image, pc.name AS category_name, pc.id AS category_id, ' +
 			'pc.slug AS category_type, v.mileage_km, v.seats, v.color,v.power, bat.capacity, bat.voltage, bat.health, ' +
 			'p.end_date, p.title, p.pushed_at, p.priority ' +
@@ -369,12 +372,10 @@ export async function getPostsById(id: number): Promise<Post[]> {
 		[id],
 	);
 
-	// const [seller]: any[] = await pool.query(
-	// 	'SELECT u.id, u.name, u.email, u.phone FROM users u ' +
-	// 		'INNER JOIN products p ON p.created_by = u.id ' +
-	// 		'WHERE p.id = ?',
-	// 	[id],
-	// );
+	const [seller]: any[] = await pool.query(
+		'SELECT id, full_name, email, phone FROM users where id = ?',
+		[rows[0].created_by],
+	);
 
 	// Lấy danh sách ảnh từ bảng product_imgs
 	const [imageRows] = await pool.query(
@@ -383,6 +384,20 @@ export async function getPostsById(id: number): Promise<Post[]> {
 	);
 
 	const images = (imageRows as any[]).map((row) => row.url);
+
+	// ai: {
+   //    min_price: 4500000 * 100,
+   //    max_price: 5500000 * 100
+   //  }
+	const geminiPromptMinPrice = await generateText(`Hãy lấy giá thấp nhất tương đối của 1 sản phẩm secondhand có đặc điểm là:
+Thương hiệu: ${rows[0].brand}
+Mẫu mã: ${rows[0].model}
+chỉ trả về cho tôi con số`);
+
+	const geminiPromptMaxPrice = await generateText(`Hãy lấy giá cao nhất tương đối của 1 sản phẩm secondhand có min price là ${geminiPromptMinPrice} có đặc điểm là:
+Thương hiệu: ${rows[0].brand}
+Mẫu mã: ${rows[0].model}
+chỉ trả về cho tôi con số`);
 
 	return (rows as any).map((r: any) => ({
 		id: r.id,
@@ -435,7 +450,17 @@ export async function getPostsById(id: number): Promise<Post[]> {
 						},
 						image: r.image,
 						images: images, // Lấy từ bảng product_imgs
-				  }
+				  },
+		seller: {
+			id: seller[0]?.id,
+			full_name: seller[0]?.full_name,
+			email: seller[0]?.email,
+			phone: seller[0]?.phone,
+		},
+		ai: {
+			min_price: geminiPromptMinPrice,
+			max_price: geminiPromptMaxPrice,
+		}
 	}));
 }
 

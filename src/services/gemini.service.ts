@@ -20,7 +20,6 @@ export async function generateText(prompt: string): Promise<string> {
 				},
 			},
 		);
-
 		// Lấy text từ response
 		const text = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
 		return text || 'No response from Gemini';
