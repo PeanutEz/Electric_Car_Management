@@ -341,7 +341,7 @@ export async function getUserPosts(req: Request, res: Response) {
 		const token = authHeader.split(' ')[1];
 		const id = (jwt.decode(token) as any).id;
 		const page = parseInt(req.query.page as string) || 1;
-		const limit = parseInt(req.query.limit as string) || 10;
+		const limit = parseInt(req.query.limit as string) || 20;
 		const status = req.query.status as string | undefined;
 		const status_verify = req.query.status_verify as string | undefined;
 
@@ -356,6 +356,10 @@ export async function getUserPosts(req: Request, res: Response) {
 											status_verify,
 											page,
 											limit);
+        
+        const totalItems = posts.counts.all || 0;
+		const totalPages = Math.ceil(totalItems / limit);
+		const pageItem = posts.posts.length;
 
 		res.status(200).json({
 			message: 'Lấy danh sách bài viết của người dùng thành công',
@@ -365,7 +369,7 @@ export async function getUserPosts(req: Request, res: Response) {
 				pagination: {
 					page: page,
 					limit: limit,
-					page_size: Math.ceil(posts.posts.length / limit),
+					page_size: totalPages,
 				},
 			},
 		});
