@@ -98,6 +98,7 @@ export async function getPostApproved(
 			INNER JOIN product_categories pc ON pc.id = p.product_category_id
 			WHERE p.status LIKE '%approved%'
 			${validYear ? `AND p.year = ${validYear}` : ''}
+			${validColor ? `AND p.color = '${validColor}'` : ''}
 			${validTitle ? `AND p.title LIKE '%${validTitle}%'` : ''}
 			${validMin && validMax ? `AND p.price BETWEEN ${validMin} AND ${validMax}` : ''}
 			ORDER BY p.priority DESC, p.created_at DESC
@@ -135,7 +136,7 @@ export async function getPostApproved(
 		description: r.description,
 		priority: r.priority,
 		status: r.status,
-		end_date: r.end_date || null,
+		end_date: r.end_date,
 		review_by: r.reviewed_by || null,
 		created_by: r.created_by || null,
 		pushed_at: r.pushed_at || null,
@@ -351,8 +352,8 @@ export async function getPostsById(id: number): Promise<Post[]> {
 	// Lấy thông tin sản phẩm
 	const [rows]: any[] = await pool.query(
 		'SELECT p.id, p.status, p.brand, p.model, p.price, p.address,p.created_by,p.created_at,p.updated_at, p.description, p.year,p.warranty, p.address,' +
-			'p.image, pc.name AS category_name, pc.id AS category_id, ' +
-			'pc.slug AS category_type, v.mileage_km, v.seats, v.color,v.power, bat.capacity, bat.voltage, bat.health, ' +
+			'p.image,p.color, pc.name AS category_name, pc.id AS category_id, ' +
+			'pc.slug AS category_type, v.mileage_km, v.seats,v.power, bat.capacity, bat.voltage, bat.health, ' +
 			'p.end_date, p.title, p.pushed_at, p.priority ' +
 			'FROM products p ' +
 			'LEFT JOIN product_categories pc ON p.product_category_id = pc.id ' +
@@ -506,6 +507,7 @@ export async function createNewPost(
 			model,
 			price,
 			year,
+			color,
 			description,
 			address,
 			warranty,
@@ -546,13 +548,14 @@ export async function createNewPost(
 		}
 
 		const [result] = await conn.query(
-			'INSERT INTO products (product_category_id, brand, model, price, year, warranty, description, address, title, image, status, created_by, created_at, end_date, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			'INSERT INTO products (product_category_id, brand, model, price, year,color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
 			[
 				category_id,
 				brand,
 				model,
 				price,
 				year,
+				color,
 				warranty,
 				description,
 				address,
@@ -586,12 +589,12 @@ export async function createNewPost(
 				postData as Partial<Vehicle>;
 
 			await conn.query(
-				'INSERT INTO vehicles (product_id, power, mileage_km, seats, color) VALUES (?, ?, ?, ?, ?)',
-				[insertId, power, mileage, seats, color],
+				'INSERT INTO vehicles (product_id, power, mileage_km, seats) VALUES (?, ?, ?, ?)',
+				[insertId, power, mileage, seats],
 			);
 
 			const [rows]: any = await conn.query(
-				`SELECT p.*, v.power, v.mileage_km, v.seats, v.color
+				`SELECT p.*, v.power, v.mileage_km, v.seats
 				 FROM products p
 				 JOIN vehicles v ON p.id = v.product_id
 				 WHERE p.id = ?`,
@@ -662,7 +665,7 @@ export async function updateUserPost(
 		const [result] = await pool.query(
 			`UPDATE products p inner join vehicles v on v.product_id = p.id
 			SET p.brand = ?, p.model = ?, p.price = ?, p.year = ?, 
-			p.description = ?, p.address = ?, p.warranty = ?, p.title = ?, v.color = ?, v.seats = ?, v.mileage_km = ?, v.power = ? WHERE p.id = ?`,
+			p.description = ?, p.address = ?, p.warranty = ?, p.title = ?, p.color = ?, v.seats = ?, v.mileage_km = ?, v.power = ? WHERE p.id = ?`,
 			[
 				brand,
 				model,

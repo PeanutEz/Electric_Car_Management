@@ -56,6 +56,7 @@ export interface Battery {
 	model: string;
 	capacity: number;
 	address: string;
+	color: string;
 	title?: string;
 	description: string;
 	voltage: number;
