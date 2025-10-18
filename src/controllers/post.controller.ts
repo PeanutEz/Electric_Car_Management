@@ -35,6 +35,7 @@ export async function getPostApprovedController(req: Request, res: Response) {
 		const min = parseInt(req.query.min as string);
 		const max = parseInt(req.query.max as string);
 		const category_type = (req.query.category_type as string) || '';
+		
 		const posts = await getPostApproved(
 			page,
 			limit,
@@ -53,6 +54,8 @@ export async function getPostApprovedController(req: Request, res: Response) {
 			max,
 			category_type,
 		);
+
+
 		const totalPosts = await getPostApproved(
 			1,
 			10000,
@@ -82,6 +85,7 @@ export async function getPostApprovedController(req: Request, res: Response) {
 				},
 			},
 		});
+
 	} catch (error: any) {
 		res.status(500).json({
 			message: error.message,

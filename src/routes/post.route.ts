@@ -162,13 +162,192 @@ router.get('/get-all', listPosts);
  * @swagger
  * /api/post/get-all-approved:
  *   get:
- *     summary: Lấy danh sách bài viết đã được phê duyệt
+ *     summary: Lấy danh sách bài viết đã được duyệt (approved)
+ *     description: 
+ *       API này trả về danh sách các bài viết có trạng thái "approved".  
+ *       Hỗ trợ lọc theo năm, màu sắc, loại danh mục, giới hạn phân trang, sắp xếp, và nhiều tiêu chí khác.
  *     tags: [Posts]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Trang hiện tại (mặc định 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Số lượng bài viết mỗi trang (mặc định 10)
+ *       - in: query
+ *         name: year
+ *         schema:
+ *           type: integer
+ *         description: Lọc theo năm sản xuất
+ *       - in: query
+ *         name: capacity
+ *         schema:
+ *           type: number
+ *         description: Dung lượng pin (nếu là sản phẩm pin)
+ *       - in: query
+ *         name: health
+ *         schema:
+ *           type: number
+ *         description: Mức độ sức khỏe pin
+ *       - in: query
+ *         name: voltage
+ *         schema:
+ *           type: number
+ *         description: Điện áp của pin
+ *       - in: query
+ *         name: color
+ *         schema:
+ *           type: string
+ *         description: Màu sắc của sản phẩm
+ *       - in: query
+ *         name: seats
+ *         schema:
+ *           type: integer
+ *         description: Số ghế (nếu là xe)
+ *       - in: query
+ *         name: mileage_km
+ *         schema:
+ *           type: integer
+ *         description: Quãng đường đã đi (km)
+ *       - in: query
+ *         name: power
+ *         schema:
+ *           type: integer
+ *         description: Công suất của xe
+ *       - in: query
+ *         name: title
+ *         schema:
+ *           type: string
+ *         description: Tìm kiếm theo tiêu đề bài đăng
+ *       - in: query
+ *         name: sort_by
+ *         schema:
+ *           type: string
+ *           enum: [price, created_at, recommend]
+ *         description: Sắp xếp theo trường
+ *       - in: query
+ *         name: order
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Thứ tự sắp xếp
+ *       - in: query
+ *         name: min
+ *         schema:
+ *           type: number
+ *         description: Giá tối thiểu
+ *       - in: query
+ *         name: max
+ *         schema:
+ *           type: number
+ *         description: Giá tối đa
+ *       - in: query
+ *         name: category_type
+ *         schema:
+ *           type: string
+ *           enum: [vehicle, battery]
+ *         description: Loại danh mục sản phẩm (xe hoặc pin)
  *     responses:
  *       200:
  *         description: Lấy danh sách bài viết thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Lấy danh sách bài viết thành công
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     posts:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                             example: 164
+ *                           title:
+ *                             type: string
+ *                             example: Haha 1
+ *                           description:
+ *                             type: string
+ *                             example: Mô tả bài đăng
+ *                           status:
+ *                             type: string
+ *                             example: approved
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                           product:
+ *                             type: object
+ *                             properties:
+ *                               brand:
+ *                                 type: string
+ *                                 example: Toyota
+ *                               model:
+ *                                 type: string
+ *                                 example: Camry
+ *                               price:
+ *                                 type: number
+ *                                 example: 5000000
+ *                               year:
+ *                                 type: integer
+ *                                 example: 2020
+ *                               color:
+ *                                 type: string
+ *                                 example: red
+ *                               images:
+ *                                 type: array
+ *                                 items:
+ *                                   type: string
+ *                                   example: https://res.cloudinary.com/demo/image.jpg
+ *                               category:
+ *                                 type: object
+ *                                 properties:
+ *                                   id:
+ *                                     type: integer
+ *                                     example: 1
+ *                                   type:
+ *                                     type: string
+ *                                     example: vehicle
+ *                                   name:
+ *                                     type: string
+ *                                     example: Electric Car
+ *                                   slug:
+ *                                     type: string
+ *                                     example: vehicle
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                         limit:
+ *                           type: integer
+ *                           example: 10
+ *                         page_size:
+ *                           type: integer
+ *                           example: 5
  *       500:
- *         description: Lỗi server
+ *         description: Lỗi máy chủ nội bộ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal server error
  */
 router.get('/get-all-approved', getPostApprovedController);
 

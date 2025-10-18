@@ -352,15 +352,26 @@ export async function getPostByUserId(
 	// ✅ 1️⃣ Lấy counts song song (tối ưu performance)
 	const [counts]: any = await pool.query(`
 		SELECT
-			SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_count,
-			SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved_count,
-			SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS rejected_count,
-			SUM(CASE WHEN status_verify = 'verified' THEN 1 ELSE 0 END) AS verified_count,
-			SUM(CASE WHEN status_verify = 'verifying' THEN 1 ELSE 0 END) AS verifying_count,
-			SUM(CASE WHEN status_verify = 'unverified' THEN 1 ELSE 0 END) AS unverified_count
+		    COUNT(*) AS "all",
+			SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
+			SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved,
+			SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS rejected,
+			SUM(CASE WHEN status_verify = 'verified' THEN 1 ELSE 0 END) AS verified,
+			SUM(CASE WHEN status_verify = 'verifying' THEN 1 ELSE 0 END) AS verifying,
+			SUM(CASE WHEN status_verify = 'unverified' THEN 1 ELSE 0 END) AS unverified
 		FROM products
 		WHERE created_by = ?
 	`, [userId]);
+
+	const result = {
+		all: Number(counts[0].all) || 0,
+		pending: Number(counts[0].pending) || 0,
+		approved: Number(counts[0].approved) || 0,
+		rejected: Number(counts[0].rejected) || 0,
+		verified: Number(counts[0].verified) || 0,
+		verifying: Number(counts[0].verifying) || 0,
+		unverified: Number(counts[0].unverified) || 0,
+	};
 
 	// ✅ 2️⃣ Lấy danh sách bài đăng
 	let query = `
@@ -471,7 +482,7 @@ export async function getPostByUserId(
 	// ✅ 6️⃣ Trả về kết quả đầy đủ
 	return {
 		posts: formattedPosts,
-		counts: counts[0],
+		counts: result,
 	};
 }
 
