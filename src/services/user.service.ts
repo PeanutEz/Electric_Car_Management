@@ -473,7 +473,7 @@ export async function getPostByUserId(
 				id: post.category_id,
 				type: post.category_type,
 				name: post.category,
-				slug: post.category_slug,
+				typeSlug: post.category_slug,
 				count: 0,
 			},
 		},

@@ -195,8 +195,8 @@ export async function getPostApproved(
 	title?: string,
 	sort_by?: string,
 	order?: 'asc' | 'desc',
-	min?: number,
-	max?: number,
+	price_min?: number,
+	price_max?: number,
 	category_type?: string,
 ): Promise<Post[]> {
 	const offset = (page - 1) * limit;
@@ -213,8 +213,8 @@ export async function getPostApproved(
 	const validPower = power && !isNaN(power) ? power : null;
 	const validSortBy = sort_by === 'price' ? 'price' : 'created_at';
 	const validOrder = order === 'asc' ? 'asc' : 'desc';
-	const validMin = min && !isNaN(min) ? min : 0;
-	const validMax = max && !isNaN(max) ? max : 99999999;
+	const validMin = price_min && !isNaN(price_min) ? price_min : 0;
+	const validMax = price_max && !isNaN(price_max) ? price_max : 99999999;
 	const validTitle = title?.trim() || null;
 	const validColor = color?.trim() || null;
 
@@ -228,7 +228,7 @@ export async function getPostApproved(
 			b.capacity, b.health, b.voltage, b.chemistry, b.dimension
 			FROM products p
 			INNER JOIN product_categories pc ON pc.id = p.product_category_id
-			INNER JOIN batteries b on b.product_id = p.id
+			left JOIN batteries b on b.product_id = p.id
 			WHERE p.status LIKE '%approved%'  
 			AND pc.slug LIKE '%battery%'
 			${validYear ? `AND p.year = ${validYear}` : ''}
@@ -251,7 +251,7 @@ export async function getPostApproved(
 			p.color, v.seats, v.mileage_km, v.power, v.license_plate, v.engine_number, v.battery_capacity
 			FROM products p
 			INNER JOIN product_categories pc ON pc.id = p.product_category_id
-			INNER JOIN vehicles v on v.product_id = p.id
+			left JOIN vehicles v on v.product_id = p.id
 			WHERE p.status LIKE '%approved%'  
 			AND pc.slug LIKE '%vehicle%'
 			${validYear ? `AND p.year = ${validYear}` : ''}
@@ -352,10 +352,10 @@ export async function getPostApproved(
 				id: r.category_id,
 				type: r.slug,
 				name: r.category_name,
-				slug: r.slug,
+				typeSlug: r.slug,
 				count: 0,
 			},
-		}
+		} as any
 	}));
 }
 
