@@ -14,6 +14,8 @@ export async function getPostApproved(
 	mileage_km?: number,
 	power?: number,
 	title?: string,
+	sort_by?: string,
+	order?: 'asc' | 'desc',
 	min?: number,
 	max?: number,
 	category_type?: string,
@@ -28,6 +30,8 @@ export async function getPostApproved(
 	const validSeats = seats && !isNaN(seats) ? seats : null;
 	const validMileage = mileage_km && !isNaN(mileage_km) ? mileage_km : null;
 	const validPower = power && !isNaN(power) ? power : null;
+	const validSortBy = sort_by === 'price' ? 'price' : 'created_at';
+	const validOrder = order === 'asc' ? 'asc' : 'desc';
 	const validMin = min && !isNaN(min) ? min : null;
 	const validMax = max && !isNaN(max) ? max : null;
 	const validTitle = title?.trim() || null;
@@ -52,7 +56,7 @@ export async function getPostApproved(
 			${validVoltage ? `AND b.voltage = ${validVoltage}` : ''}
 			${validTitle ? `AND p.title LIKE '%${validTitle}%'` : ''}
 			${validMin && validMax ? `AND p.price BETWEEN ${validMin} AND ${validMax}` : ''}
-			ORDER BY p.priority DESC, p.created_at DESC
+			ORDER BY p.${validSortBy} ${validOrder}, p.priority DESC
 			LIMIT ? OFFSET ?`,
 			[limit, offset],
 		);
@@ -75,7 +79,7 @@ export async function getPostApproved(
 			${validPower ? `AND v.power = ${validPower}` : ''}
 			${validTitle ? `AND p.title LIKE '%${validTitle}%'` : ''}
 			${validMin && validMax ? `AND p.price BETWEEN ${validMin} AND ${validMax}` : ''}
-			ORDER BY p.priority DESC, p.created_at DESC
+			ORDER BY p.${validSortBy} ${validOrder}, p.priority DESC
 			LIMIT ? OFFSET ?`,
 			[limit, offset],
 		);
@@ -365,12 +369,12 @@ export async function getPostsById(id: number): Promise<Post[]> {
 		[id],
 	);
 
-	const [seller]: any[] = await pool.query(
-		'SELECT u.id, u.name, u.email, u.phone FROM users u ' +
-			'INNER JOIN products p ON p.created_by = u.id ' +
-			'WHERE p.id = ?',
-		[id],
-	);
+	// const [seller]: any[] = await pool.query(
+	// 	'SELECT u.id, u.name, u.email, u.phone FROM users u ' +
+	// 		'INNER JOIN products p ON p.created_by = u.id ' +
+	// 		'WHERE p.id = ?',
+	// 	[id],
+	// );
 
 	// Lấy danh sách ảnh từ bảng product_imgs
 	const [imageRows] = await pool.query(
@@ -431,13 +435,7 @@ export async function getPostsById(id: number): Promise<Post[]> {
 						},
 						image: r.image,
 						images: images, // Lấy từ bảng product_imgs
-				  },
-		// seller: {
-		// 	id: seller[0].id,
-		// 	name: seller[0].name,
-		// 	email: seller[0].email,
-		// 	phone: seller[0].phone,
-		// }
+				  }
 	}));
 }
 

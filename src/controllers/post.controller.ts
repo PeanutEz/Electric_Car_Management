@@ -30,6 +30,8 @@ export async function getPostApprovedController(req: Request, res: Response) {
 		const mileage_km = parseInt(req.query.mileage_km as string);
 		const power = parseInt(req.query.power as string);
 		const title = (req.query.title as string) || '';
+		const sort_by = (req.query.sort_by as string);
+		const order = (req.query.order as string) as 'asc' | 'desc';
 		const min = parseInt(req.query.min as string);
 		const max = parseInt(req.query.max as string);
 		const category_type = (req.query.category_type as string) || '';
@@ -45,6 +47,8 @@ export async function getPostApprovedController(req: Request, res: Response) {
 			mileage_km,
 			power,
 			title,
+			sort_by,
+			order,
 			min,
 			max,
 			category_type,
@@ -61,6 +65,8 @@ export async function getPostApprovedController(req: Request, res: Response) {
 			mileage_km,
 			power,
 			title,
+			sort_by,
+			order,
 			min,
 			max,
 			category_type,
