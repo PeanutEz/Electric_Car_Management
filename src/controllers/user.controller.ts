@@ -13,6 +13,8 @@ import {
 } from '../services/user.service';
 import jwt from 'jsonwebtoken';
 import * as uploadService from '../services/upload.service';
+import { count } from 'console';
+import { all } from 'axios';
 
 export async function userDetail(req: Request, res: Response) {
 	try {
@@ -347,7 +349,17 @@ export async function getUserPosts(req: Request, res: Response) {
 		const posts = await getPostByUserId(id, status);
 		res.status(200).json({
 			message: 'Lấy danh sách bài viết của người dùng thành công',
-			data: posts,
+			data: {
+				posts: posts,
+				count: {
+					all: posts.length,
+					rejected: posts.filter((p: any) => p.status === 'rejected').length,
+					pending: posts.filter((p: any) => p.status === 'pending').length,
+					approved: posts.filter((p: any) => p.status === 'approved').length,
+					is_verified: posts.filter((p: any) => p.is_verified === 'yes').length,
+					unverified: posts.filter((p: any) => p.is_verified === 'none').length,
+				}
+			},
 		});
 	} catch (error: any) {
 		res.status(422).json({

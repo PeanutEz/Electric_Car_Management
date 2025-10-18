@@ -15,7 +15,7 @@ import {
 	getPostApproved
 } from '../services/post.service';
 import { checkAndProcessPostPayment } from '../services/service.service';
-import { emitToAll } from '../config/socket';
+//import { emitToAll } from '../config/socket';
 
 export async function getPostApprovedController(req: Request, res: Response) {
 	try {
@@ -201,11 +201,11 @@ export async function updatePost(req: Request, res: Response) {
 
 		// 🔥 Emit WebSocket event for real-time update
 		try {
-			emitToAll('post:updated', {
-				post: updatedPost,
-				message: 'Bài viết đã được cập nhật',
-				timestamp: new Date().toISOString(),
-			});
+			// emitToAll('post:updated', {
+			// 	post: updatedPost,
+			// 	message: 'Bài viết đã được cập nhật',
+			// 	timestamp: new Date().toISOString(),
+			// });
 			console.log('📡 WebSocket event emitted: post:updated');
 		} catch (socketError) {
 			console.error('⚠️ Failed to emit WebSocket event:', socketError);
@@ -333,11 +333,11 @@ export async function createPost(req: Request, res: Response) {
 
 		// 🔥 Emit WebSocket event for real-time update
 		try {
-			emitToAll('post:created', {
-				post: newPost,
-				message: 'Bài viết mới đã được tạo',
-				timestamp: new Date().toISOString(),
-			});
+			// emitToAll('post:created', {
+			// 	post: newPost,
+			// 	message: 'Bài viết mới đã được tạo',
+			// 	timestamp: new Date().toISOString(),
+			// });
 			console.log('📡 WebSocket event emitted: post:created');
 		} catch (socketError) {
 			// Log error but don't fail the request

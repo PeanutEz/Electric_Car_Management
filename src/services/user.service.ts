@@ -356,6 +356,8 @@ export async function getPostByUserId(userId: number, status?: string) {
 			p.warranty,
 			p.priority,
 			p.price, 
+			p.is_verified,
+			p.color,
 			p.status, 
 			p.created_at,
 			p.updated_at,
@@ -371,6 +373,22 @@ export async function getPostByUserId(userId: number, status?: string) {
 		[userId, status],
 	);
 
+	const countAll = posts.length;
+
+	const [rejectedCount]: any = await pool.query(
+		'SELECT COUNT(*) as rejected_count FROM products WHERE created_by = ? AND status = "rejected"',
+		[userId],
+	);
+	const [pendingCount]: any = await pool.query(
+		'SELECT COUNT(*) as pending_count FROM products WHERE created_by = ? AND status = "pending"',
+		[userId],
+	);
+	const [approvedCount]: any = await pool.query(
+		'SELECT COUNT(*) as approved_count FROM products WHERE created_by = ? AND status = "approved"',
+		[userId],
+	);
+
+
 	// Lấy IDs của products
 	const productIds = posts.map((p: any) => p.id);
 
@@ -382,13 +400,11 @@ export async function getPostByUserId(userId: number, status?: string) {
 	const [vehicles]: any = await pool.query(
 		`SELECT 
 			product_id,
-			color,
 			seats,
 			mileage_km,
 			battery_capacity,
 			license_plate,
 			engine_number,
-			is_verified,
 			power
 		FROM vehicles 
 		WHERE product_id IN (${productIds.map(() => '?').join(',')})`,
@@ -440,6 +456,7 @@ export async function getPostByUserId(userId: number, status?: string) {
 			brand: post.brand,
 			model: post.model,
 			description: post.description,
+			color: post.color,
 			year: post.year,
 			address: post.address,
 			image: post.image,
@@ -447,6 +464,7 @@ export async function getPostByUserId(userId: number, status?: string) {
 			warranty: post.warranty,
 			priority: post.priority,
 			price: post.price,
+			is_verified: post.is_verified,
 			status: post.status,
 			created_at: post.created_at,
 			updated_at: post.updated_at,
@@ -457,7 +475,8 @@ export async function getPostByUserId(userId: number, status?: string) {
 				slug: post.category_slug,
 			},
 			images: imageMap.get(post.id) || [],
-		};
+		}
+
 
 		// Thêm vehicle info nếu là vehicle
 		if (vehicleMap.has(post.id)) {

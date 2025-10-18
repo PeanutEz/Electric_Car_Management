@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import bodyParser from 'body-parser';
 import { createServer } from 'http';
 import { testConnection } from './config/db';
-import { initializeSocket } from './config/socket';
+//import { initializeSocket } from './config/socket';
 import routes from './routes/index.route';
 import { setupSwagger } from './utils/swagger';
 
