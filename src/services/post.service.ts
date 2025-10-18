@@ -45,7 +45,7 @@ export async function getPostApproved(
 	if (category_type === 'battery') {
 		const [result] = await pool.query(
 			`SELECT p.id, p.title, p.priority, p.warranty, p.pushed_at, p.end_date, p.created_by,
-			p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at, p.updated_at, p.address, p.status,
+			p.model, p.price, p.description, p.image, p.brand, p.year,p.color, p.created_at, p.updated_at, p.address, p.status,
 			pc.slug as slug, pc.name as category_name, pc.id as category_id, 
 			b.capacity, b.health, b.voltage, b.chemistry, b.dimension
 			FROM products p
@@ -54,6 +54,7 @@ export async function getPostApproved(
 			WHERE p.status LIKE '%approved%'  
 			AND pc.slug LIKE '%battery%'
 			${validYear ? `AND p.year = ${validYear}` : ''}
+			${validColor ? `AND p.color = '${validColor}'` : ''}
 			${validCapacity ? `AND b.capacity = ${validCapacity}` : ''}
 			${validHealth ? `AND b.health = ${validHealth}` : ''}
 			${validVoltage ? `AND b.voltage = ${validVoltage}` : ''}
@@ -69,14 +70,14 @@ export async function getPostApproved(
 			`SELECT p.id, p.title, p.priority, p.warranty, p.pushed_at, p.end_date, p.created_by,
 			p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at, p.updated_at, p.address, p.status,
 			pc.slug as slug, pc.name as category_name, pc.id as category_id, 
-			v.color, v.seats, v.mileage_km, v.power, v.license_plate, v.engine_number, v.battery_capacity
+			p.color, v.seats, v.mileage_km, v.power, v.license_plate, v.engine_number, v.battery_capacity
 			FROM products p
 			INNER JOIN product_categories pc ON pc.id = p.product_category_id
 			INNER JOIN vehicles v on v.product_id = p.id
 			WHERE p.status LIKE '%approved%'  
 			AND pc.slug LIKE '%vehicle%'
 			${validYear ? `AND p.year = ${validYear}` : ''}
-			${validColor ? `AND v.color = '${validColor}'` : ''}
+			${validColor ? `AND p.color = '${validColor}'` : ''}
 			${validSeats ? `AND v.seats = ${validSeats}` : ''}
 			${validMileage ? `AND v.mileage_km = ${validMileage}` : ''}
 			${validPower ? `AND v.power = ${validPower}` : ''}
@@ -91,7 +92,7 @@ export async function getPostApproved(
 		// Default query khi không có category_type
 		const [result] = await pool.query(
 			`SELECT p.id, p.title, p.priority, p.warranty, p.pushed_at, p.end_date, p.created_by,
-			p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at, p.updated_at, p.address, p.status,
+			p.model, p.price, p.description, p.image, p.brand, p.year, p.color, p.created_at, p.updated_at, p.address, p.status,
 			pc.slug as slug, pc.name as category_name, pc.id as category_id
 			FROM products p
 			INNER JOIN product_categories pc ON pc.id = p.product_category_id
