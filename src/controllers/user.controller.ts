@@ -360,20 +360,12 @@ export async function getUserPosts(req: Request, res: Response) {
 		res.status(200).json({
 			message: 'Lấy danh sách bài viết của người dùng thành công',
 			data: {
-				posts: posts,
-				count: {
-					all: posts.length,
-					rejected: posts.filter((p: any) => p.status === 'rejected').length,
-					pending: posts.filter((p: any) => p.status === 'pending').length,
-					approved: posts.filter((p: any) => p.status === 'approved').length,
-					verified: posts.filter((p: any) => p.status_verify === 'verified').length,
-					verifying: posts.filter((p: any) => p.status_verify === 'verifying').length,
-					unverified: posts.filter((p: any) => p.status_verify === 'unverified').length,
-				},
+				posts: posts.posts,
+				count: posts.counts,
 				pagination: {
 					page: page,
 					limit: limit,
-					page_size: Math.ceil(posts.length / limit),
+					page_size: Math.ceil(posts.posts.length / limit),
 				},
 			},
 		});

@@ -337,12 +337,32 @@ export async function updatePhoneUser(userId: number, phone: string) {
 	};
 }
 
-export async function getPostByUserId(userId: number, status?: string, status_verify?: string, page: number = 1, limit: number = 20) {
+export async function getPostByUserId(
+	userId: number,
+	status?: string,
+	status_verify?: string,
+	page: number = 1,
+	limit: number = 20
+) {
 	const offset = (page - 1) * limit;
 
 	if (status === 'all') status = undefined;
 	if (status_verify === 'all') status_verify = undefined;
 
+	// ✅ 1️⃣ Lấy counts song song (tối ưu performance)
+	const [counts]: any = await pool.query(`
+		SELECT
+			SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_count,
+			SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved_count,
+			SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS rejected_count,
+			SUM(CASE WHEN status_verify = 'verified' THEN 1 ELSE 0 END) AS verified_count,
+			SUM(CASE WHEN status_verify = 'verifying' THEN 1 ELSE 0 END) AS verifying_count,
+			SUM(CASE WHEN status_verify = 'unverified' THEN 1 ELSE 0 END) AS unverified_count
+		FROM products
+		WHERE created_by = ?
+	`, [userId]);
+
+	// ✅ 2️⃣ Lấy danh sách bài đăng
 	let query = `
 		SELECT 
 			p.id, 
@@ -373,77 +393,38 @@ export async function getPostByUserId(userId: number, status?: string, status_ve
 
 	const params: any[] = [userId];
 
-	// Thêm điều kiện nếu có status
 	if (status) {
 		query += ' AND p.status = ?';
 		params.push(status);
 	}
 
-	// Thêm điều kiện nếu có status_verify
 	if (status_verify) {
 		query += ' AND p.status_verify = ?';
 		params.push(status_verify);
 	}
 
-	// Cuối cùng, thêm phần sắp xếp và phân trang
 	query += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
 	params.push(limit, offset);
 
-	// Thực thi query
 	const [posts]: any = await pool.query(query, params);
 
-
-	// Lấy IDs của products
-	const productIds = posts.map((p: any) => p.id);
-
-	if (productIds.length === 0) {
-		return [];
+	// ✅ 3️⃣ Nếu không có bài đăng
+	if (posts.length === 0) {
+		return {
+			counts: counts[0],
+			posts: [],
+		};
 	}
 
-	// Lấy thông tin vehicles cho các product là vehicle
-	// const [vehicles]: any = await pool.query(
-	// 	`SELECT 
-	// 		product_id,
-	// 		seats,
-	// 		mileage_km,
-	// 		battery_capacity,
-	// 		license_plate,
-	// 		engine_number,
-	// 		power
-	// 	FROM vehicles 
-	// 	WHERE product_id IN (${productIds.map(() => '?').join(',')})`,
-	// 	productIds,
-	// );
-
-	// // Lấy thông tin batteries cho các product là battery
-	// const [batteries]: any = await pool.query(
-	// 	`SELECT 
-	// 		product_id,
-	// 		capacity,
-	// 		health,
-	// 		chemistry,
-	// 		voltage,
-	// 		dimension
-	// 	FROM batteries 
-	// 	WHERE product_id IN (${productIds.map(() => '?').join(',')})`,
-	// 	productIds,
-	// );
-
-	// Lấy images cho tất cả products
+	// ✅ 4️⃣ Lấy images cho tất cả sản phẩm
+	const productIds = posts.map((p: any) => p.id);
 	const [images]: any = await pool.query(
-		`SELECT 
-			product_id,
-			url
-		FROM product_imgs 
-		WHERE product_id IN (${productIds.map(() => '?').join(',')})`,
-		productIds,
+		`SELECT product_id, url
+		 FROM product_imgs 
+		 WHERE product_id IN (${productIds.map(() => '?').join(',')})`,
+		productIds
 	);
 
-	// Map vehicles, batteries, và images vào từng post
-	// const vehicleMap = new Map(vehicles.map((v: any) => [v.product_id, v]));
-	// const batteryMap = new Map(batteries.map((b: any) => [b.product_id, b]));
-
-	// Group images by product_id
 	const imageMap = new Map();
 	images.forEach((img: any) => {
 		if (!imageMap.has(img.product_id)) {
@@ -452,46 +433,48 @@ export async function getPostByUserId(userId: number, status?: string, status_ve
 		imageMap.get(img.product_id).push(img.url);
 	});
 
-	// Kết hợp tất cả thông tin
-	return posts.map((post: any) => {
-		const result: any = {
+	// ✅ 5️⃣ Gộp dữ liệu
+	const formattedPosts = posts.map((post: any) => ({
+		id: post.id,
+		title: post.title,
+		description: post.description,
+		priority: post.priority,
+		status: post.status,
+		end_date: post.end_date,
+		created_at: post.created_at,
+		updated_at: post.updated_at,
+		status_verify: post.status_verify,
+		product: {
 			id: post.id,
-			title: post.title,
+			brand: post.brand,
+			model: post.model,
+			price: post.price,
+			year: post.year,
+			address: post.address,
+			image: post.image,
 			description: post.description,
+			warranty: post.warranty,
 			priority: post.priority,
-			status: post.status,
-			end_date: post.end_date,
-			created_at: post.created_at,
-			updated_at: post.updated_at,
-			status_verify: post.status_verify,
-			// Nếu có thêm các field khác (review_by, created_by, pushed_at) thì thêm ở đây
-			product: {
-				id: post.id,
-				brand: post.brand,
-				model: post.model,
-				price: post.price,
-				year: post.year,
-				address: post.address,
-				image: post.image,
-				description: post.description,
-				warranty: post.warranty,
-				priority: post.priority,
-				pushed_at: post.pushed_at || null,
-				color: post.color,
-				images: imageMap.get(post.id) || [],
-				category: {
-					id: post.category_id,
-					type: post.category_type,
-					name: post.category,
-					slug: post.category_slug,
-					count: 0, // bạn có thể thay bằng giá trị thật nếu có
-				},
+			pushed_at: post.pushed_at || null,
+			color: post.color,
+			images: imageMap.get(post.id) || [],
+			category: {
+				id: post.category_id,
+				type: post.category_type,
+				name: post.category,
+				slug: post.category_slug,
+				count: 0,
 			},
-		};
+		},
+	}));
 
-		return result;
-	});
+	// ✅ 6️⃣ Trả về kết quả đầy đủ
+	return {
+		posts: formattedPosts,
+		counts: counts[0],
+	};
 }
+
 
 export async function getOrderByUserId(userId: number, page: number, limit: number) {
 	const [orders]: any = await pool.query(
