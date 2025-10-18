@@ -272,12 +272,12 @@ export async function updateUser(userId: number, userData: Partial<User>) {
 		(error as any).data = errors;
 		throw error;
 	}
-	
+
 	const [updateUser] = await pool.query(
 		'UPDATE users SET full_name = ?, phone = ?, email = ?, avatar = ?, gender = ?, address = ? WHERE id = ?',
 		[full_name, phone, email, avatar, gender, address, userId],
 	);
-	
+
 	if (updateUser === undefined) {
 		errors.update = 'Cập nhật người dùng thất bại';
 	}
@@ -338,43 +338,10 @@ export async function updatePhoneUser(userId: number, phone: string) {
 }
 
 export async function getPostByUserId(userId: number, status?: string, status_verify?: string, page: number = 1, limit: number = 20) {
-    const offset = (page - 1) * limit;
+	const offset = (page - 1) * limit;
 
 	if (status === 'all') status = undefined;
 	if (status_verify === 'all') status_verify = undefined;
-	
-	// const [posts]: any = await pool.query(
-	// 	`SELECT 
-	// 		p.id, 
-	// 		p.title,
-	// 		p.brand, 
-	// 		p.model,
-	// 		p.description,
-	// 		p.year,
-	// 		p.address,
-	// 		p.image,
-	// 		p.end_date,
-	// 		p.warranty,
-	// 		p.priority,
-	// 		p.price, 
-	// 		p.status_verify,
-	// 		p.color,
-	// 		p.status, 
-	// 		p.created_at,
-	// 		p.updated_at,
-	// 		pc.id as category_id,
-	// 		pc.name as category,
-	// 		pc.type as category_type,
-	// 		pc.slug as category_slug
-	// 	FROM products p 
-	// 	INNER JOIN product_categories pc ON p.product_category_id = pc.id 
-	// 	WHERE p.created_by = ? 
-	// 	${status ? 'AND p.status = ?' : ''}
-	// 	${status_verify ? 'AND p.status_verify = ?' : ''}
-	// 	ORDER BY p.created_at DESC
-	// 	LIMIT ? OFFSET ?`,
-	// 	[userId, status, status_verify, limit, offset],
-	// );
 
 	let query = `
 		SELECT 
@@ -425,21 +392,6 @@ export async function getPostByUserId(userId: number, status?: string, status_ve
 	// Thực thi query
 	const [posts]: any = await pool.query(query, params);
 
-	const countAll = posts.length;
-
-	// const [rejectedCount]: any = await pool.query(
-	// 	'SELECT COUNT(*) as rejected_count FROM products WHERE created_by = ? AND status = "rejected"',
-	// 	[userId],
-	// );
-	// const [pendingCount]: any = await pool.query(
-	// 	'SELECT COUNT(*) as pending_count FROM products WHERE created_by = ? AND status = "pending"',
-	// 	[userId],
-	// );
-	// const [approvedCount]: any = await pool.query(
-	// 	'SELECT COUNT(*) as approved_count FROM products WHERE created_by = ? AND status = "approved"',
-	// 	[userId],
-	// );
-
 
 	// Lấy IDs của products
 	const productIds = posts.map((p: any) => p.id);
@@ -449,33 +401,33 @@ export async function getPostByUserId(userId: number, status?: string, status_ve
 	}
 
 	// Lấy thông tin vehicles cho các product là vehicle
-	const [vehicles]: any = await pool.query(
-		`SELECT 
-			product_id,
-			seats,
-			mileage_km,
-			battery_capacity,
-			license_plate,
-			engine_number,
-			power
-		FROM vehicles 
-		WHERE product_id IN (${productIds.map(() => '?').join(',')})`,
-		productIds,
-	);
+	// const [vehicles]: any = await pool.query(
+	// 	`SELECT 
+	// 		product_id,
+	// 		seats,
+	// 		mileage_km,
+	// 		battery_capacity,
+	// 		license_plate,
+	// 		engine_number,
+	// 		power
+	// 	FROM vehicles 
+	// 	WHERE product_id IN (${productIds.map(() => '?').join(',')})`,
+	// 	productIds,
+	// );
 
-	// Lấy thông tin batteries cho các product là battery
-	const [batteries]: any = await pool.query(
-		`SELECT 
-			product_id,
-			capacity,
-			health,
-			chemistry,
-			voltage,
-			dimension
-		FROM batteries 
-		WHERE product_id IN (${productIds.map(() => '?').join(',')})`,
-		productIds,
-	);
+	// // Lấy thông tin batteries cho các product là battery
+	// const [batteries]: any = await pool.query(
+	// 	`SELECT 
+	// 		product_id,
+	// 		capacity,
+	// 		health,
+	// 		chemistry,
+	// 		voltage,
+	// 		dimension
+	// 	FROM batteries 
+	// 	WHERE product_id IN (${productIds.map(() => '?').join(',')})`,
+	// 	productIds,
+	// );
 
 	// Lấy images cho tất cả products
 	const [images]: any = await pool.query(
@@ -488,8 +440,8 @@ export async function getPostByUserId(userId: number, status?: string, status_ve
 	);
 
 	// Map vehicles, batteries, và images vào từng post
-	const vehicleMap = new Map(vehicles.map((v: any) => [v.product_id, v]));
-	const batteryMap = new Map(batteries.map((b: any) => [b.product_id, b]));
+	// const vehicleMap = new Map(vehicles.map((v: any) => [v.product_id, v]));
+	// const batteryMap = new Map(batteries.map((b: any) => [b.product_id, b]));
 
 	// Group images by product_id
 	const imageMap = new Map();
@@ -505,40 +457,37 @@ export async function getPostByUserId(userId: number, status?: string, status_ve
 		const result: any = {
 			id: post.id,
 			title: post.title,
-			brand: post.brand,
-			model: post.model,
 			description: post.description,
-			color: post.color,
-			year: post.year,
-			address: post.address,
-			image: post.image,
-			end_date: post.end_date,
-			warranty: post.warranty,
 			priority: post.priority,
-			price: post.price,
-			status_verify: post.status_verify,
 			status: post.status,
+			end_date: post.end_date,
 			created_at: post.created_at,
 			updated_at: post.updated_at,
-			category: {
-				id: post.category_id,
-				name: post.category,
-				type: post.category_type,
-				slug: post.category_slug,
+			status_verify: post.status_verify,
+			// Nếu có thêm các field khác (review_by, created_by, pushed_at) thì thêm ở đây
+			product: {
+				id: post.id,
+				brand: post.brand,
+				model: post.model,
+				price: post.price,
+				year: post.year,
+				address: post.address,
+				image: post.image,
+				description: post.description,
+				warranty: post.warranty,
+				priority: post.priority,
+				pushed_at: post.pushed_at || null,
+				color: post.color,
+				images: imageMap.get(post.id) || [],
+				category: {
+					id: post.category_id,
+					type: post.category_type,
+					name: post.category,
+					slug: post.category_slug,
+					count: 0, // bạn có thể thay bằng giá trị thật nếu có
+				},
 			},
-			images: imageMap.get(post.id) || [],
-		}
-
-
-		// Thêm vehicle info nếu là vehicle
-		if (vehicleMap.has(post.id)) {
-			result.vehicle = vehicleMap.get(post.id);
-		}
-
-		// Thêm battery info nếu là battery
-		if (batteryMap.has(post.id)) {
-			result.battery = batteryMap.get(post.id);
-		}
+		};
 
 		return result;
 	});
