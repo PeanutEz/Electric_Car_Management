@@ -768,7 +768,7 @@ router.get('/order-by-user', authenticateToken, getUserOrders);
 
 /**
  * @swagger
- * /change-password:
+ * api/user/change-password:
  *   put:
  *     summary: Đổi mật khẩu người dùng
  *     description: API cho phép người dùng đổi mật khẩu mới (yêu cầu đăng nhập bằng token hợp lệ).

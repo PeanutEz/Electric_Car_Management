@@ -16,7 +16,7 @@ router.post('/verify', authenticateToken,getOrdersByUserIdAndCodeController);
 
 /**
  * @swagger
- * /get-transaction-detail:
+ * api/order/get-transaction-detail:
  *   get:
  *     summary: Lấy chi tiết giao dịch của người dùng
  *     description: Trả về thông tin chi tiết về giao dịch, dịch vụ và đơn hàng của người dùng dựa trên userId (tự động lấy từ token).
