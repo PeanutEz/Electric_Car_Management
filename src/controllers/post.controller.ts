@@ -171,7 +171,7 @@ export async function postDetail(req: Request, res: Response) {
 		}
 		return res.status(200).json({
 			message: 'Lấy thông tin bài viết thành công',
-			data: post,
+			data: post[0],
 		});
 	} catch {
 		return res.status(500).json({ message: 'Lỗi máy chủ nội bộ' });

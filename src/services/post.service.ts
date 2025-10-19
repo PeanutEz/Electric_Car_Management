@@ -146,46 +146,46 @@ export async function getPostApproved(
 		product:
 			r.slug === 'vehicle'
 				? {
-						id: r.product_id,
-						brand: r.brand,
-						model: r.model,
-						price: r.price,
-						year: r.year,
-						address: r.address,
-						image: r.image,
-						color: r.color,
-						seats: r.seats,
-						mileage: r.mileage_km,
-						power: r.power,
-						health: r.health,
-						previousOwners: r.previousOwners,
-						images: [],
-						category: {
-							id: r.category_id,
-							name: r.category_name,
-							typeSlug: r.slug,
-						},
-				  }
+					id: r.product_id,
+					brand: r.brand,
+					model: r.model,
+					price: r.price,
+					year: r.year,
+					address: r.address,
+					image: r.image,
+					color: r.color,
+					seats: r.seats,
+					mileage: r.mileage_km,
+					power: r.power,
+					health: r.health,
+					previousOwners: r.previousOwners,
+					images: [],
+					category: {
+						id: r.category_id,
+						name: r.category_name,
+						typeSlug: r.slug,
+					},
+				}
 				: {
-						id: r.product_id,
-						brand: r.brand,
-						model: r.model,
-						price: r.price,
-						year: r.year,
-						address: r.address,
-						image: r.image,
-						color: r.color,
-						capacity: r.capacity,
-						voltage: r.voltage,
-						health: r.health,
-						previousOwners: r.previousOwners,
-						images: [],
-						category: {
-							id: r.category_id,
-							name: r.category_name,
-							typeSlug: r.slug,
-						},
-				  },
+					id: r.product_id,
+					brand: r.brand,
+					model: r.model,
+					price: r.price,
+					year: r.year,
+					address: r.address,
+					image: r.image,
+					color: r.color,
+					capacity: r.capacity,
+					voltage: r.voltage,
+					health: r.health,
+					previousOwners: r.previousOwners,
+					images: [],
+					category: {
+						id: r.category_id,
+						name: r.category_name,
+						typeSlug: r.slug,
+					},
+				},
 	}));
 }
 
@@ -243,56 +243,56 @@ export async function paginatePosts(
 		product:
 			r.category_type === 'vehicle'
 				? {
-						id: r.product_id,
-						brand: r.brand,
-						model: r.model,
-						price: r.price,
-						description: r.description,
-						status: r.status,
-						year: r.year,
-						created_by: r.created_by,
-						warranty: r.warranty,
-						address: r.address,
-						color: r.color,
-						seats: r.seats,
-						mileage: r.mileage_km,
-						power: r.power,
-						health: r.health,
-						previousOwners: r.previousOwners,
-						images: images
-							.filter((img) => img.product_id === r.id)
-							.map((img) => img.url),
-						category: {
-							id: r.category_id,
-							typeSlug: r.slug,
-							name: r.category_name,
-						},
-				  }
+					id: r.product_id,
+					brand: r.brand,
+					model: r.model,
+					price: r.price,
+					description: r.description,
+					status: r.status,
+					year: r.year,
+					created_by: r.created_by,
+					warranty: r.warranty,
+					address: r.address,
+					color: r.color,
+					seats: r.seats,
+					mileage: r.mileage_km,
+					power: r.power,
+					health: r.health,
+					previousOwners: r.previousOwners,
+					images: images
+						.filter((img) => img.product_id === r.id)
+						.map((img) => img.url),
+					category: {
+						id: r.category_id,
+						typeSlug: r.slug,
+						name: r.category_name,
+					},
+				}
 				: {
-						id: r.product_id,
-						brand: r.brand,
-						model: r.model,
-						price: r.price,
-						description: r.description,
-						status: r.status,
-						year: r.year,
-						color: r.color,
-						created_by: r.created_by,
-						warranty: r.warranty,
-						address: r.address,
-						capacity: r.capacity,
-						voltage: r.voltage,
-						health: r.health,
-						previousOwners: r.previousOwners,
-						images: images
-							.filter((img) => img.product_id === r.id)
-							.map((img) => img.url),
-						category: {
-							id: r.category_id,
-							typeSlug: r.slug,
-							name: r.category_name,
-						},
-				  },
+					id: r.product_id,
+					brand: r.brand,
+					model: r.model,
+					price: r.price,
+					description: r.description,
+					status: r.status,
+					year: r.year,
+					color: r.color,
+					created_by: r.created_by,
+					warranty: r.warranty,
+					address: r.address,
+					capacity: r.capacity,
+					voltage: r.voltage,
+					health: r.health,
+					previousOwners: r.previousOwners,
+					images: images
+						.filter((img) => img.product_id === r.id)
+						.map((img) => img.url),
+					category: {
+						id: r.category_id,
+						typeSlug: r.slug,
+						name: r.category_name,
+					},
+				},
 	}));
 }
 
@@ -400,16 +400,16 @@ export async function searchPosts(title: string): Promise<Post[]> {
 
 export async function getPostsById(id: number): Promise<Post[]> {
 	// Lấy thông tin sản phẩm
-	const [rows]: any[] = await pool.query(
+	const [rows]: any = await pool.query(
 		'SELECT p.id, p.status, p.brand, p.model, p.price, p.address,p.created_by,p.created_at,p.updated_at, p.description, p.year,p.warranty,p.previousOwners, p.address,' +
-			'p.image,p.color, pc.name AS category_name, pc.id AS category_id, ' +
-			'pc.slug AS category_type, v.mileage_km, v.seats,v.power,v.health, bat.capacity, bat.voltage, bat.health, ' +
-			'p.end_date, p.title, p.pushed_at, p.priority ' +
-			'FROM products p ' +
-			'LEFT JOIN product_categories pc ON p.product_category_id = pc.id ' +
-			'LEFT JOIN vehicles v ON v.product_id = p.id ' +
-			'LEFT JOIN batteries bat ON bat.product_id = p.id ' +
-			'WHERE p.id = ?',
+		'p.image,p.color, pc.name AS category_name, pc.id AS category_id, ' +
+		'pc.slug AS category_type, v.mileage_km, v.seats,v.power,v.health, bat.capacity, bat.voltage, bat.health, ' +
+		'p.end_date, p.title, p.pushed_at, p.priority ' +
+		'FROM products p ' +
+		'LEFT JOIN product_categories pc ON p.product_category_id = pc.id ' +
+		'LEFT JOIN vehicles v ON v.product_id = p.id ' +
+		'LEFT JOIN batteries bat ON bat.product_id = p.id ' +
+		'WHERE p.id = ?',
 		[id],
 	);
 
@@ -477,8 +477,7 @@ Yêu cầu:
 Ví dụ:
 350000000, 450000000`);
 	}
-
-	console.log(geminiPromptPrice);
+	const r = (rows as any)[0];
 
 	return (rows as any).map((r: any) => ({
 		id: r.id,
