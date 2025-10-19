@@ -92,7 +92,7 @@ export async function getPostApprovedController(req: Request, res: Response) {
 				pagination: {
 					page: page,
 					limit: limit,
-					//length: posts.length,
+					length: posts.length,
 					page_size: Math.ceil(totalPosts.length / limit),
 				},
 			},
