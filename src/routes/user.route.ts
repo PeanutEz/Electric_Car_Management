@@ -11,7 +11,7 @@ import {
 	updateUserPhone,
 	getUserPosts,
 	getUserOrders,
-	changeUserPassword
+	changeAndConfirmUserPassword
 } from '../controllers/user.controller';
 import { authenticateToken, authorizeRoles } from '../middleware/AuthMiddleware';
 
@@ -809,6 +809,6 @@ router.get('/order-by-user', authenticateToken, getUserOrders);
  *       500:
  *         description: Lỗi server
  */
-router.put('/change-password', authenticateToken, changeUserPassword);
+router.put('/change-password', authenticateToken, changeAndConfirmUserPassword);
 
 export default router;

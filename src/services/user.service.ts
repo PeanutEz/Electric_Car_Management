@@ -557,9 +557,23 @@ export async function getOrderByUserId(
 	return orders;
 }
 
-export async function changePassword(userId: number, newPassword: string) {
-	if (!newPassword || newPassword.length < 6 || newPassword.length > 160) {
-		const error = new Error('Mật khẩu phải từ 6 đến 160 ký tự');
+export async function changeAndConfirmPassword(userId: number, currentPassword: string, newPassword: string, confirmPassword: string) {
+	const [rows]: any = await pool.query(
+		'select password from users WHERE id = ?',
+		[userId],
+	);
+	const user = rows[0];
+	if (!user) {
+		const error = new Error('Người dùng không tồn tại');
+		throw error;
+	}
+	const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+	if (!isPasswordValid) {
+		const error = new Error('Mật khẩu hiện tại không đúng');
+		throw error;
+	}
+	if (newPassword !== confirmPassword) {
+		const error = new Error('Mật khẩu mới và xác nhận mật khẩu không khớp');
 		throw error;
 	}
 	const hashedPassword = await bcrypt.hash(newPassword, 10);

@@ -86,9 +86,9 @@ router.get('/list-orders', listOrders);
 router.get('/transactions', getOrderTransactions);
 
 router.get('/list-services', listServices);
-router.post('/create-service', addService);
-router.put('/update-service/:id', editService);
-router.delete('/delete-service/:id', removeService);
+router.post('/create-package', addService);
+router.put('/update-package/:id', editService);
+router.delete('/delete-package/:id', removeService);
 
 
 

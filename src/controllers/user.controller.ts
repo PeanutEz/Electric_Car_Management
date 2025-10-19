@@ -10,7 +10,7 @@ import {
 	updatePhoneUser,
 	getPostByUserId,
 	getOrderByUserId,
-	changePassword
+	changeAndConfirmPassword
 } from '../services/user.service';
 import jwt from 'jsonwebtoken';
 import * as uploadService from '../services/upload.service';
@@ -423,7 +423,7 @@ export async function getUserOrders(req: Request, res: Response) {
 	}
 }
 
-export async function changeUserPassword(req: Request, res: Response) {
+export async function changeAndConfirmUserPassword(req: Request, res: Response) {
 	try {
 		// lấy userId trong header Authorization: token decode
 		const authHeader = req.headers.authorization;
@@ -434,22 +434,20 @@ export async function changeUserPassword(req: Request, res: Response) {
 		}
 		const token = authHeader.split(' ')[1];
 		const id = (jwt.decode(token) as any).id;
-		const { newPassword } = req.body;
+		const { currentPassword, newPassword, confirmPassword } = req.body;
 
-		if (!id) {
-			return res.status(403).json({
-				message: 'Vui lòng đăng nhập để đổi mật khẩu',
-			});
-		}
-		await changePassword(id, newPassword);
+		const result = await changeAndConfirmPassword(id, currentPassword, newPassword, confirmPassword);
+
 		res.status(200).json({
 			message: 'Đổi mật khẩu thành công',
+			data: result,
 		});
-	}
-	catch (error: any) {
+	} catch (error: any) {
 		res.status(422).json({
 			message: error.message,
 			data: error.data,
 		});
 	}
 }
+
+

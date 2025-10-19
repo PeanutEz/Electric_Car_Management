@@ -15,21 +15,28 @@ import { Transaction } from '../models/transaction.model';
 // 7  Gói cơ bản(3 lần đăng tin cho xe)   package               100000            3                 0                   0                  1
 // 8  gói nâng cao (3 push 3 post cho xe)   package           300000            3                 3                   0                  1,3
 
-export async function createService(service: Service): Promise<void> {
-   const { name, type, cost, number_of_post, number_of_push, number_of_verify, service_ref } = service;
-   await pool.query('INSERT INTO services (name, type, cost, number_of_post, number_of_push, number_of_verify, service_ref) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-   [name, type, cost, number_of_post, number_of_push, number_of_verify, service_ref]);
-}
 export async function getAllServices(): Promise<Service[]> {
     const [rows] = await pool.query('SELECT * FROM services');
    return rows as Service[];
 }
-export async function updateService(id: number, service: Service): Promise<void> {
-   const { name, type, cost, number_of_post, number_of_push, number_of_verify, service_ref } = service;
-   await pool.query('UPDATE services SET name = ?, type = ?, cost = ?, number_of_post = ?, number_of_push = ?, number_of_verify = ?, service_ref = ? WHERE id = ?', 
-   [name, type, cost, number_of_post, number_of_push, number_of_verify, service_ref, id]);
+export async function createPackage(service: Service): Promise<any> {
+   const {name, description, cost, number_of_post, number_of_push, number_of_verify, service_ref, product_type, feature } = service;
+   const [result] = await pool.query('INSERT INTO services (type,name, description,cost, number_of_post, number_of_push, number_of_verify, service_ref, product_type, duration, feature) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+   ["package", name, description, cost, number_of_post, number_of_push, number_of_verify, service_ref, product_type, 30, feature]);
+   
+   const insertId = (result as any).insertId;
+   return { id: insertId, ...service };
 }
-export async function deleteService(id: number): Promise<void> {
+export async function updatePackage(id: number, name: string, cost: number, feature: string) {
+   const [result] = await pool.query('UPDATE services SET name = ?, cost = ?, feature = ? WHERE id = ?', 
+   [name, cost, feature, id]);
+   if ((result as any).affectedRows === 0) throw new Error('Service not found');
+   const [rows] = await pool.query('SELECT * FROM services WHERE id = ?', [id]);
+
+   return (rows as Service[])[0];
+}
+
+export async function deletePackage(id: number): Promise<void> {
    await pool.query('DELETE FROM services WHERE id = ?', [id]);
 }
 
