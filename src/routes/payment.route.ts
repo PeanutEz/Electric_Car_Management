@@ -4,6 +4,7 @@ import {
 	getPaymentInfo,
 	payosWebhookHandler,
 	packagePaymentController,
+	topUpPaymentController,
 } from '../controllers/payment.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 
@@ -144,6 +145,78 @@ router.post('/payos-webhook', payosWebhookHandler);
  *       500:
  *         description: Internal server error
  */
-router.post('/package-payment', authenticateToken, packagePaymentController);
+router.post('/package-payment', packagePaymentController);
+
+/**
+ * @swagger
+ * /api/payment/topup:
+ *   post:
+ *     summary: Top up credit to user account
+ *     tags: [Payment]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - user_id
+ *               - amount
+ *             properties:
+ *               user_id:
+ *                 type: number
+ *                 description: User ID
+ *                 example: 1
+ *               amount:
+ *                 type: number
+ *                 description: Amount to top up (VND)
+ *                 example: 100000
+ *               description:
+ *                 type: string
+ *                 description: Payment description (optional)
+ *                 example: "Nạp tiền vào tài khoản"
+ *     responses:
+ *       200:
+ *         description: Payment link created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Đã tạo link thanh toán nạp 100000 VND"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     checkoutUrl:
+ *                       type: string
+ *                       example: "https://pay.payos.vn/web/..."
+ *                     orderCode:
+ *                       type: number
+ *                       example: 123456
+ *                     amount:
+ *                       type: number
+ *                       example: 100000
+ *       400:
+ *         description: Bad request - Missing or invalid parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Missing required fields: user_id, amount"
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/topup', authenticateToken, topUpPaymentController);
 
 export default router;

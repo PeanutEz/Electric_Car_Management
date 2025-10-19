@@ -322,20 +322,19 @@ export async function checkAndProcessPostPayment(
 	}
 }
 
-// Xử lý payment thành công cho service (post creation)
+// Xử lý payment thành công cho service (post creation) và topup
 export async function processServicePayment(orderCode: string) {
 	const paymentStatus = await getPaymentStatus(orderCode);
 
-
-
 	const [checkUser]: any = await pool.query(
-		'select buyer_id, id, price, service_id from orders where code = ?',
+		'select buyer_id, id, price, service_id, type from orders where code = ?',
 		[orderCode],
 	);
 	const orderId = checkUser[0].id;
 	const price = checkUser[0].price;
 	const userId = checkUser[0].buyer_id;
 	const serviceId = checkUser[0].service_id;
+	const orderType = checkUser[0].type; // 'post', 'package', 'topup', etc.
 
 	// Kiểm tra user
 	const [userRows]: any = await pool.query(
@@ -348,7 +347,7 @@ export async function processServicePayment(orderCode: string) {
 
 	// Kiểm tra trạng thái order trong database
 	const [orderRows]: any = await pool.query(
-		'select status, price, service_id from orders where code = ?',
+		'select status, price, service_id, type from orders where code = ?',
 		[orderCode],
 	);
 
@@ -358,9 +357,8 @@ export async function processServicePayment(orderCode: string) {
 
 	const currentOrderStatus = orderRows[0].status;
 	const orderPrice = orderRows[0].price;
-	//const serviceId = orderRows[0].service_id;
 
-	// Chỉ cập nhật nếu trạng thái payment là PAID và order chưa được xử lý\
+	// Chỉ cập nhật nếu trạng thái payment là PAID và order chưa được xử lý
 	if (
 		paymentStatus.data.data.status === 'PAID' &&
 		currentOrderStatus !== 'PAID'
@@ -371,17 +369,46 @@ export async function processServicePayment(orderCode: string) {
 			orderCode,
 		]);
 
-		// Cộng tiền vào total_credit (để có thể post)
+		// Cộng tiền vào total_credit
 		await pool.query(
 			'update users set total_credit = total_credit + ? where id = ?',
 			[orderPrice, userId],
 		);
-		console.log('orderId, userId, price:', orderId, userId, price);
+		console.log(
+			'orderId, userId, price, type:',
+			orderId,
+			userId,
+			price,
+			orderType,
+		);
 
+		// Log transaction
 		await pool.query(
 			'insert into transaction_detail (order_id, user_id, unit, type, credits) values (?, ?, ?, ?, ?)',
 			[orderId, userId, 'CREDIT', 'Increase', price],
 		);
+
+		// Nếu là topup, không cần xử lý thêm (chỉ cộng credit)
+		// Nếu là package, cộng quota (sẽ xử lý riêng nếu cần)
+		let message = 'Thanh toán thành công!';
+
+		if (orderType === 'topup') {
+			message = `Nạp tiền thành công ${orderPrice} VND vào tài khoản.`;
+		} else if (
+			orderType === null
+		) {
+			message = 'Thanh toán thành công.';
+		} else if (orderType === 'package') {
+			message =
+				'Thanh toán package thành công.';
+		}
+
+		return {
+			user: await getUserById(userId),
+			canPost: true,
+			message: message,
+			orderType: orderType,
+		};
 	} else if (
 		paymentStatus.data.data.status === 'CANCELLED' &&
 		currentOrderStatus !== 'CANCELLED'
@@ -391,12 +418,20 @@ export async function processServicePayment(orderCode: string) {
 			'CANCELLED',
 			orderCode,
 		]);
+
+		return {
+			user: await getUserById(userId),
+			canPost: false,
+			message: 'Thanh toán đã bị hủy.',
+			orderType: orderType,
+		};
 	}
 
 	return {
 		user: await getUserById(userId),
-		canPost: true,
-		message: 'Thanh toán thành công. Bạn có thể tạo bài post ngay.',
+		canPost: currentOrderStatus === 'PAID',
+		message: 'Đơn hàng đã được xử lý trước đó.',
+		orderType: orderType,
 	};
 }
 
@@ -592,5 +627,105 @@ export async function processPackagePayment(
 		throw error;
 	} finally {
 		conn.release();
+	}
+}
+
+/**
+ * Top Up Payment - Create payment link to add credit to user account
+ * @param userId - User ID
+ * @param amount - Amount to top up (VND)
+ * @param description - Payment description (optional)
+ * @returns Payment link and order code
+ */
+export async function processTopUpPayment(
+	userId: number,
+	amount: number,
+	description?: string,
+): Promise<{
+	success: boolean;
+	message: string;
+	checkoutUrl?: string;
+	orderCode?: number;
+	amount?: number;
+}> {
+	try {
+		// 1. Validate user exists
+		const [userRows]: any = await pool.query(
+			'SELECT id, full_name, email FROM users WHERE id = ?',
+			[userId],
+		);
+
+		if (userRows.length === 0) {
+			return {
+				success: false,
+				message: 'User không tồn tại',
+			};
+		}
+
+		// 2. Validate amount
+		if (!amount || isNaN(amount) || amount <= 3000) {
+			return {
+				success: false,
+				message:
+					'Số tiền nạp không hợp lệ. Vui lòng nhập số tiền lớn hơn 3000.',
+			};
+		}
+
+		// 3. Create order with PENDING status
+		const orderCode = Math.floor(Math.random() * 1000000);
+		const [orderResult]: any = await pool.query(
+			'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
+			[
+				orderCode,
+				'topup', // type = 'topup' để phân biệt với package/post
+				null, // service_id = null vì đây là nạp tiền
+				userId,
+				amount,
+				'PENDING',
+				'PAYOS',
+			],
+		);
+
+		// 4. Create PayOS payment link
+		try {
+			const envAppUrl = process.env.APP_URL || 'http://localhost:3000';
+			const paymentDescription =
+				description || `Nap tien tai khoan ${orderCode}`;
+
+			const paymentLinkRes = await payos.paymentRequests.create({
+				orderCode: orderCode,
+				amount: Math.round(amount),
+				description: paymentDescription.substring(0, 25), // PayOS limit 25 chars
+				returnUrl: buildUrl(envAppUrl, '/payment/result', {
+					provider: 'payos',
+					next: '/profile?tab=wallet',
+				}),
+				cancelUrl: buildUrl(envAppUrl, '/payment/result', {
+					provider: 'payos',
+					next: '/',
+				}),
+			});
+
+			return {
+				success: true,
+				message: `Đã tạo link thanh toán nạp ${amount} VND`,
+				checkoutUrl: paymentLinkRes.checkoutUrl,
+				orderCode: orderCode,
+				amount: amount,
+			};
+		} catch (payosError: any) {
+			console.error('PayOS error:', payosError);
+
+			// Delete order if PayOS fails
+			await pool.query('DELETE FROM orders WHERE code = ?', [orderCode]);
+
+			return {
+				success: false,
+				message: `Lỗi tạo link thanh toán: ${payosError.message}`,
+			};
+		}
+	} catch (error: any) {
+		console.error('Top up payment error:', error);
+		throw error;
 	}
 }

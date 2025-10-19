@@ -6,6 +6,7 @@ import {
 import {
 	processServicePayment,
 	processPackagePayment,
+	processTopUpPayment,
 } from '../services/service.service';
 import jwt from 'jsonwebtoken';
 import pool from '../config/db';
@@ -89,13 +90,13 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 export const packagePaymentController = async (req: Request, res: Response) => {
 	try {
 		const authHeader = req.headers.authorization;
-				if (!authHeader) {
-					return res.status(401).json({ message: 'Unauthorized' });
-				}
-				const token = authHeader.split(' ')[1];
-				const id = (jwt.decode(token) as any).id;
-				const userId = id;
-		
+		if (!authHeader) {
+			return res.status(401).json({ message: 'Unauthorized' });
+		}
+		const token = authHeader.split(' ')[1];
+		const id = (jwt.decode(token) as any).id;
+		const userId = id;
+
 		const { service_id } = req.body;
 
 		// Validate input
@@ -151,6 +152,76 @@ export const packagePaymentController = async (req: Request, res: Response) => {
 		return res.status(500).json({
 			success: false,
 			message: error.message || 'Xử lý thanh toán package thất bại',
+		});
+	}
+};
+
+/**
+ * Top Up Payment Controller
+ * Body: { user_id: number, amount: number, description?: string }
+ */
+export const topUpPaymentController = async (req: Request, res: Response) => {
+	try {
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res.status(401).json({ message: 'Unauthorized' });
+		}
+		const token = authHeader.split(' ')[1];
+		const id = (jwt.decode(token) as any).id;
+		const userId = id;
+
+		const { amount, description } = req.body;
+
+		// Validate input
+		if (!userId || !amount) {
+			return res.status(400).json({
+				success: false,
+				message: 'Missing required fields: user_id, amount',
+			});
+		}
+
+		if (isNaN(userId) || isNaN(amount)) {
+			return res.status(400).json({
+				success: false,
+				message: 'user_id and amount must be numbers',
+			});
+		}
+
+		if (amount <= 0) {
+			return res.status(400).json({
+				success: false,
+				message: 'Amount must be greater than 0',
+			});
+		}
+
+		// Process top up payment
+		const result = await processTopUpPayment(
+			userId,
+			parseFloat(amount),
+			description,
+		);
+
+		if (result.success) {
+			return res.status(200).json({
+				success: true,
+				message: result.message,
+				data: {
+					checkoutUrl: result.checkoutUrl,
+					orderCode: result.orderCode,
+					amount: result.amount,
+				},
+			});
+		} else {
+			return res.status(400).json({
+				success: false,
+				message: result.message,
+			});
+		}
+	} catch (error: any) {
+		console.error('Top up payment error:', error);
+		return res.status(500).json({
+			success: false,
+			message: error.message || 'Xử lý nạp tiền thất bại',
 		});
 	}
 };

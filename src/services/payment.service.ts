@@ -4,7 +4,6 @@ import payos from '../config/payos';
 import pool from '../config/db';
 import { detectPaymentMethod } from '../utils/parser';
 
-
 export async function createPayosPayment(payload: Payment) {
 	try {
 		const orderCode = Math.floor(Math.random() * 1000000);
@@ -48,6 +47,8 @@ export async function getPaymentStatus(paymentId: string) {
 		);
 	}
 }
+
+
 
 
 // {
