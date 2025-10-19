@@ -346,18 +346,11 @@ export async function getPostsById(id: number): Promise<Post[]> {
 	//    min_price: 4500000 * 100,
 	//    max_price: 5500000 * 100
 	//  }
-	const geminiPromptMinPrice =
-		await generateText(`Hãy lấy giá thấp nhất tương đối của 1 sản phẩm secondhand có đặc điểm là:
-Thương hiệu: ${rows[0].brand}
-Mẫu mã: ${rows[0].model}
-chỉ trả về cho tôi con số`);
+const geminiPromptPrice = await generateText(`tôi đang cần tham khảo giá về một sản phẩm cũ gồm các thông tin sau : 
+	tên là ${rows[0].model} và tôi cần bạn trả về cho tôi một khoảng giá có format như sau: 'min_price, max_price'
+   Lưu ý: số ở đây là đơn vị VND nha, bạn chỉ cần trả tôi số là được và hãy trả lời theo format tôi và không cần trả lời thêm bất cứ thứ gì`) 
 
-	const geminiPromptMaxPrice =
-		await generateText(`Hãy lấy giá cao nhất tương đối của 1 sản phẩm secondhand có min price là ${geminiPromptMinPrice} có đặc điểm là:
-Thương hiệu: ${rows[0].brand}
-Mẫu mã: ${rows[0].model}
-chỉ trả về cho tôi con số`);
-
+	console.log(geminiPromptPrice);//850000000, 1200000000
 	return (rows as any).map((r: any) => ({
 		id: r.id,
 		title: r.title,
@@ -417,8 +410,8 @@ chỉ trả về cho tôi con số`);
 			phone: seller[0]?.phone,
 		},
 		ai: {
-			min_price: geminiPromptMinPrice,
-			max_price: geminiPromptMaxPrice,
+			min_price: geminiPromptPrice.split(',')[0].trim(),
+			max_price: geminiPromptPrice.split(',')[1].trim(),
 		},
 	}));
 }
