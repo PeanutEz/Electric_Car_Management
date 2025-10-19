@@ -448,7 +448,7 @@ export async function getPostByUserId(
 		params.push(status_verify);
 	}
 
-	query += ' ORDER BY p.created_at desc, p.updated_at DESC LIMIT ? OFFSET ?';
+	query += ' ORDER BY p.updated_at DESC, p.created_at desc  LIMIT ? OFFSET ?';
 	params.push(limit, offset);
 
 	const [posts]: any = await pool.query(query, params);
@@ -508,6 +508,7 @@ export async function getPostByUserId(
 					power: post.power,
 					health: post.health,
 					previousOwners: post.previousOwners,
+					image: post.image,
 					images: imageMap.get(post.id) || [],
 					category: {
 						id: post.category_id,
