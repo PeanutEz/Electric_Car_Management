@@ -403,7 +403,7 @@ export async function getPostsById(id: number): Promise<Post[]> {
 	const [rows]: any[] = await pool.query(
 		'SELECT p.id, p.status, p.brand, p.model, p.price, p.address,p.created_by,p.created_at,p.updated_at, p.description, p.year,p.warranty,p.previousOwners, p.address,' +
 			'p.image,p.color, pc.name AS category_name, pc.id AS category_id, ' +
-			'pc.slug AS category_type, v.mileage_km, v.seats,v.power, bat.capacity, bat.voltage, bat.health, ' +
+			'pc.slug AS category_type, v.mileage_km, v.seats,v.power,v.health, bat.capacity, bat.voltage, bat.health, ' +
 			'p.end_date, p.title, p.pushed_at, p.priority ' +
 			'FROM products p ' +
 			'LEFT JOIN product_categories pc ON p.product_category_id = pc.id ' +

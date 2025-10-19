@@ -397,9 +397,19 @@ export async function getPostByUserId(
 			pc.id AS category_id,
 			pc.name AS category,
 			pc.type AS category_type,
-			pc.slug AS category_slug
+			pc.slug AS category_slug,
+			v.seats,
+			v.mileage_km,
+			v.power,
+			v.health,
+			bat.capacity,
+			bat.voltage,
+			bat.health
+
 		FROM products p 
 		INNER JOIN product_categories pc ON p.product_category_id = pc.id 
+		left JOIN vehicles v ON v.product_id = p.id
+		left JOIN batteries bat ON b.product_id = p.id
 		WHERE p.created_by = ?
 	`;
 
@@ -456,7 +466,8 @@ export async function getPostByUserId(
 		created_at: post.created_at,
 		updated_at: post.updated_at,
 		status_verify: post.status_verify,
-		product: {
+		product: 
+		{
 			id: post.id,
 			brand: post.brand,
 			model: post.model,

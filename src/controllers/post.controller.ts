@@ -12,7 +12,7 @@ import {
 	searchPosts,
 	getAllPosts,
 	updateUserPost,
-	getPostApproved
+	getPostApproved,
 } from '../services/post.service';
 import { checkAndProcessPostPayment } from '../services/service.service';
 //import { emitToAll } from '../config/socket';
@@ -23,25 +23,25 @@ export async function getPostApprovedController(req: Request, res: Response) {
 		const limit = parseInt(req.query.limit as string) || 10;
 		const year = parseInt(req.query.year as string);
 		const capacity = parseInt(req.query.capacity as string);
-		const health = req.query.health as string || '';
-		const voltage = req.query.voltage as string || '';
+		const health = (req.query.health as string) || '';
+		const voltage = (req.query.voltage as string) || '';
 		const color = (req.query.color as string) || '';
 		const seats = parseInt(req.query.seats as string);
-		const mileage_km = req.query.mileage_km as string || '';
+		const mileage_km = (req.query.mileage_km as string) || '';
 		const power = parseInt(req.query.power as string);
 		const title = (req.query.title as string) || '';
-		const sort_by = (req.query.sort_by as string);
-		const order = (req.query.order as string) as 'asc' | 'desc';
+		const sort_by = req.query.sort_by as string;
+		const order = req.query.order as string as 'asc' | 'desc';
 		let min = parseInt(req.query.price_min as string);
 		let max = parseInt(req.query.price_max as string);
 		const category_type = (req.query.category_type as string) || '';
-		if(min === undefined || isNaN(min)){
+		if (min === undefined || isNaN(min)) {
 			min = 0;
 		}
-		if(max === undefined || isNaN(max)){
+		if (max === undefined || isNaN(max)) {
 			max = 9999999999;
 		}
-		if(min > max && max !== 0){
+		if (min > max && max !== 0) {
 			return res.status(400).json({
 				message: 'Giá trị min không được lớn hơn max',
 			});
@@ -65,7 +65,6 @@ export async function getPostApprovedController(req: Request, res: Response) {
 			max,
 			category_type,
 		);
-
 
 		const totalPosts = await getPostApproved(
 			1,
@@ -97,7 +96,6 @@ export async function getPostApprovedController(req: Request, res: Response) {
 				},
 			},
 		});
-
 	} catch (error: any) {
 		res.status(500).json({
 			message: error.message,
@@ -117,14 +115,14 @@ export async function listPosts(req: Request, res: Response) {
 			limit,
 			status,
 			year,
-			category_type
+			category_type,
 		);
 		const totalPosts = await paginatePosts(
 			1,
 			10000,
 			status,
 			year,
-			category_type
+			category_type,
 		); // Lấy tất cả để tính tổng
 		res.status(200).json({
 			message: 'Lấy danh sách bài viết thành công',
@@ -319,12 +317,12 @@ export async function createPost(req: Request, res: Response) {
 		let imageUrls: string[] = [];
 
 		// Upload ảnh chính nếu có
-		if (files?.image && files.image[0]) {
-			const uploadResult = await uploadService.uploadImage(
-				files.image[0].buffer,
-			);
-			imageUrl = uploadResult.secure_url;
-		}
+		// if (files?.image && files.image[0]) {
+		//   const uploadResult = await uploadService.uploadImage(
+		//     files.image[0].buffer
+		//   );
+		//   imageUrl = uploadResult.secure_url;
+		// }
 
 		// Upload nhiều ảnh nếu có
 		if (files?.images && files.images.length > 0) {
@@ -334,13 +332,11 @@ export async function createPost(req: Request, res: Response) {
 			imageUrls = uploadResults.map((result) => result.secure_url);
 		}
 
-		console.log(files.images + "-" + imageUrls);
-
 		// Chuẩn bị dữ liệu để insert
 		const postDataWithImages = {
 			...postData,
 			category_id: parseInt(postData.category_id),
-			image: imageUrls, // Lấy ảnh đầu tiên làm ảnh chính
+			image: imageUrls[0] || '', // Lấy ảnh đầu tiên làm ảnh chính
 			images: imageUrls,
 		};
 		const newPost = await createNewPost(
@@ -386,8 +382,7 @@ export async function editPost(req: Request, res: Response) {
 			message: 'Cập nhật bài viết thành công',
 			data: updatedPost,
 		});
-	}
-	catch (error: any) {
+	} catch (error: any) {
 		return res.status(500).json({ message: error.message });
 	}
 }
