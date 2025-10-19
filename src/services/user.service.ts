@@ -342,7 +342,7 @@ export async function getPostByUserId(
 	status?: string,
 	status_verify?: string,
 	page: number = 1,
-	limit: number = 20
+	limit: number = 20,
 ) {
 	const offset = (page - 1) * limit;
 
@@ -350,7 +350,8 @@ export async function getPostByUserId(
 	if (status_verify === 'all') status_verify = undefined;
 
 	// ✅ 1️⃣ Lấy counts song song (tối ưu performance)
-	const [counts]: any = await pool.query(`
+	const [counts]: any = await pool.query(
+		`
 		SELECT
 		    COUNT(*) AS "all",
 			SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
@@ -361,7 +362,9 @@ export async function getPostByUserId(
 			SUM(CASE WHEN status_verify = 'unverified' THEN 1 ELSE 0 END) AS unverified
 		FROM products
 		WHERE created_by = ?
-	`, [userId]);
+	`,
+		[userId],
+	);
 
 	const result = {
 		all: Number(counts[0].all) || 0,
@@ -405,11 +408,10 @@ export async function getPostByUserId(
 			bat.capacity,
 			bat.voltage,
 			bat.health
-
 		FROM products p 
 		INNER JOIN product_categories pc ON p.product_category_id = pc.id 
-		left JOIN vehicles v ON v.product_id = p.id
-		left JOIN batteries bat ON b.product_id = p.id
+		left JOIN vehicles v ON v.product_id = p.id 
+		left JOIN batteries bat ON bat.product_id = p.id
 		WHERE p.created_by = ?
 	`;
 
@@ -444,7 +446,7 @@ export async function getPostByUserId(
 		`SELECT product_id, url
 		 FROM product_imgs 
 		 WHERE product_id IN (${productIds.map(() => '?').join(',')})`,
-		productIds
+		productIds,
 	);
 
 	const imageMap = new Map();
@@ -466,30 +468,51 @@ export async function getPostByUserId(
 		created_at: post.created_at,
 		updated_at: post.updated_at,
 		status_verify: post.status_verify,
-		product: 
-		{
-			id: post.id,
-			brand: post.brand,
-			model: post.model,
-			price: post.price,
-			year: post.year,
-			address: post.address,
-			image: post.image,
-			description: post.description,
-			warranty: post.warranty,
-			priority: post.priority,
-			pushed_at: post.pushed_at || null,
-			color: post.color,
-			previousOwners: post.previousOwners,
-			images: imageMap.get(post.id) || [],
-			category: {
-				id: post.category_id,
-				type: post.category_type,
-				name: post.category,
-				typeSlug: post.category_slug,
-				count: 0,
-			},
-		},
+		product:
+			post.category_type === 'vehicle'
+				? {
+						id: post.id,
+						brand: post.brand,
+						model: post.model,
+						price: post.price,
+						description: post.description,
+						status: post.status,
+						year: post.year,
+						created_by: post.created_by,
+						warranty: post.warranty,
+						address: post.address,
+						color: post.color,
+						seats: post.seats,
+						mileage: post.mileage_km,
+						power: post.power,
+						health: post.health,
+						previousOwners: post.previousOwners,
+						images: imageMap.get(post.id) || [],
+						category: {
+							id: post.category_id,
+							type: post.category_type,
+							name: post.category,
+							typeSlug: post.category_slug,
+							count: 0,
+						},
+				  }
+				: {
+						id: post.id,
+						brand: post.brand,
+						model: post.model,
+						price: post.price,
+						description: post.description,
+						status: post.status,
+						year: post.year,
+						color: post.color,
+						created_by: post.created_by,
+						warranty: post.warranty,
+						address: post.address,
+						capacity: post.capacity,
+						voltage: post.voltage,
+						health: post.health,
+						previousOwners: post.previousOwners,
+				  },
 	}));
 
 	// ✅ 6️⃣ Trả về kết quả đầy đủ
@@ -499,7 +522,11 @@ export async function getPostByUserId(
 	};
 }
 
-export async function getOrderByUserId(userId: number, page: number, limit: number) {
+export async function getOrderByUserId(
+	userId: number,
+	page: number,
+	limit: number,
+) {
 	const [orders]: any = await pool.query(
 		'SELECT * FROM orders WHERE buyer_id = ? ORDER BY created_at DESC LIMIT ?, ?',
 		[userId, (page - 1) * limit, limit],

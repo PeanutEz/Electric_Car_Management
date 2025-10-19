@@ -27,7 +27,7 @@ export async function getPostApprovedController(req: Request, res: Response) {
 		const voltage = (req.query.voltage as string) || '';
 		const color = (req.query.color as string) || '';
 		const seats = parseInt(req.query.seats as string);
-		const mileage_km = (req.query.mileage_km as string) || '';
+		const mileage = (req.query.mileage as string) || '';
 		const power = parseInt(req.query.power as string);
 		const title = (req.query.title as string) || '';
 		const sort_by = req.query.sort_by as string;
@@ -56,7 +56,7 @@ export async function getPostApprovedController(req: Request, res: Response) {
 			voltage,
 			color,
 			seats,
-			mileage_km,
+			mileage,
 			power,
 			title,
 			sort_by,
@@ -75,7 +75,7 @@ export async function getPostApprovedController(req: Request, res: Response) {
 			voltage,
 			color,
 			seats,
-			mileage_km,
+			mileage,
 			power,
 			title,
 			sort_by,
