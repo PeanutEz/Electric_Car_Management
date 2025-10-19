@@ -278,54 +278,117 @@ router.get('/get-all', listPosts);
  *                             example: 164
  *                           title:
  *                             type: string
- *                             example: Haha 1
- *                           description:
- *                             type: string
- *                             example: Mô tả bài đăng
+ *                             example: Xe điện VinFast VF 6
+ *                           priority:
+ *                             type: integer
+ *                             example: 1
  *                           status:
  *                             type: string
  *                             example: approved
  *                           created_at:
  *                             type: string
  *                             format: date-time
+ *                             example: 2025-10-04T07:50:28.000Z
+ *                           updated_at:
+ *                             type: string
+ *                             nullable: true
+ *                             example: null
+ *                           end_date:
+ *                             type: string
+ *                             format: date-time
+ *                             example: 2025-10-11T07:50:28.000Z
  *                           product:
  *                             type: object
  *                             properties:
  *                               brand:
  *                                 type: string
- *                                 example: Toyota
+ *                                 example: VinFast
  *                               model:
  *                                 type: string
- *                                 example: Camry
+ *                                 example: VF 6
  *                               price:
  *                                 type: number
- *                                 example: 5000000
+ *                                 example: 500000000
+ *                               description:
+ *                                 type: string
+ *                                 example: Xe điện cao cấp tiết kiệm năng lượng
+ *                               status:
+ *                                 type: string
+ *                                 example: approved
  *                               year:
  *                                 type: integer
- *                                 example: 2020
+ *                                 example: 2023
+ *                               created_by:
+ *                                 type: integer
+ *                                 example: 12
+ *                               warranty:
+ *                                 type: string
+ *                                 example: "2 years or 20,000 km"
+ *                               address:
+ *                                 type: string
+ *                                 example: "Hà Nội"
  *                               color:
  *                                 type: string
- *                                 example: red
- *                               images:
- *                                 type: array
- *                                 items:
- *                                   type: string
- *                                   example: https://res.cloudinary.com/demo/image.jpg
+ *                                 example: "white"
+ *                               seats:
+ *                                 type: integer
+ *                                 example: 5
+ *                               mileage:
+ *                                 type: string
+ *                                 example: "1000"
+ *                               power:
+ *                                 type: string
+ *                                 example: "100"
+ *                               health:
+ *                                 type: string
+ *                                 example: "Good"
+ *                               previousOwners:
+ *                                 type: string
+ *                                 example: "1"
  *                               category:
  *                                 type: object
  *                                 properties:
  *                                   id:
  *                                     type: integer
  *                                     example: 1
- *                                   type:
- *                                     type: string
- *                                     example: vehicle
  *                                   name:
  *                                     type: string
- *                                     example: Electric Car
- *                                   slug:
+ *                                     example: "Electric Car"
+ *                                   typeSlug:
  *                                     type: string
- *                                     example: vehicle
+ *                                     example: "vehicle"
+ *                               image:
+ *                                 type: string
+ *                                 example: "https://res.cloudinary.com/demo/image/upload/v123456/demo.png"
+ *                               images:
+ *                                 type: array
+ *                                 items:
+ *                                   type: string
+ *                                   example: "https://res.cloudinary.com/demo/image/upload/v123456/demo2.png"
+ *                           seller:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: integer
+ *                                 example: 12
+ *                               full_name:
+ *                                 type: string
+ *                                 example: "Nhật Trường"
+ *                               email:
+ *                                 type: string
+ *                                 example: "nhatruong5012@gmail.com"
+ *                               phone:
+ *                                 type: string
+ *                                 example: "0911973863"
+ *                           ai:
+ *                             type: object
+ *                             properties:
+ *                               min_price:
+ *                                 type: string
+ *                                 example: "200,000,000"
+ *                               max_price:
+ *                                 type: string
+ *                                 example: "400,000,000"
  *                     pagination:
  *                       type: object
  *                       properties:

@@ -16,6 +16,7 @@ export async function getPostApproved(
 	mileage_km?: string,
 	power?: number,
 	title?: string,
+	warranty?: string,
 	sort_by?: string,
 	order?: 'asc' | 'desc',
 	price_min?: number,
@@ -42,6 +43,8 @@ export async function getPostApproved(
 			query += ` AND p.color = '${color}'`;
 		if (title !== undefined && title !== '')
 			query += ` AND p.title LIKE '%${title}%'`;
+		if (warranty !== undefined && warranty !== '')
+			query += ` AND p.warranty = '${warranty}'`;
 		if (
 			price_min !== undefined &&
 			price_max !== undefined &&
@@ -75,6 +78,8 @@ export async function getPostApproved(
 					query += ` AND b.voltage = '${voltage}'`;
 				if (title !== undefined && title !== '')
 					query += ` AND p.title LIKE '%${title}%'`;
+				if (warranty !== undefined && warranty !== '')
+					query += ` AND p.warranty = '${warranty}'`;
 				if (
 					price_min !== undefined &&
 					price_max !== undefined &&
@@ -109,6 +114,8 @@ export async function getPostApproved(
 					query += ` AND v.power = ${power}`;
 				if (title !== undefined && title !== '')
 					query += ` AND p.title LIKE '%${title}%'`;
+				if (warranty !== undefined && warranty !== '')
+					query += ` AND p.warranty = '${warranty}'`;
 				if (
 					price_min !== undefined &&
 					price_max !== undefined &&
@@ -489,52 +496,52 @@ Ví dụ:
 		product:
 			r.category_type === 'vehicle'
 				? {
-						brand: r.brand,
-						model: r.model,
-						price: r.price,
-						description: r.description,
-						status: r.status,
-						year: r.year,
-						created_by: r.created_by,
-						warranty: r.warranty,
-						address: r.address,
-						color: r.color,
-						seats: r.seats,
-						mileage: r.mileage_km,
-						power: r.power,
-						health: r.health,
-						previousOwners: r.previousOwners,
-						category: {
-							id: r.category_id,
-							name: r.category_name,
-							typeSlug: r.category_type,
-						},
-						image: r.image,
-						images: images,
-				  }
+					brand: r.brand,
+					model: r.model,
+					price: r.price,
+					description: r.description,
+					status: r.status,
+					year: r.year,
+					created_by: r.created_by,
+					warranty: r.warranty,
+					address: r.address,
+					color: r.color,
+					seats: r.seats,
+					mileage: r.mileage_km,
+					power: r.power,
+					health: r.health,
+					previousOwners: r.previousOwners,
+					category: {
+						id: r.category_id,
+						name: r.category_name,
+						typeSlug: r.category_type,
+					},
+					image: r.image,
+					images: images,
+				}
 				: {
-						brand: r.brand,
-						model: r.model,
-						price: r.price,
-						description: r.description,
-						status: r.status,
-						year: r.year,
-						color: r.color,
-						created_by: r.created_by,
-						warranty: r.warranty,
-						address: r.address,
-						capacity: r.capacity,
-						voltage: r.voltage,
-						health: r.health,
-						previousOwners: r.previousOwners,
-						category: {
-							id: r.category_id,
-							name: r.category_name,
-							typeSlug: r.category_type,
-						},
-						image: r.image,
-						images: images,
-				  },
+					brand: r.brand,
+					model: r.model,
+					price: r.price,
+					description: r.description,
+					status: r.status,
+					year: r.year,
+					color: r.color,
+					created_by: r.created_by,
+					warranty: r.warranty,
+					address: r.address,
+					capacity: r.capacity,
+					voltage: r.voltage,
+					health: r.health,
+					previousOwners: r.previousOwners,
+					category: {
+						id: r.category_id,
+						name: r.category_name,
+						typeSlug: r.category_type,
+					},
+					image: r.image,
+					images: images,
+				},
 		seller: {
 			id: seller[0]?.id,
 			full_name: seller[0]?.full_name,
@@ -573,7 +580,7 @@ export async function updatePostByAdmin(
 	status: string,
 ): Promise<Vehicle | Battery | null> {
 	const [result] = await pool.query(
-		'UPDATE products SET status = ? WHERE id = ?',
+		'UPDATE products SET status = ?, updated_at = NOW() WHERE id = ?',
 		[status, id],
 	);
 	if ((result as any).affectedRows === 0) {

@@ -30,10 +30,11 @@ export async function getPostApprovedController(req: Request, res: Response) {
 		const mileage = (req.query.mileage as string) || '';
 		const power = parseInt(req.query.power as string);
 		const title = (req.query.title as string) || '';
+		const warranty = (req.query.warranty as string) || '';
 		const sort_by = req.query.sort_by as string;
 		const order = req.query.order as string as 'asc' | 'desc';
-		let min = parseInt(req.query.price_min as string);
-		let max = parseInt(req.query.price_max as string);
+		let min = parseInt(req.query.price_min as string) * 1000000;
+		let max = parseInt(req.query.price_max as string) * 1000000;
 		const category_type = (req.query.category_type as string) || '';
 		if (min === undefined || isNaN(min)) {
 			min = 0;
@@ -59,6 +60,7 @@ export async function getPostApprovedController(req: Request, res: Response) {
 			mileage,
 			power,
 			title,
+			warranty,
 			sort_by,
 			order,
 			min,
@@ -78,6 +80,7 @@ export async function getPostApprovedController(req: Request, res: Response) {
 			mileage,
 			power,
 			title,
+			warranty,
 			sort_by,
 			order,
 			min,
