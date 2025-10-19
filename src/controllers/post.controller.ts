@@ -319,12 +319,12 @@ export async function createPost(req: Request, res: Response) {
 		let imageUrls: string[] = [];
 
 		// Upload ảnh chính nếu có
-		// if (files?.image && files.image[0]) {
-		// 	const uploadResult = await uploadService.uploadImage(
-		// 		files.image[0].buffer,
-		// 	);
-		// 	imageUrl = uploadResult.secure_url;
-		// }
+		if (files?.image && files.image[0]) {
+			const uploadResult = await uploadService.uploadImage(
+				files.image[0].buffer,
+			);
+			imageUrl = uploadResult.secure_url;
+		}
 
 		// Upload nhiều ảnh nếu có
 		if (files?.images && files.images.length > 0) {
@@ -334,11 +334,13 @@ export async function createPost(req: Request, res: Response) {
 			imageUrls = uploadResults.map((result) => result.secure_url);
 		}
 
+		console.log(files.images + "-" + imageUrls);
+
 		// Chuẩn bị dữ liệu để insert
 		const postDataWithImages = {
 			...postData,
 			category_id: parseInt(postData.category_id),
-			image: imageUrls[0] || '', // Lấy ảnh đầu tiên làm ảnh chính
+			image: imageUrls, // Lấy ảnh đầu tiên làm ảnh chính
 			images: imageUrls,
 		};
 		const newPost = await createNewPost(
