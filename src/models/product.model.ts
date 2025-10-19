@@ -29,6 +29,8 @@ export interface Vehicle {
 	title?: string;
 	description: string;
 	end_date?: string;
+	health: string;
+	previousOwners: number;
 	power: number;
 	color: string;
 	seats: number;
@@ -57,6 +59,7 @@ export interface Battery {
 	capacity: number;
 	address: string;
 	color: string;
+	previousOwners: number;
 	title?: string;
 	description: string;
 	voltage: number;

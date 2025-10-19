@@ -25,7 +25,7 @@ export async function getPostApproved(
 	const offset = (page - 1) * limit;
 	if (sort_by === 'recommend') sort_by = undefined;
 	let query = `SELECT p.id, p.title, p.priority, p.color,
-		p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at, p.address,p.status,
+		p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at, p.address,p.status,p.previousOwners,
 		pc.slug as slug, pc.name as category_name, pc.id as category_id`;
 
 	if (!category_type || category_type === '') {
@@ -114,6 +114,8 @@ export async function getPostApproved(
 			seats: r.seats,
 			mileage: r.mileage_km,
 			power: r.power,
+			health: r.health,
+			previousOwners: r.previousOwners,
 			images: [],
 			category: {
 				id: r.category_id,
@@ -132,6 +134,7 @@ export async function getPostApproved(
 			capacity: r.capacity,
 			voltage: r.voltage,
 			health: r.health,
+			previousOwners: r.previousOwners,
 			images: [],
 			category: {
 				id: r.category_id,
@@ -155,7 +158,7 @@ export async function paginatePosts(
 	const offset = (page - 1) * limit;
 
 	const query = `SELECT p.id, p.title, p.priority,
-      p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at, p.address,p.status,
+      p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at, p.address,p.status,p.previousOwners,
       pc.slug as slug, pc.name as category_name, pc.id as category_id
 		FROM products p
 		INNER JOIN product_categories pc ON pc.id = p.product_category_id
@@ -200,6 +203,7 @@ export async function paginatePosts(
 			year: r.year,
 			address: r.address,
 			image: r.image,
+			previousOwners: r.previousOwners,
 			images: images
 				.filter((img) => img.product_id === r.id)
 				.map((img) => img.url),
@@ -317,7 +321,7 @@ export async function searchPosts(title: string): Promise<Post[]> {
 export async function getPostsById(id: number): Promise<Post[]> {
 	// Lấy thông tin sản phẩm
 	const [rows]: any[] = await pool.query(
-		'SELECT p.id, p.status, p.brand, p.model, p.price, p.address,p.created_by,p.created_at,p.updated_at, p.description, p.year,p.warranty, p.address,' +
+		'SELECT p.id, p.status, p.brand, p.model, p.price, p.address,p.created_by,p.created_at,p.updated_at, p.description, p.year,p.warranty,p.previousOwners, p.address,' +
 			'p.image,p.color, pc.name AS category_name, pc.id AS category_id, ' +
 			'pc.slug AS category_type, v.mileage_km, v.seats,v.power, bat.capacity, bat.voltage, bat.health, ' +
 			'p.end_date, p.title, p.pushed_at, p.priority ' +
@@ -417,6 +421,8 @@ Ví dụ:
 						seats: r.seats,
 						mileage: r.mileage_km,
 						power: r.power,
+						health: r.health,
+						previousOwners: r.previousOwners,
 						category: {
 							id: r.category_id,
 							name: r.category_name,
@@ -432,12 +438,14 @@ Ví dụ:
 						description: r.description,
 						status: r.status,
 						year: r.year,
+						color: r.color,
 						created_by: r.created_by,
 						warranty: r.warranty,
 						address: r.address,
 						capacity: r.capacity,
 						voltage: r.voltage,
 						health: r.health,
+						previousOwners: r.previousOwners,
 						category: {
 							id: r.category_id,
 							name: r.category_name,
@@ -519,6 +527,7 @@ export async function createNewPost(
 			image,
 			images,
 			category,
+			previousOwners,
 			category_id,
 		} = postData;
 
@@ -552,7 +561,7 @@ export async function createNewPost(
 		}
 
 		const [result] = await conn.query(
-			'INSERT INTO products (product_category_id, brand, model, price, year,color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			'INSERT INTO products (product_category_id, brand, model, price, year,color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority, previousOwners) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)',
 			[
 				category_id,
 				brand,
@@ -570,6 +579,7 @@ export async function createNewPost(
 				now,
 				endDate,
 				1, // priority mặc định là 1
+				previousOwners
 			],
 		);
 
@@ -589,12 +599,12 @@ export async function createNewPost(
 
 		// ✅ Insert vehicle
 		if (category_type === 'vehicle') {
-			const { power, mileage, seats, color } =
+			const { power, mileage, seats, health } =
 				postData as Partial<Vehicle>;
 
 			await conn.query(
-				'INSERT INTO vehicles (product_id, power, mileage_km, seats) VALUES (?, ?, ?, ?)',
-				[insertId, power, mileage, seats],
+				'INSERT INTO vehicles (product_id, power, mileage_km, seats, health) VALUES (?, ?, ?, ?, ?)',
+				[insertId, power, mileage, seats, health],
 			);
 
 			const [rows]: any = await conn.query(

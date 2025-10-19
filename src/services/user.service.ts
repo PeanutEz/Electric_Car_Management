@@ -391,6 +391,7 @@ export async function getPostByUserId(
 			p.status_verify,
 			p.color,
 			p.status, 
+			p.previousOwners,
 			p.created_at,
 			p.updated_at,
 			pc.id AS category_id,
@@ -468,6 +469,7 @@ export async function getPostByUserId(
 			priority: post.priority,
 			pushed_at: post.pushed_at || null,
 			color: post.color,
+			previousOwners: post.previousOwners,
 			images: imageMap.get(post.id) || [],
 			category: {
 				id: post.category_id,

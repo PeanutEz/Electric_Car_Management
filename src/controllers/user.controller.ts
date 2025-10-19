@@ -361,8 +361,8 @@ export async function getUserPosts(req: Request, res: Response) {
 		);
 
 		const totalItems = posts.counts.all || 0;
-		const totalPages = Math.ceil(totalItems / limit);
 		const pageItem = posts.posts.length;
+		const totalPages = Math.ceil(posts.posts.length / limit);
 
 		res.status(200).json({
 			message: 'Lấy danh sách bài viết của người dùng thành công',
