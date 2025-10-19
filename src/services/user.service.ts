@@ -366,6 +366,27 @@ export async function getPostByUserId(
 		[userId],
 	);
 
+	let queryCount = 'SELECT COUNT(*) AS count FROM products WHERE 1=1';
+	let param: any[] = [];
+
+	// Nếu có status
+	if (status) {
+		queryCount += ' AND status = ?';
+		param.push(status);
+	}
+
+	// Nếu có status_verify
+	if (status_verify) {
+		queryCount += ' AND status_verify = ?';
+		param.push(status_verify);
+	}
+
+	// Luôn có created_by
+	queryCount += ' AND created_by = ?';
+	param.push(userId);
+
+	const [countStatus]: any = await pool.query(queryCount, param);
+
 	const result = {
 		all: Number(counts[0].all) || 0,
 		pending: Number(counts[0].pending) || 0,
@@ -427,7 +448,7 @@ export async function getPostByUserId(
 		params.push(status_verify);
 	}
 
-	query += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
+	query += ' ORDER BY p.created_at desc, p.updated_at DESC LIMIT ? OFFSET ?';
 	params.push(limit, offset);
 
 	const [posts]: any = await pool.query(query, params);
@@ -471,54 +492,55 @@ export async function getPostByUserId(
 		product:
 			post.category_type === 'vehicle'
 				? {
-						id: post.id,
-						brand: post.brand,
-						model: post.model,
-						price: post.price,
-						description: post.description,
-						status: post.status,
-						year: post.year,
-						created_by: post.created_by,
-						warranty: post.warranty,
-						address: post.address,
-						color: post.color,
-						seats: post.seats,
-						mileage: post.mileage_km,
-						power: post.power,
-						health: post.health,
-						previousOwners: post.previousOwners,
-						images: imageMap.get(post.id) || [],
-						category: {
-							id: post.category_id,
-							type: post.category_type,
-							name: post.category,
-							typeSlug: post.category_slug,
-							count: 0,
-						},
-				  }
+					id: post.id,
+					brand: post.brand,
+					model: post.model,
+					price: post.price,
+					description: post.description,
+					status: post.status,
+					year: post.year,
+					created_by: post.created_by,
+					warranty: post.warranty,
+					address: post.address,
+					color: post.color,
+					seats: post.seats,
+					mileage: post.mileage_km,
+					power: post.power,
+					health: post.health,
+					previousOwners: post.previousOwners,
+					images: imageMap.get(post.id) || [],
+					category: {
+						id: post.category_id,
+						type: post.category_type,
+						name: post.category,
+						typeSlug: post.category_slug,
+						count: 0,
+					},
+				}
 				: {
-						id: post.id,
-						brand: post.brand,
-						model: post.model,
-						price: post.price,
-						description: post.description,
-						status: post.status,
-						year: post.year,
-						color: post.color,
-						created_by: post.created_by,
-						warranty: post.warranty,
-						address: post.address,
-						capacity: post.capacity,
-						voltage: post.voltage,
-						health: post.health,
-						previousOwners: post.previousOwners,
-				  },
+					id: post.id,
+					brand: post.brand,
+					model: post.model,
+					price: post.price,
+					description: post.description,
+					status: post.status,
+					year: post.year,
+					color: post.color,
+					created_by: post.created_by,
+					warranty: post.warranty,
+					address: post.address,
+					capacity: post.capacity,
+					voltage: post.voltage,
+					health: post.health,
+					previousOwners: post.previousOwners,
+				},
 	}));
-
+	console.log("aa:" + countStatus);
 	// ✅ 6️⃣ Trả về kết quả đầy đủ
 	return {
 		posts: formattedPosts,
 		counts: result,
+		countStatus: countStatus[0]?.count || 0
 	};
 }
 

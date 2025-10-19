@@ -205,7 +205,7 @@ export async function paginatePosts(
 ): Promise<Post[]> {
 	const offset = (page - 1) * limit;
 
-	const query = `SELECT p.id, p.title, p.priority,
+	let query = `SELECT p.id, p.title, p.priority,
       p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at, p.address,p.status,p.previousOwners,
       pc.slug as slug, pc.name as category_name, pc.id as category_id, 
 		bat.capacity, bat.voltage, bat.health,
@@ -219,8 +219,9 @@ export async function paginatePosts(
 	if (year !== undefined) {
 		query.concat(` and p.year = ${year} `);
 	}
-	query.concat(` ORDER BY p.created_at DESC
-		LIMIT ? OFFSET ?`);
+
+    query += 'ORDER BY p.updated_at desc, p.id desc LIMIT ? OFFSET ?';
+
 
 	const [rows] = await pool.query(query, [limit, offset]);
 
