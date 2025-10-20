@@ -4,6 +4,7 @@ import { Post } from '../models/post.model';
 import { Battery, Vehicle } from '../models/product.model';
 import { generateText } from '../services/gemini.service';
 
+
 export async function getPostApproved(
 	page: number,
 	limit: number,
@@ -579,16 +580,67 @@ export async function getAllPostsForAdmin(): Promise<Post[]> {
 export async function updatePostByAdmin(
 	id: number,
 	status: string,
+	reason: string
 ): Promise<Vehicle | Battery | null> {
-	const [result] = await pool.query(
-		'UPDATE products SET status = ?, updated_at = NOW() WHERE id = ?',
-		[status, id],
-	);
-	if ((result as any).affectedRows === 0) {
-		return null;
+
+	const [rows]: any = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
+	const post = rows[0];
+
+	if (!post) {
+		throw new Error('Không tìm thấy bài viết');
 	}
+	let query = '';
+	let params: any[] = [];
+
+
+	if (status === 'rejected') {
+		if (post.reject_count === 0 && post.is_finally_rejected === 0) {
+			
+			query = `
+				UPDATE products
+				SET status = 'rejected',
+					reject_count = reject_count + 1,
+					rejected_reason = ?,
+					updated_at = NOW()
+				WHERE id = ?;
+			`;
+			params = [reason || 'Không có lý do', id];
+		}
+		else if (post.reject_count === 1 && post.is_finally_rejected === 0) {
+			query = `
+				UPDATE products
+				SET status = 'rejected',
+					reject_count = 2,
+					is_finally_rejected = 1,
+					rejected_reason = ?,
+					updated_at = NOW()
+				WHERE id = ?;
+			`;
+			params = [reason || 'Không có lý do', id];
+		}
+		else if (post.reject_count >= 2 && post.is_finally_rejected === 1) {
+			throw new Error('Hành động bị nghi ngờ tấn công hệ thống');
+		}
+	}
+	else if (status === 'approved') {
+		query = `
+			UPDATE products
+			SET status = 'approved',
+				updated_at = NOW()
+			WHERE id = ?;
+		`;
+		params = [id];
+	}
+	else {
+		throw new Error('Trạng thái không hợp lệ');
+	}
+
+
+	await pool.query(query, params);
+
 	return getPostsById(id) as unknown as Vehicle | Battery;
 }
+
 
 //tạo bài post gồm các trường sau
 //battery: brand, model, capacity, voltage, health, year, price, warranty, address, title, description, images
@@ -736,6 +788,107 @@ export async function createNewPost(
 	}
 }
 
+// export async function updateUserPost(
+// 	postData: Partial<Vehicle> | Partial<Battery>,
+// ) {
+// 	const product_category_id = postData.category_id;
+// 	const [rows]: any = await pool.query(
+// 		'SELECT type as category_type FROM product_categories WHERE id = ?',
+// 		[product_category_id],
+// 	);
+// 	const category_type = rows[0]?.category_type;
+// 	if (rows.length === 0) {
+// 		throw new Error('Invalid category ID');
+// 	}
+// 	if (category_type === 'vehicle') {
+// 		const {
+// 			brand,
+// 			model,
+// 			price,
+// 			year,
+// 			description,
+// 			address,
+// 			warranty,
+// 			title,
+// 			color,
+// 			seats,
+// 			mileage,
+// 			power,
+// 			image,
+// 			id,
+// 		} = postData as Partial<Vehicle>;
+// 		const [result] = await pool.query(
+// 			`UPDATE products p inner join vehicles v on v.product_id = p.id
+// 			SET p.brand = ?, p.model = ?, p.price = ?, p.year = ?, 
+// 			p.description = ?, p.address = ?, p.warranty = ?, p.title = ?, p.color = ?, v.seats = ?, v.mileage_km = ?, v.power = ? WHERE p.id = ?`,
+// 			[
+// 				brand,
+// 				model,
+// 				price,
+// 				year,
+// 				description,
+// 				address,
+// 				warranty,
+// 				title,
+// 				color,
+// 				seats,
+// 				mileage,
+// 				power,
+// 				image,
+// 				id,
+// 			],
+// 		);
+// 	} else if (category_type === 'battery') {
+// 		const {
+// 			brand,
+// 			model,
+// 			price,
+// 			year,
+// 			description,
+// 			address,
+// 			warranty,
+// 			title,
+// 			id,
+// 			capacity,
+// 			voltage,
+// 			health,
+// 		} = postData as Partial<Battery>;
+// 		const [result] = await pool.query(
+// 			`UPDATE products p inner join batteries b on b.product_id = p.id
+// 			SET p.brand = ?, p.model = ?, p.price = ?, p.year = ?, 
+// 			p.description = ?, p.address = ?, p.warranty = ?, p.title = ?, b.capacity = ?, b.health = ?, b.voltage =? WHERE p.id = ?`,
+// 			[
+// 				brand,
+// 				model,
+// 				price,
+// 				year,
+// 				description,
+// 				address,
+// 				warranty,
+// 				title,
+// 				capacity,
+// 				health,
+// 				voltage,
+// 				id,
+// 			],
+// 		);
+// 	}
+// 	return getPostsById(postData.id!);
+// }
+
+export async function deleteUserPost(id: number) {
+	const [result] = await pool.query(
+		'update products set status = ? where id = ?'
+		,['deleted', id]
+	);
+
+	if ((result as any).affectedRows === 0) {
+		return null;
+	}
+
+	return getPostsById(id);
+}
+
 export async function updateUserPost(
 	postData: Partial<Vehicle> | Partial<Battery>,
 ) {
@@ -744,10 +897,32 @@ export async function updateUserPost(
 		'SELECT type as category_type FROM product_categories WHERE id = ?',
 		[product_category_id],
 	);
+	
 	const category_type = rows[0]?.category_type;
 	if (rows.length === 0) {
 		throw new Error('Invalid category ID');
 	}
+
+	// ✅ Lấy thông tin bài post hiện tại
+	const [postRows]: any = await pool.query(
+		'SELECT reject_count, is_finally_rejected FROM products WHERE id = ?',
+		[postData.id],
+	);
+	const post = postRows[0];
+	if (!post) {
+		throw new Error('Không tìm thấy bài viết');
+	}
+
+	// ✅ Kiểm tra điều kiện cho phép resubmit
+	// if (!(post.reject_count === 1 && post.is_finally_rejected === 0)) {
+	// 	throw new Error('Bài viết này không thể chỉnh sửa hoặc đã bị từ chối vĩnh viễn');
+	// }
+
+	if ((post.reject_count === 2 && post.is_finally_rejected === 1)) {
+		throw new Error('Bài viết này không thể chỉnh sửa hoặc đã bị từ chối vĩnh viễn');
+	}
+
+	// ✅ Nếu đủ điều kiện => cho phép update + set status = pending
 	if (category_type === 'vehicle') {
 		const {
 			brand,
@@ -765,10 +940,26 @@ export async function updateUserPost(
 			image,
 			id,
 		} = postData as Partial<Vehicle>;
-		const [result] = await pool.query(
-			`UPDATE products p inner join vehicles v on v.product_id = p.id
-			SET p.brand = ?, p.model = ?, p.price = ?, p.year = ?, 
-			p.description = ?, p.address = ?, p.warranty = ?, p.title = ?, p.color = ?, v.seats = ?, v.mileage_km = ?, v.power = ? WHERE p.id = ?`,
+
+		await pool.query(
+			`UPDATE products p
+			 INNER JOIN vehicles v ON v.product_id = p.id
+			 SET p.brand = ?, 
+				 p.model = ?, 
+				 p.price = ?, 
+				 p.year = ?, 
+				 p.description = ?, 
+				 p.address = ?, 
+				 p.warranty = ?, 
+				 p.title = ?, 
+				 p.color = ?, 
+				 p.image = ?, 
+				 v.seats = ?, 
+				 v.mileage_km = ?, 
+				 v.power = ?, 
+				 p.status = 'pending',
+				 p.updated_at = NOW()
+			 WHERE p.id = ?`,
 			[
 				brand,
 				model,
@@ -779,14 +970,15 @@ export async function updateUserPost(
 				warranty,
 				title,
 				color,
+				image,
 				seats,
 				mileage,
 				power,
-				image,
 				id,
 			],
 		);
-	} else if (category_type === 'battery') {
+	} 
+	else if (category_type === 'battery') {
 		const {
 			brand,
 			model,
@@ -800,11 +992,27 @@ export async function updateUserPost(
 			capacity,
 			voltage,
 			health,
+			image,
 		} = postData as Partial<Battery>;
-		const [result] = await pool.query(
-			`UPDATE products p inner join batteries b on b.product_id = p.id
-			SET p.brand = ?, p.model = ?, p.price = ?, p.year = ?, 
-			p.description = ?, p.address = ?, p.warranty = ?, p.title = ?, b.capacity = ?, b.health = ?, b.voltage =? WHERE p.id = ?`,
+
+		await pool.query(
+			`UPDATE products p
+			 INNER JOIN batteries b ON b.product_id = p.id
+			 SET p.brand = ?, 
+				 p.model = ?, 
+				 p.price = ?, 
+				 p.year = ?, 
+				 p.description = ?, 
+				 p.address = ?, 
+				 p.warranty = ?, 
+				 p.title = ?, 
+				 p.image = ?, 
+				 b.capacity = ?, 
+				 b.health = ?, 
+				 b.voltage = ?, 
+				 p.status = 'pending',
+				 p.updated_at = NOW()
+			 WHERE p.id = ?`,
 			[
 				brand,
 				model,
@@ -814,6 +1022,7 @@ export async function updateUserPost(
 				address,
 				warranty,
 				title,
+				image,
 				capacity,
 				health,
 				voltage,
@@ -821,5 +1030,6 @@ export async function updateUserPost(
 			],
 		);
 	}
+
 	return getPostsById(postData.id!);
 }

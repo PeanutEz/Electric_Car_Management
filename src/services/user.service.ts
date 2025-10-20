@@ -418,6 +418,8 @@ export async function getPostByUserId(
 			p.previousOwners,
 			p.created_at,
 			p.updated_at,
+			p.reject_count,
+			p.is_finally_rejected,
 			pc.id AS category_id,
 			pc.name AS category,
 			pc.type AS category_type,
@@ -481,6 +483,7 @@ export async function getPostByUserId(
 	// ✅ 5️⃣ Gộp dữ liệu
 	const formattedPosts = posts.map((post: any) => ({
 		id: post.id,
+		allow_resubmit: !(post.reject_count === 2 && post.is_finally_rejected === 1) ,
 		title: post.title,
 		description: post.description,
 		priority: post.priority,

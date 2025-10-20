@@ -6,7 +6,9 @@ import {
 	updatePost,
 	createPost,
 	searchForPosts,
-	getPostApprovedController
+	getPostApprovedController,
+	deletePost,
+	editPost
 } from '../controllers/post.controller';
 import {
 	authenticateToken,
@@ -551,34 +553,69 @@ router.get('/:id', postDetail);
  * @swagger
  * /api/post/update-post-by-admin/{id}:
  *   put:
- *     summary: Cập nhật trạng thái bài viết (chỉ Admin)
- *     tags: [Posts]
+ *     summary: Admin cập nhật trạng thái bài viết
+ *     description: |
+ *       Cho phép admin duyệt hoặc từ chối bài viết.  
+ *       - Nếu `status = "approved"` → bài viết được duyệt.  
+ *       - Nếu `status = "rejected"` → xử lý theo logic sau:
+ *         - Nếu `reject_count = 0` và `is_finally_rejected = 0` → `reject_count = 1`, cập nhật `rejected_reason`.
+ *         - Nếu `reject_count = 1` và `is_finally_rejected = 0` → `reject_count = 2`, `is_finally_rejected = 1`.
+ *         - Nếu `reject_count >= 2` và `is_finally_rejected = 1` → lỗi "Tấn công hệ thống".
+ *     tags:
+ *       - Admin
  *     parameters:
- *       - in: path
- *         name: id
+ *       - name: id
+ *         in: path
  *         required: true
+ *         description: ID của bài viết cần cập nhật
  *         schema:
  *           type: integer
- *         description: ID của bài viết
+ *           example: 25
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - status
  *             properties:
  *               status:
  *                 type: string
- *                 example: approved
+ *                 enum: [approved, rejected]
+ *                 description: Trạng thái mới của bài viết
+ *                 example: rejected
+ *               reason:
+ *                 type: string
+ *                 description: Lý do từ chối bài viết (chỉ cần khi `status = rejected`)
+ *                 example: "Ảnh vi phạm quy định cộng đồng"
  *     responses:
  *       200:
- *         description: Cập nhật thành công
+ *         description: Cập nhật trạng thái bài viết thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Cập nhật trạng thái bài viết thành công
+ *                 data:
+ *                   $ref: '#/components/schemas/Post'
  *       400:
- *         description: ID không hợp lệ
+ *         description: Dữ liệu đầu vào không hợp lệ hoặc tấn công hệ thống
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Hành động bị nghi ngờ tấn công hệ thống
  *       404:
  *         description: Không tìm thấy bài viết
  *       500:
- *         description: Lỗi server
+ *         description: Lỗi server nội bộ
  */
 router.put('/update-post-by-admin/:id', updatePost);
 
@@ -719,6 +756,46 @@ router.post(
 	createPost,
 );
 
-router.get('/update-post', authenticateToken, updateUserPost);
+/**
+ * @swagger
+ * /api/post/update-post:
+ *   put:
+ *     summary: Cập nhật bài viết của người dùng (resubmit bài bị từ chối)
+ *     description: 
+ *       Cho phép người dùng chỉnh sửa và gửi lại bài viết nếu bài viết đã bị từ chối (reject_count = 1, is_finally_rejected = 0).
+ *       Bài viết sau khi chỉnh sửa sẽ tự động chuyển trạng thái sang `pending` và cập nhật `updated_at`.
+ *     tags:
+ *       - Posts
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             oneOf:
+ *               - $ref: '#/components/schemas/VehiclePostUpdate'
+ *               - $ref: '#/components/schemas/BatteryPostUpdate'
+ *     responses:
+ *       200:
+ *         description: Cập nhật bài viết thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Cập nhật bài viết thành công
+ *                 data:
+ *                   $ref: '#/components/schemas/Post'
+ *       400:
+ *         description: Bài viết không hợp lệ hoặc đã bị từ chối vĩnh viễn
+ *       404:
+ *         description: Không tìm thấy bài viết
+ *       500:
+ *         description: Lỗi server
+ */
+router.put('/update-post', editPost);
+
+router.get('/delete-post/:id', deletePost);
 
 export default router;
