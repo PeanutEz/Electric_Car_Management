@@ -74,7 +74,9 @@ export const listOrders = async (req: Request, res: Response) => {
       res.status(200).json({
          message: 'Lấy danh sách đơn hàng thành công',
          data: {
-				orders: orders,
+				orders: orders.orders,
+				total: orders.totalOrders,
+				totalRevenue: orders.totalRevenue,
 				pagination: {
 					page: page,
 					limit: limit,

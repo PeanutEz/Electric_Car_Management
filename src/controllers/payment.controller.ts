@@ -131,7 +131,7 @@ export const packagePaymentController = async (req: Request, res: Response) => {
 				},
 			});
 		} else if (result.needPayment) {
-			return res.status(200).json({
+			return res.status(402).json({
 				success: false,
 				needPayment: true,
 				message: result.message,
