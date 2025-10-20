@@ -2,6 +2,7 @@ import pool from '../config/db';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/user.model';
 import { JWTService } from './jwt.service';
+import { createDefaultAvatar } from '../utils/avatar';
 import { get } from 'http';
 import { access } from 'fs';
 
@@ -180,9 +181,15 @@ export async function registerUser(userData: User) {
 	}
 	const hashedPassword = await bcrypt.hash(password, 10);
 
+	// Tạo avatar mặc định
+	const defaultAvatar = createDefaultAvatar(
+		{ full_name, email },
+		'ui-avatars', // Có thể đổi thành 'dicebear' hoặc 'gravatar'
+	);
+
 	const [result]: any = await pool.query(
-		`insert into users (full_name, email, password) VALUES (?, ?, ?)`,
-		[full_name, email, hashedPassword],
+		`insert into users (full_name, email, password, avatar) VALUES (?, ?, ?, ?)`,
+		[full_name, email, hashedPassword, defaultAvatar],
 	);
 	const insertedId = result.insertId;
 

@@ -69,7 +69,8 @@ export const listOrders = async (req: Request, res: Response) => {
    try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
-      const { orders, total } = await getOrder(page, limit);
+      const status = req.query.status as string;
+		const orders = await getOrder(page, limit, status);
       res.status(200).json({
          message: 'Lấy danh sách đơn hàng thành công',
          data: {
@@ -77,7 +78,7 @@ export const listOrders = async (req: Request, res: Response) => {
 				pagination: {
 					page: page,
 					limit: limit,
-					page_size: Math.ceil(total / limit),
+					page_size: Math.ceil(orders.totalOrders / limit),
 				},
 			},
       });

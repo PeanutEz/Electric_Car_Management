@@ -22,6 +22,7 @@ export async function getPostApproved(
 	order?: 'asc' | 'desc',
 	price_min?: number,
 	price_max?: number,
+	category_id?: number,
 	category_type?: string,
 ): Promise<Post[]> {
 	const offset = (page - 1) * limit;
@@ -81,6 +82,8 @@ export async function getPostApproved(
 					query += ` AND p.title LIKE '%${title}%'`;
 				if (warranty !== undefined && warranty !== '')
 					query += ` AND p.warranty = '${warranty}'`;
+				if (category_id !== undefined && !isNaN(category_id))
+					query += ` AND pc.id = ${category_id}`;
 				if (
 					price_min !== undefined &&
 					price_max !== undefined &&
@@ -117,6 +120,8 @@ export async function getPostApproved(
 					query += ` AND p.title LIKE '%${title}%'`;
 				if (warranty !== undefined && warranty !== '')
 					query += ` AND p.warranty = '${warranty}'`;
+				if (category_id !== undefined && !isNaN(category_id))
+					query += ` AND pc.id = ${category_id}`;
 				if (
 					price_min !== undefined &&
 					price_max !== undefined &&

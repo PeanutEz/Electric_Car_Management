@@ -40,12 +40,28 @@ export async function deletePackage(id: number): Promise<void> {
    await pool.query('DELETE FROM services WHERE id = ?', [id]);
 }
 
-export async function getOrder(page: number, limit: number): Promise<{orders: Order[], total: number}> {
-   const offset = (page - 1) * limit;
-   const [rows] = await pool.query('SELECT * FROM orders ORDER BY created_at DESC LIMIT ? OFFSET ?', [limit, offset]);
-   const [countRows] = await pool.query('SELECT COUNT(*) as count FROM orders');
-   const total = (countRows as any)[0].count as number;
-   return { orders: rows as Order[], total };
+export async function getOrder(page: number, limit: number, status: string) {
+	const offset = (page - 1) * limit;
+	let rows;
+	if (status === undefined) {
+		[rows] = await pool.query(
+			`SELECT * FROM orders ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+			[limit, offset],
+		);
+	} else {
+		[rows] = await pool.query(
+			`SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+			[status, limit, offset],
+		);
+	}
+	const [countRows] = await pool.query(
+		'SELECT COUNT(*) AS totalOrders, SUM(price) AS totalRevenue FROM orders WHERE status = "PAID"',
+	);
+	return {
+		orders: rows as Order[],
+		totalOrders: (countRows as any)[0].totalOrders,
+		totalRevenue: (countRows as any)[0].totalRevenue || 0,
+	};
 }
 
 export async function getTransactions(orderId: number): Promise<Transaction[]> {
