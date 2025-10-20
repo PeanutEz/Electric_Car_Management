@@ -537,6 +537,15 @@ export async function getPostByUserId(
 					voltage: post.voltage,
 					health: post.health,
 					previousOwners: post.previousOwners,
+					image: post.image,
+					images: imageMap.get(post.id) || [],
+					category: {
+						id: post.category_id,
+						type: post.category_type,
+						name: post.category,
+						typeSlug: post.category_slug,
+						count: 0,
+					},
 				},
 	}));
 
