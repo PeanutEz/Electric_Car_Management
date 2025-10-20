@@ -10,7 +10,7 @@ export async function generateText(prompt: string): Promise<string> {
 			{
 				contents: [
 					{
-						parts: [{ text: "hãy trả lời cho tôi bằng tiếng việt." + prompt }],
+						parts: [{ text: "Bạn là một chuyên gia dự đoán .Hãy trả lời cho tôi bằng tiếng việt." + prompt }],
 					},
 				],
 			},

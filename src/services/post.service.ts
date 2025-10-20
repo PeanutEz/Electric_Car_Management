@@ -551,8 +551,8 @@ Ví dụ:
 			phone: seller[0]?.phone,
 		},
 		ai: {
-			min_price: geminiPromptPrice.split(',')[0].trim(),
-			max_price: geminiPromptPrice.split(',')[1].trim(),
+			min_price: parseInt(geminiPromptPrice.split(',')[0].trim()),
+			max_price: parseInt(geminiPromptPrice.split(',')[1].trim()),
 		},
 	}));
 }

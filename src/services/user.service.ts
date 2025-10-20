@@ -539,7 +539,7 @@ export async function getPostByUserId(
 					previousOwners: post.previousOwners,
 				},
 	}));
-	console.log("aa:" + countStatus);
+
 	// ✅ 6️⃣ Trả về kết quả đầy đủ
 	return {
 		posts: formattedPosts,
