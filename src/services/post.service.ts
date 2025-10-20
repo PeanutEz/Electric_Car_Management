@@ -412,7 +412,7 @@ export async function getPostsById(id: number): Promise<Post[]> {
 	const [rows]: any = await pool.query(
 		'SELECT p.id, p.status, p.brand, p.model, p.price, p.address,p.created_by,p.created_at,p.updated_at, p.description, p.year,p.warranty,p.previousOwners, p.address,' +
 		'p.image,p.color, pc.name AS category_name, pc.id AS category_id, ' +
-		'pc.slug AS category_type, v.mileage_km, v.seats,v.power,v.health, bat.capacity, bat.voltage, bat.health, ' +
+		'pc.slug AS category_type, v.mileage_km, v.seats,v.power,v.health as vehicle_health, bat.capacity, bat.voltage, bat.health as batery_health, ' +
 		'p.end_date, p.title, p.pushed_at, p.priority ' +
 		'FROM products p ' +
 		'LEFT JOIN product_categories pc ON p.product_category_id = pc.id ' +
@@ -502,7 +502,7 @@ Ví dụ:
 					id: r.id,
 					brand: r.brand,
 					model: r.model,
-					price: r.price,
+					price: parseFloat(r.price),
 					description: r.description,
 					status: r.status,
 					year: r.year,
@@ -513,7 +513,7 @@ Ví dụ:
 					seats: r.seats,
 					mileage: r.mileage_km,
 					power: r.power,
-					health: r.health,
+					health: r.vehicle_health,
 					previousOwners: r.previousOwners,
 					category: {
 						id: r.category_id,
@@ -527,7 +527,7 @@ Ví dụ:
 					id: r.id,
 					brand: r.brand,
 					model: r.model,
-					price: r.price,
+					price: parseFloat(r.price),
 					description: r.description,
 					status: r.status,
 					year: r.year,
@@ -537,7 +537,7 @@ Ví dụ:
 					address: r.address,
 					capacity: r.capacity,
 					voltage: r.voltage,
-					health: r.health,
+					health: r.batery_health,
 					previousOwners: r.previousOwners,
 					category: {
 						id: r.category_id,
