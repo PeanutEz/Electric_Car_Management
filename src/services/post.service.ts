@@ -495,9 +495,11 @@ Ví dụ:
 		created_at: r.created_at,
 		updated_at: r.updated_at,
 		end_date: r.end_date,
+		status: r.status,
 		product:
 			r.category_type === 'vehicle'
 				? {
+					id: r.id,
 					brand: r.brand,
 					model: r.model,
 					price: r.price,
@@ -522,6 +524,7 @@ Ví dụ:
 					images: images,
 				}
 				: {
+					id: r.id,
 					brand: r.brand,
 					model: r.model,
 					price: r.price,
