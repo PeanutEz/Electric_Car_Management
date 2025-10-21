@@ -26,9 +26,16 @@ export async function listServices(req: Request, res: Response) {
 
 export async function listPackages(req: Request, res: Response) {
 	try {
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res.status(401).json({ message: 'Unauthorized' });
+		}
+		const token = authHeader.split(' ')[1];
+		const user = jwt.decode(token) as any;
+		const userId = user.id;
 		const id = parseInt(req.query.id as string);
 		const productType = req.query.product_type as string;
-		const packages = await getPackage(id, productType);
+		const packages = await getPackage(userId, id, productType);
 		res.status(200).json({
 			message: 'Lấy danh sách gói dịch vụ thành công',
 			data: {

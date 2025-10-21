@@ -185,6 +185,6 @@ router.post('/process-service-payment', processServicePaymentController);
  *       500:
  *         description: Lỗi máy chủ nội bộ
  */
-router.get('/packages', listPackages);
+router.get('/packages', authenticateToken, listPackages);
 
 export default router;

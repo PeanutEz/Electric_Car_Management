@@ -48,9 +48,6 @@ export async function getPaymentStatus(paymentId: string) {
 	}
 }
 
-
-
-
 // {
 //   "order_id": "12345",
 //   "transaction_id": "txn_987654321",

@@ -14,6 +14,7 @@ export async function getAllServices(): Promise<Service[]> {
 }
 
 export async function getPackage(
+	userId: number,
 	id: number,
 	productType: string,
 ): Promise<Service[]> {
@@ -28,6 +29,18 @@ export async function getPackage(
 		'select * from services where id = ? and product_type = ? and type = "package"',
 		[id, productType],
 	);
+	const total_credit = await pool.query(
+		'select total_credit from users where id = ?',
+		[userId],
+	);
+	if (total_credit && (total_credit as any)[0].length > 0) {
+		(rows as any)[0].user_total_credit = (total_credit as any)[0][0].total_credit;
+		if ((rows as any)[0].cost - (total_credit as any)[0][0].total_credit <= 0) {
+			(rows as any)[0].topup_credit = 0;
+		} else {
+			(rows as any)[0].topup_credit = (rows as any)[0].cost - (total_credit as any)[0][0].total_credit;
+		}
+	}
 	return rows as Service[];
 }
 
@@ -588,7 +601,7 @@ export async function processPackagePayment(
 			try {
 				const envAppUrl =
 					process.env.APP_URL || 'http://localhost:3000';
-
+				// checkout?id=7&product_type=vehicle
 				// Tạo payment link PayOS
 				const paymentLinkRes = await payos.paymentRequests.create({
 					orderCode: orderCode,
@@ -596,7 +609,7 @@ export async function processPackagePayment(
 					description: `Thanh toan ${serviceName}`,
 					returnUrl: buildUrl(envAppUrl, '/payment/result', {
 						provider: 'payos',
-						next: '/profile',
+						next: `/checkout?id=${serviceRows[0].id}&product_type=${serviceRows[0].product_type}`,
 					}),
 					cancelUrl: buildUrl(envAppUrl, '/payment/result', {
 						provider: 'payos',
