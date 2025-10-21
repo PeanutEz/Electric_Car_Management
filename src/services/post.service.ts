@@ -3,6 +3,8 @@ import pool from '../config/db';
 import { Post } from '../models/post.model';
 import { Battery, Vehicle } from '../models/product.model';
 import { generateText } from '../services/gemini.service';
+import * as notificationService from './notification.service';
+import { sendNotificationToUser } from '../config/socket';
 
 
 export async function getPostApproved(
@@ -645,6 +647,47 @@ export async function updatePostByAdmin(
 
 
 	await pool.query(query, params);
+
+	// 🔔 GỬI NOTIFICATION REALTIME CHO USER
+	try {
+		let notificationTitle = '';
+		let notificationMessage = '';
+		let notificationType: 'post_approved' | 'post_rejected' = 'post_approved';
+
+		if (status === 'approved') {
+			notificationTitle = '✅ Bài đăng được duyệt';
+			notificationMessage = `Bài đăng "${post.title}" của bạn đã được admin phê duyệt và hiển thị công khai.`;
+			notificationType = 'post_approved';
+		} else if (status === 'rejected') {
+			notificationTitle = '❌ Bài đăng bị từ chối';
+			notificationMessage = `Bài đăng "${post.title}" của bạn bị từ chối. Lý do: ${reason || 'Không có lý do cụ thể'}`;
+			notificationType = 'post_rejected';
+		}
+
+		// Lưu notification vào database
+		const notification = await notificationService.createNotification({
+			user_id: post.user_id, // post.user_id là owner của bài viết
+			post_id: id,
+			type: notificationType,
+			title: notificationTitle,
+			message: notificationMessage,
+		});
+
+		// Gửi notification real-time qua WebSocket
+		sendNotificationToUser(post.user_id, {
+			id: notification.id,
+			type: notification.type,
+			title: notification.title,
+			message: notification.message,
+			post_id: id,
+			created_at: notification.created_at,
+		});
+
+		console.log(`📨 Notification sent to user ${post.user_id} for post ${id}`);
+	} catch (notifError: any) {
+		console.error('⚠️ Failed to send notification:', notifError.message);
+		// Không throw error - notification là optional, không làm fail việc update post
+	}
 
 	return getPostsById(id) as unknown as Vehicle | Battery;
 }
