@@ -472,7 +472,7 @@ export async function processPackagePayment(
 
 		// 1. Lấy thông tin service/package
 		const [serviceRows]: any = await conn.query(
-			'SELECT cost, name, number_of_post, number_of_push, service_ref FROM services WHERE id = ?',
+			'SELECT id, cost, name, number_of_post, number_of_push, service_ref, product_type FROM services WHERE id = ?',
 			[serviceId],
 		);
 
