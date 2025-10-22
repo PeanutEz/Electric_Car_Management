@@ -590,10 +590,12 @@ export async function getAllPostsForAdmin(): Promise<Post[]> {
 export async function updatePostByAdmin(
 	id: number,
 	status: string,
-	reason: string
+	reason: string,
 ): Promise<Vehicle | Battery | null> {
-
-	const [rows]: any = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
+	const [rows]: any = await pool.query(
+		'SELECT * FROM products WHERE id = ?',
+		[id],
+	);
 	const post = rows[0];
 
 	if (!post) {
@@ -602,10 +604,8 @@ export async function updatePostByAdmin(
 	let query = '';
 	let params: any[] = [];
 
-
 	if (status === 'rejected') {
 		if (post.reject_count === 0 && post.is_finally_rejected === 0) {
-			
 			query = `
 				UPDATE products
 				SET status = 'rejected',
@@ -615,8 +615,7 @@ export async function updatePostByAdmin(
 				WHERE id = ?;
 			`;
 			params = [reason || 'Không có lý do', id];
-		}
-		else if (post.reject_count === 1 && post.is_finally_rejected === 0) {
+		} else if (post.reject_count === 1 && post.is_finally_rejected === 0) {
 			query = `
 				UPDATE products
 				SET status = 'rejected',
@@ -627,12 +626,10 @@ export async function updatePostByAdmin(
 				WHERE id = ?;
 			`;
 			params = [reason || 'Không có lý do', id];
-		}
-		else if (post.reject_count >= 2 && post.is_finally_rejected === 1) {
+		} else if (post.reject_count >= 2 && post.is_finally_rejected === 1) {
 			throw new Error('Hành động bị nghi ngờ tấn công hệ thống');
 		}
-	}
-	else if (status === 'approved') {
+	} else if (status === 'approved') {
 		query = `
 			UPDATE products
 			SET status = 'approved',
@@ -640,11 +637,9 @@ export async function updatePostByAdmin(
 			WHERE id = ?;
 		`;
 		params = [id];
-	}
-	else {
+	} else {
 		throw new Error('Trạng thái không hợp lệ');
 	}
-
 
 	await pool.query(query, params);
 
@@ -652,38 +647,33 @@ export async function updatePostByAdmin(
 	try {
 		let notificationTitle = '';
 		let notificationMessage = '';
-		let notificationType: 'post_approved' | 'post_rejected' = 'post_approved';
+		let notificationType: 'bài post này được phê duyệt' | 'bài post này bị từ chối' =
+			'bài post này được phê duyệt';
 
 		if (status === 'approved') {
-			notificationTitle = '✅ Bài đăng được duyệt';
-			notificationMessage = `Bài đăng "${post.title}" của bạn đã được admin phê duyệt và hiển thị công khai.`;
-			notificationType = 'post_approved';
+			notificationMessage = `Bài đăng của bạn đã được admin phê duyệt và hiển thị công khai.`;
+			notificationType = 'bài post này được phê duyệt';
 		} else if (status === 'rejected') {
-			notificationTitle = '❌ Bài đăng bị từ chối';
-			notificationMessage = `Bài đăng "${post.title}" của bạn bị từ chối. Lý do: ${reason || 'Không có lý do cụ thể'}`;
-			notificationType = 'post_rejected';
+			notificationMessage = `Bài đăng của bạn đã bị từ chối. Lý do: ${reason || 'Không có lý do cụ thể'}`;
+			notificationType = 'bài post này bị từ chối';
 		}
 
 		// Lưu notification vào database
 		const notification = await notificationService.createNotification({
-			user_id: post.user_id, // post.user_id là owner của bài viết
+			user_id: post.created_by, 
 			post_id: id,
-			type: notificationType,
-			title: notificationTitle,
 			message: notificationMessage,
 		});
 
 		// Gửi notification real-time qua WebSocket
-		sendNotificationToUser(post.user_id, {
-			id: notification.id,
-			type: notification.type,
-			title: notification.title,
-			message: notification.message,
-			post_id: id,
-			created_at: notification.created_at,
-		});
+		sendNotificationToUser(
+			post.created_by,
+			notification
+		);
 
-		console.log(`📨 Notification sent to user ${post.user_id} for post ${id}`);
+		console.log(
+			`📨 Notification sent to user ${post.user_id} for post ${id}`,
+		);
 	} catch (notifError: any) {
 		console.error('⚠️ Failed to send notification:', notifError.message);
 		// Không throw error - notification là optional, không làm fail việc update post

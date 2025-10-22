@@ -13,7 +13,7 @@ interface SocketData {
 /**
  * Initialize Socket.IO server cho chat
  */
-export function initializeSocket(server: HttpServer) {
+export function initializeSocket(server: HttpServer): SocketServer {
 	io = new SocketServer(server, {
 		cors: {
 			origin: process.env.FRONTEND_URL || '*',
@@ -169,11 +169,12 @@ export function initializeSocket(server: HttpServer) {
 		socket.on('notification:list', async (data, callback) => {
 			try {
 				const { limit = 20, offset = 0 } = data || {};
-				const notifications = await notificationService.getUserNotifications(
-					userId,
-					limit,
-					offset
-				);
+				const notifications =
+					await notificationService.getUserNotifications(
+						userId,
+						limit,
+						offset,
+					);
 				callback({ success: true, notifications });
 			} catch (error: any) {
 				callback({ success: false, error: error.message });
@@ -215,7 +216,10 @@ export function initializeSocket(server: HttpServer) {
 		socket.on('notification:delete', async (data, callback) => {
 			try {
 				const { notificationId } = data;
-				await notificationService.deleteNotification(notificationId, userId);
+				await notificationService.deleteNotification(
+					notificationId,
+					userId,
+				);
 				callback({ success: true });
 			} catch (error: any) {
 				callback({ success: false, error: error.message });
@@ -245,12 +249,8 @@ export function sendNotificationToUser(
 	userId: number,
 	notification: {
 		id: number;
-		type: string;
-		title: string;
 		message: string;
-		post_id?: number;
-		created_at: Date;
-	}
+	},
 ): void {
 	if (!io) {
 		console.warn('⚠️ Socket.IO not initialized, cannot send notification');
@@ -259,9 +259,14 @@ export function sendNotificationToUser(
 
 	const socketId = chatService.getUserSocketId(userId);
 	if (socketId) {
-		io.to(socketId).emit('notification:new', notification);
-		console.log(`📩 Notification sent to user ${userId}: ${notification.title}`);
+		io.to(socketId).emit('notification:new', {
+			id: notification.id,
+			message: notification.message,
+		});
 	} else {
-		console.log(`⚠️ User ${userId} not online, notification saved but not sent`);
+		console.log(
+			`⚠️ User ${userId} not online, notification saved but not sent`,
+		);
 	}
 }
+

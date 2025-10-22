@@ -9,21 +9,23 @@ import { RowDataPacket } from 'mysql2';
  * Tạo notification mới cho user
  */
 export async function createNotification(
-	data: CreateNotificationDTO,
+	n: CreateNotificationDTO
 ): Promise<Notification> {
-	const { user_id, post_id, type, title, message } = data;
+	const notification: CreateNotificationDTO = {
+		user_id: n.user_id,
+		post_id: n.post_id,
+		message: n.message,
+	};
 
 	const query = `
-		INSERT INTO notifications (user_id, post_id, type, title, message, is_read, created_at)
-		VALUES (?, ?, ?, ?, ?, 0, NOW())
+		INSERT INTO notifications (user_id, post_id, message, is_read, created_at)
+		VALUES (?, ?, ?, 0, NOW())
 	`;
 
 	const [result]: any = await pool.query(query, [
-		user_id,
-		post_id || null,
-		type,
-		title,
-		message,
+		notification.user_id,
+		notification.post_id || null,
+		notification.message,
 	]);
 
 	// Lấy notification vừa tạo

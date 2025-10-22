@@ -11,6 +11,7 @@ import ServiceRouter from './service.route';
 import OrderRouter from './order.route';
 import AdminRouter from './admin.route';
 import ChatRouter from './chat.route';
+import NotificationRouter from './notification.route';
 
 
 const routes = Router();
@@ -27,5 +28,6 @@ routes.use('/api/service', ServiceRouter);
 routes.use('/api/order', OrderRouter);
 routes.use('/api/admin', AdminRouter);
 routes.use('/api/chat', ChatRouter);
+routes.use('/api/notification', NotificationRouter);
 
 export default routes;
