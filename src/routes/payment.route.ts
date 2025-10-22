@@ -5,6 +5,8 @@ import {
 	payosWebhookHandler,
 	packagePaymentController,
 	topUpPaymentController,
+	sellerDepositController,
+	confirmDepositController,
 } from '../controllers/payment.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 
@@ -218,5 +220,143 @@ router.post('/package-payment', packagePaymentController);
  *         description: Internal server error
  */
 router.post('/topup', authenticateToken, topUpPaymentController);
+
+/**
+ * @swagger
+ * /api/payment/seller-deposit:
+ *   post:
+ *     summary: Seller deposits 10% of product price when buyer purchases
+ *     tags: [Payment]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - product_id
+ *               - buyer_id
+ *             properties:
+ *               product_id:
+ *                 type: number
+ *                 description: Product ID
+ *                 example: 26
+ *               buyer_id:
+ *                 type: number
+ *                 description: Buyer User ID
+ *                 example: 2
+ *     responses:
+ *       200:
+ *         description: Deposit successful with credit
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Đặt cọc thành công bằng credit"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orderId:
+ *                       type: number
+ *                       example: 123
+ *                     orderCode:
+ *                       type: string
+ *                       example: "741765"
+ *                     amount:
+ *                       type: number
+ *                       example: 8000
+ *                     paymentMethod:
+ *                       type: string
+ *                       example: "CREDIT"
+ *       402:
+ *         description: Insufficient credit, need to pay via PayOS
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 needPayment:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Vui lòng thanh toán qua PayOS"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orderId:
+ *                       type: number
+ *                       example: 124
+ *                     orderCode:
+ *                       type: string
+ *                       example: "741766"
+ *                     amount:
+ *                       type: number
+ *                       example: 8000
+ *                     checkoutUrl:
+ *                       type: string
+ *                       example: "https://pay.payos.vn/web/..."
+ *                     paymentMethod:
+ *                       type: string
+ *                       example: "PAYOS"
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/seller-deposit', authenticateToken, sellerDepositController);
+
+/**
+ * @swagger
+ * /api/payment/confirm-deposit:
+ *   post:
+ *     summary: Confirm deposit payment after PayOS payment success
+ *     tags: [Payment]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - order_id
+ *             properties:
+ *               order_id:
+ *                 type: number
+ *                 description: Order ID
+ *                 example: 124
+ *     responses:
+ *       200:
+ *         description: Deposit confirmed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Xác nhận thanh toán đặt cọc thành công"
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/confirm-deposit', confirmDepositController);
 
 export default router;

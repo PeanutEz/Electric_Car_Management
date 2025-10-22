@@ -240,7 +240,7 @@ export async function checkAndProcessPostPayment(
 			// Tạo order để tracking
 			const orderCode = Math.floor(Math.random() * 1000000);
 			const [row] = await conn.query(
-				'INSERT INTO orders (code, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+				'INSERT INTO orders (code, service_id, seller_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
 				[orderCode, serviceId, userId, serviceCost, 'PAID', 'CREDIT'],
 			);
 
@@ -268,7 +268,7 @@ export async function checkAndProcessPostPayment(
 
 			// Tạo order trong database với status PENDING
 			await pool.query(
-				'INSERT INTO orders (code, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+				'INSERT INTO orders (code, service_id, seller_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
 				[
 					orderCode,
 					serviceId,
@@ -340,12 +340,12 @@ export async function processServicePayment(orderCode: string) {
 	const paymentStatus = await getPaymentStatus(orderCode);
 
 	const [checkUser]: any = await pool.query(
-		'select buyer_id, id, price, service_id, type from orders where code = ?',
+		'select seller_id, id, price, service_id, type from orders where code = ?',
 		[orderCode],
 	);
 	const orderId = checkUser[0].id;
 	const price = checkUser[0].price;
-	const userId = checkUser[0].buyer_id;
+	const userId = checkUser[0].seller_id;
 	const serviceId = checkUser[0].service_id;
 	const orderType = checkUser[0].type; // 'post', 'package', 'topup', etc.
 
@@ -549,7 +549,7 @@ export async function processPackagePayment(
 			// Tạo order để tracking (PAID ngay)
 			const orderCode = Math.floor(Math.random() * 1000000);
 			const [orderResult]: any = await conn.query(
-				'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
+				'INSERT INTO orders (code, type, service_id, seller_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
 				[
 					orderCode,
 					'package',
@@ -586,7 +586,7 @@ export async function processPackagePayment(
 			// Tạo order với status PENDING
 			const orderCode = Math.floor(Math.random() * 1000000);
 			await pool.query(
-				'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
+				'INSERT INTO orders (code, type, service_id, seller_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
 				[
 					orderCode,
 					'package',

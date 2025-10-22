@@ -10,11 +10,10 @@
 ---
 
 ## 📦 Table: `orders`
-| id | type | status | price | service_id | related_id | buyer_id | created_at | code | payment_method |
-|----|------|---------|--------|-------------|-------------|-----------|---------------------|--------|----------------|
-| 1 | post | PAID | 30000.00 | 1 | NULL | 741765 | 2025-10-01 14:22:11 | 741765 | PAYOS |
-| 4 | push | pending | 3000.00 | 5 | NULL | 774448 | 2025-10-06 06:42:11 | 774448 | PAYOS |
-| 5 | post | pending | 3000.00 | 5 | NULL | 152502 | 2025-10-06 07:35:10 | 152502 | PAYOS |
+| id | type | status | price | service_id | post_id | seller_id | created_at | code | payment_method | buyer_id |
+| 1 | post | PAID | 30000.00 | 1 | NULL | 741765 | 2025-10-01 14:22:11 | 741765 | PAYOS | null|
+| 4 | push | pending | 3000.00 | 5 | NULL | 774448 | 2025-10-06 06:42:11 | 774448 | PAYOS | null|
+| 5 | post | pending | 3000.00 | 5 | NULL | 152502 | 2025-10-06 07:35:10 | 152502 | PAYOS | null|
 
 ---
 ## 📦 Table: `services`
@@ -85,4 +84,20 @@ batteries
 | 43         | 20.00    | 90%    | NULL      | 24V     | NULL          |
 
 
+## 📦 Table: `contracts`
+| **Column Name**      | **Type**        | **Attributes / Default**                                         | **Description**                             |
+| -------------------- | --------------- | ---------------------------------------------------------------- | ------------------------------------------- |
+| `id`                 | `INT`           | `PRIMARY KEY AUTO_INCREMENT`                                     | Mã tự tăng, định danh hợp đồng              |
+| `contract_code`      | `VARCHAR(50)`   | `NOT NULL UNIQUE`                                                | Mã hợp đồng (VD: CT20251022-001)            |
+| `seller_id`          | `INT`           | `NOT NULL`                                                       | ID người bán                                |
+| `buyer_id`           | `INT`           | `NOT NULL`                                                       | ID người mua                                |
+| `product_id`         | `INT`           | `NOT NULL`                                                       | ID sản phẩm hoặc xe được bán                |
+| `deposit_amount`     | `DECIMAL(15,2)` | `NOT NULL`                                                       | Số tiền đặt cọc                             |
+| `vehicle_price`      | `DECIMAL(15,2)` | `NOT NULL`                                                       | Giá xe bán ra                               |
+| `commission_percent` | `DECIMAL(5,2)`  | `DEFAULT 1.00`                                                   | Phần trăm hoa hồng hệ thống (mặc định 1%)   |
+| `dispute_city`       | `VARCHAR(100)`  | `NULL`                                                           | Thành phố xử lý tranh chấp                  |
+| `status`             | `ENUM`          | `('pending','signed','completed','cancelled') DEFAULT 'pending'` | Trạng thái hợp đồng                         |
+| `url`                | `VARCHAR(255)`  | `NULL`                                                           | Đường dẫn file hợp đồng `.docx` hoặc `.pdf` |
+| `created_at`         | `DATETIME`      | `DEFAULT CURRENT_TIMESTAMP`                                      | Ngày tạo                                    |
+| `updated_at`         | `DATETIME`      | `DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`          | Ngày cập nhật gần nhất                      |
 

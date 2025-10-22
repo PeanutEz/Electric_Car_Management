@@ -1,0 +1,278 @@
+<!-- Test Seller Deposit Flow -->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Test Seller Deposit</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 800px;
+				margin: 50px auto;
+				padding: 20px;
+			}
+			.section {
+				margin-bottom: 30px;
+				padding: 20px;
+				border: 1px solid #ddd;
+				border-radius: 8px;
+			}
+			h2 {
+				color: #333;
+			}
+			input,
+			button {
+				margin: 10px 0;
+				padding: 10px;
+				width: 100%;
+				box-sizing: border-box;
+			}
+			button {
+				background-color: #007bff;
+				color: white;
+				border: none;
+				cursor: pointer;
+				border-radius: 4px;
+			}
+			button:hover {
+				background-color: #0056b3;
+			}
+			.response {
+				margin-top: 20px;
+				padding: 15px;
+				background-color: #f8f9fa;
+				border-radius: 4px;
+				white-space: pre-wrap;
+				font-family: monospace;
+			}
+			.error {
+				background-color: #f8d7da;
+				color: #721c24;
+			}
+			.success {
+				background-color: #d4edda;
+				color: #155724;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Test Seller Deposit Flow</h1>
+
+		<!-- Section 1: Login to get token -->
+		<div class="section">
+			<h2>1. Login (Get Seller Token)</h2>
+			<input
+				type="email"
+				id="loginEmail"
+				placeholder="Email (e.g., ntruong5012@gmail.com)"
+				value="ntruong5012@gmail.com" />
+			<input
+				type="password"
+				id="loginPassword"
+				placeholder="Password"
+				value="123456" />
+			<button onclick="login()">Login</button>
+			<div id="loginResponse" class="response"></div>
+		</div>
+
+		<!-- Section 2: Create Deposit -->
+		<div class="section">
+			<h2>2. Seller Deposit (10% Product Price)</h2>
+			<input
+				type="text"
+				id="depositToken"
+				placeholder="Bearer Token (auto-filled from login)" />
+			<input
+				type="number"
+				id="productId"
+				placeholder="Product ID"
+				value="26" />
+			<input
+				type="number"
+				id="buyerId"
+				placeholder="Buyer ID"
+				value="2" />
+			<button onclick="createDeposit()">Create Deposit</button>
+			<div id="depositResponse" class="response"></div>
+		</div>
+
+		<!-- Section 3: Confirm Deposit -->
+		<div class="section">
+			<h2>3. Confirm Deposit (After PayOS Payment)</h2>
+			<input
+				type="number"
+				id="orderId"
+				placeholder="Order ID (from deposit response)" />
+			<button onclick="confirmDeposit()">Confirm Deposit</button>
+			<div id="confirmResponse" class="response"></div>
+		</div>
+
+		<!-- Section 4: Check Product Status -->
+		<div class="section">
+			<h2>4. Check Product Status</h2>
+			<input
+				type="number"
+				id="checkProductId"
+				placeholder="Product ID"
+				value="26" />
+			<button onclick="checkProduct()">Check Product</button>
+			<div id="productResponse" class="response"></div>
+		</div>
+
+		<script>
+			const API_BASE = 'http://localhost:4001';
+			let sellerToken = '';
+
+			async function login() {
+				const email = document.getElementById('loginEmail').value;
+				const password = document.getElementById('loginPassword').value;
+				const responseDiv = document.getElementById('loginResponse');
+
+				try {
+					const response = await fetch(`${API_BASE}/api/user/login`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify({ email, password }),
+					});
+
+					const data = await response.json();
+
+					if (response.ok && data.access_token) {
+						sellerToken = data.access_token;
+						document.getElementById('depositToken').value =
+							sellerToken;
+						responseDiv.className = 'response success';
+						responseDiv.textContent = JSON.stringify(data, null, 2);
+					} else {
+						responseDiv.className = 'response error';
+						responseDiv.textContent = JSON.stringify(data, null, 2);
+					}
+				} catch (error) {
+					responseDiv.className = 'response error';
+					responseDiv.textContent = 'Error: ' + error.message;
+				}
+			}
+
+			async function createDeposit() {
+				const token = document.getElementById('depositToken').value;
+				const productId = document.getElementById('productId').value;
+				const buyerId = document.getElementById('buyerId').value;
+				const responseDiv = document.getElementById('depositResponse');
+
+				try {
+					const response = await fetch(
+						`${API_BASE}/api/payment/seller-deposit`,
+						{
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								Authorization: `Bearer ${token}`,
+							},
+							body: JSON.stringify({
+								product_id: parseInt(productId),
+								buyer_id: parseInt(buyerId),
+							}),
+						},
+					);
+
+					const data = await response.json();
+
+					if (response.ok) {
+						responseDiv.className = 'response success';
+						responseDiv.textContent = JSON.stringify(data, null, 2);
+
+						// Auto-fill orderId for confirmation
+						if (data.data && data.data.orderId) {
+							document.getElementById('orderId').value =
+								data.data.orderId;
+						}
+
+						// If need payment, open PayOS checkout
+						if (data.needPayment && data.data.checkoutUrl) {
+							if (
+								confirm(
+									'Need to pay via PayOS. Open payment page?',
+								)
+							) {
+								window.open(data.data.checkoutUrl, '_blank');
+							}
+						}
+					} else {
+						responseDiv.className = 'response error';
+						responseDiv.textContent = JSON.stringify(data, null, 2);
+					}
+				} catch (error) {
+					responseDiv.className = 'response error';
+					responseDiv.textContent = 'Error: ' + error.message;
+				}
+			}
+
+			async function confirmDeposit() {
+				const orderId = document.getElementById('orderId').value;
+				const responseDiv = document.getElementById('confirmResponse');
+
+				try {
+					const response = await fetch(
+						`${API_BASE}/api/payment/confirm-deposit`,
+						{
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+							},
+							body: JSON.stringify({
+								order_id: parseInt(orderId),
+							}),
+						},
+					);
+
+					const data = await response.json();
+
+					if (response.ok) {
+						responseDiv.className = 'response success';
+						responseDiv.textContent = JSON.stringify(data, null, 2);
+					} else {
+						responseDiv.className = 'response error';
+						responseDiv.textContent = JSON.stringify(data, null, 2);
+					}
+				} catch (error) {
+					responseDiv.className = 'response error';
+					responseDiv.textContent = 'Error: ' + error.message;
+				}
+			}
+
+			async function checkProduct() {
+				const productId =
+					document.getElementById('checkProductId').value;
+				const responseDiv = document.getElementById('productResponse');
+
+				try {
+					const response = await fetch(
+						`${API_BASE}/api/product/${productId}`,
+						{
+							method: 'GET',
+							headers: {
+								'Content-Type': 'application/json',
+							},
+						},
+					);
+
+					const data = await response.json();
+
+					if (response.ok) {
+						responseDiv.className = 'response success';
+						responseDiv.textContent = JSON.stringify(data, null, 2);
+					} else {
+						responseDiv.className = 'response error';
+						responseDiv.textContent = JSON.stringify(data, null, 2);
+					}
+				} catch (error) {
+					responseDiv.className = 'response error';
+					responseDiv.textContent = 'Error: ' + error.message;
+				}
+			}
+		</script>
+	</body>
+</html>
