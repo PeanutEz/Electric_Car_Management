@@ -8,8 +8,13 @@ export interface Auction {
 	deposit: number;
 	winner_id?: number;
 	winning_price?: number;
-	user_id: number;
-	auction_id: number;
-	desire_price?: number;
-	updated_at?: number;
+   duration?: number;
+}
+
+export interface Auction_member {
+   id?: number;
+   user_id: number;
+   auction_id: number;
+   desire_price?: number;
+   updated_at?: number;
 }

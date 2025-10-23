@@ -1,6 +1,14 @@
 export interface Order {
 	id: number;
-	type: 'post' | 'push' | 'verify' | 'package' | 'topup' | 'deposit';
+	type:
+		| 'post'
+		| 'push'
+		| 'verify'
+		| 'package'
+		| 'topup'
+		| 'deposit'
+		| 'auction_fee'
+		| 'auction_deposit';
 	order_code: string;
 	service_id?: number;
 	product_id?: number;

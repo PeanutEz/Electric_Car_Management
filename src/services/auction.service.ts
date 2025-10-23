@@ -8,19 +8,43 @@ export async function createAuctionByAdmin(
 	original_price: number,
 	target_price: number,
 	deposit: number,
-	winner_id?: number,
-	winning_price?: number,
-) {
-	const [result]: any = await pool.query(
-		`insert into auctions (product_id, seller_id, starting_price, original_price, target_price, deposit) values(?, ?, ?, ?, ?, ?)`,
-		[
-			product_id,
-			seller_id,
-			starting_price,
-			original_price,
-			target_price,
-			deposit,
-		],
-	);
-   return result.insertId;
+   duration?: number,
+){
+	const connection = await pool.getConnection();
+
+	try {
+		await connection.beginTransaction();
+
+		// 1️⃣ Thêm bản ghi mới vào bảng auctions
+		const [auctionResult]: any = await connection.query(
+			`INSERT INTO auctions (product_id, seller_id, starting_price, original_price, target_price, deposit, duration)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			[
+				product_id,
+				seller_id,
+				starting_price,
+				original_price,
+				target_price,
+				deposit,
+            duration,
+			],
+		);
+      const auctionId = auctionResult.insertId;
+      return {
+         id: auctionId,
+         product_id,
+         seller_id,
+         starting_price,
+         original_price,
+         target_price,
+         deposit,
+         duration,
+      };
+	} catch (error) {
+		await connection.rollback();
+		console.error('Error creating auction with members:', error);
+		throw error;
+	} finally {
+		connection.release();
+	}
 }
