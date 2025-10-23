@@ -490,7 +490,10 @@ export async function getPostByUserId(
 	// ✅ 5️⃣ Gộp dữ liệu
 	const formattedPosts = posts.map((post: any) => ({
 		id: post.id,
-		allow_resubmit: !(post.reject_count === 2 && post.is_finally_rejected === 1) ,
+		allow_resubmit:
+			!(post.reject_count === 2 && post.is_finally_rejected === 1) ||
+			post.status === 'approve' ||
+			post.status === 'processing',
 		title: post.title,
 		description: post.description,
 		priority: post.priority,
@@ -502,65 +505,65 @@ export async function getPostByUserId(
 		product:
 			post.category_type === 'vehicle'
 				? {
-					id: post.id,
-					brand: post.brand,
-					model: post.model,
-					price: post.price,
-					description: post.description,
-					status: post.status,
-					year: post.year,
-					created_by: post.created_by,
-					warranty: post.warranty,
-					address: post.address,
-					color: post.color,
-					seats: post.seats,
-					mileage: post.mileage_km,
-					power: post.power,
-					health: post.health,
-					previousOwners: post.previousOwners,
-					image: post.image,
-					images: imageMap.get(post.id) || [],
-					category: {
-						id: post.category_id,
-						type: post.category_type,
-						name: post.category,
-						typeSlug: post.category_slug,
-						count: 0,
-					},
-				}
+						id: post.id,
+						brand: post.brand,
+						model: post.model,
+						price: post.price,
+						description: post.description,
+						status: post.status,
+						year: post.year,
+						created_by: post.created_by,
+						warranty: post.warranty,
+						address: post.address,
+						color: post.color,
+						seats: post.seats,
+						mileage: post.mileage_km,
+						power: post.power,
+						health: post.health,
+						previousOwners: post.previousOwners,
+						image: post.image,
+						images: imageMap.get(post.id) || [],
+						category: {
+							id: post.category_id,
+							type: post.category_type,
+							name: post.category,
+							typeSlug: post.category_slug,
+							count: 0,
+						},
+				  }
 				: {
-					id: post.id,
-					brand: post.brand,
-					model: post.model,
-					price: post.price,
-					description: post.description,
-					status: post.status,
-					year: post.year,
-					color: post.color,
-					created_by: post.created_by,
-					warranty: post.warranty,
-					address: post.address,
-					capacity: post.capacity,
-					voltage: post.voltage,
-					health: post.health,
-					previousOwners: post.previousOwners,
-					image: post.image,
-					images: imageMap.get(post.id) || [],
-					category: {
-						id: post.category_id,
-						type: post.category_type,
-						name: post.category,
-						typeSlug: post.category_slug,
-						count: 0,
-					},
-				},
+						id: post.id,
+						brand: post.brand,
+						model: post.model,
+						price: post.price,
+						description: post.description,
+						status: post.status,
+						year: post.year,
+						color: post.color,
+						created_by: post.created_by,
+						warranty: post.warranty,
+						address: post.address,
+						capacity: post.capacity,
+						voltage: post.voltage,
+						health: post.health,
+						previousOwners: post.previousOwners,
+						image: post.image,
+						images: imageMap.get(post.id) || [],
+						category: {
+							id: post.category_id,
+							type: post.category_type,
+							name: post.category,
+							typeSlug: post.category_slug,
+							count: 0,
+						},
+				  },
 	}));
 
 	// ✅ 6️⃣ Trả về kết quả đầy đủ
 	return {
 		posts: formattedPosts,
 		counts: result,
-		countStatus: countStatus[0]?.count || 0
+		countStatus: countStatus[0]?.count || 0,
 	};
 }
 
@@ -576,7 +579,12 @@ export async function getOrderByUserId(
 	return orders;
 }
 
-export async function changeAndConfirmPassword(userId: number, currentPassword: string, newPassword: string, confirmPassword: string) {
+export async function changeAndConfirmPassword(
+	userId: number,
+	currentPassword: string,
+	newPassword: string,
+	confirmPassword: string,
+) {
 	const [rows]: any = await pool.query(
 		'select password from users WHERE id = ?',
 		[userId],
@@ -586,7 +594,10 @@ export async function changeAndConfirmPassword(userId: number, currentPassword: 
 		const error = new Error('Người dùng không tồn tại');
 		throw error;
 	}
-	const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+	const isPasswordValid = await bcrypt.compare(
+		currentPassword,
+		user.password,
+	);
 	if (!isPasswordValid) {
 		const error = new Error('Mật khẩu hiện tại không đúng');
 		throw error;

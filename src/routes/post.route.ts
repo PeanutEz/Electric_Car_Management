@@ -796,6 +796,7 @@ router.post(
  */
 router.put('/update-post', editPost);
 
+
 router.get('/delete-post/:id', deletePost);
 
 export default router;

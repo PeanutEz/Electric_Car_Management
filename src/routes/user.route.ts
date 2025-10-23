@@ -542,54 +542,7 @@ router.get('/user-detail', userDetail);
  */
 router.put('/update-user', authenticateToken, upload.single('avatar'), updateUserInfo);
 
-/** 
- * @swagger
- * /api/user/update-phone:
- *   put:
- *     summary: Cập nhật số điện thoại người dùng
- *     tags:
- *       - Users
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - phone
- *             properties:
- *               phone:
- *                 type: string
- *                 example: "0912345678"
- *     responses:
- *       200:
- *         description: Cập nhật số điện thoại thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Cập nhật số điện thoại thành công"
- *                 data:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: integer
- *                       example: 1
- *                     status:
- *                       type: string
- *                       example: "active"
- *                     full_name:
- *                       type: string
- *                       example: "John Doe"
- *                     email:
- *                       type: string
- *                       example: "john.doe@example.com"
- */
+
 router.put('/update-phone', authenticateToken, updateUserPhone);
 
 /**
@@ -764,6 +717,98 @@ router.put('/update-phone', authenticateToken, updateUserPhone);
  */
 router.get('/user-posts', authenticateToken, getUserPosts);
 
+/**
+ * @swagger
+ * /api/user/order-by-user:
+ *   get:
+ *     summary: Lấy danh sách đơn hàng của người dùng
+ *     description: Lấy danh sách đơn hàng của người dùng hiện tại dựa trên JWT token trong header Authorization.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []     # Yêu cầu xác thực bằng JWT Bearer Token
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Trang hiện tại (mặc định là 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *         description: Số đơn hàng trên mỗi trang (mặc định là 10)
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách đơn hàng thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Lấy danh sách đơn hàng của người dùng thành công
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orders:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                             example: 15
+ *                           buyer_id:
+ *                             type: integer
+ *                             example: 3
+ *                           total_price:
+ *                             type: number
+ *                             example: 1250000
+ *                           status:
+ *                             type: string
+ *                             example: "completed"
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-23T15:30:00Z"
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                         limit:
+ *                           type: integer
+ *                           example: 10
+ *                         page_size:
+ *                           type: integer
+ *                           example: 3
+ *       401:
+ *         description: Thiếu token xác thực hoặc token không hợp lệ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Chưa cung cấp token xác thực
+ *       403:
+ *         description: Không thể xác định người dùng từ token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Vui lòng đăng nhập để xem đơn hàng của bạn
+ *       422:
+ *         description: Lỗi xử lý hoặc truy vấn cơ sở dữ liệu
+ */
 router.get('/order-by-user', authenticateToken, getUserOrders);
 
 /**
@@ -771,10 +816,10 @@ router.get('/order-by-user', authenticateToken, getUserOrders);
  * /api/user/change-password:
  *   put:
  *     summary: Đổi mật khẩu người dùng
- *     description: API cho phép người dùng đổi mật khẩu mới (yêu cầu đăng nhập bằng token hợp lệ).
- *     tags: [User]
+ *     description: Người dùng đổi mật khẩu bằng cách cung cấp mật khẩu hiện tại và mật khẩu mới.
+ *     tags: [Users]
  *     security:
- *       - bearerAuth: []
+ *       - bearerAuth: []      # Yêu cầu JWT Bearer token
  *     requestBody:
  *       required: true
  *       content:
@@ -782,12 +827,19 @@ router.get('/order-by-user', authenticateToken, getUserOrders);
  *           schema:
  *             type: object
  *             required:
+ *               - currentPassword
  *               - newPassword
+ *               - confirmPassword
  *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 example: "OldPassword123"
  *               newPassword:
  *                 type: string
- *                 example: "newStrongPassword123"
- *                 description: Mật khẩu mới (6–160 ký tự)
+ *                 example: "NewPassword456"
+ *               confirmPassword:
+ *                 type: string
+ *                 example: "NewPassword456"
  *     responses:
  *       200:
  *         description: Đổi mật khẩu thành công
@@ -796,18 +848,16 @@ router.get('/order-by-user', authenticateToken, getUserOrders);
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Password changed successfully"
- *       400:
- *         description: Mật khẩu không hợp lệ (ít hơn 6 ký tự hoặc dài hơn 160 ký tự)
+ *                   example: Đổi mật khẩu thành công
+ *                 data:
+ *                   type: boolean
+ *                   example: true
  *       401:
- *         description: Token không hợp lệ hoặc chưa đăng nhập
- *       500:
- *         description: Lỗi server
+ *         description: Token không hợp lệ hoặc chưa cung cấp
+ *       422:
+ *         description: Mật khẩu không đúng hoặc xác nhận không khớp
  */
 router.put('/change-password', authenticateToken, changeAndConfirmUserPassword);
 

@@ -23,6 +23,6 @@ const router = Router();
  *       500:
  *         description: Lỗi server
  */
-router.get('/user-notifications', listUserNotifications);
+router.get('/notifications', listUserNotifications);
 
 export default router;

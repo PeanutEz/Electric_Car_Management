@@ -20,6 +20,9 @@ s.description, s.cost, d.credits, d.type as changing,d.unit,o.status,o.created_a
                                     inner join users u on u.id = d.user_id where d.user_id = ?`,
 		[userId],
 	);
-
-	return rows;
+	return rows.map((row: any) => ({
+		...row,
+		service_type: row.changing === 'Increase' ? 'top up' : row.service_type,
+		service_name: row.changing === 'Increase' ? 'Nạp tiền' : row.service_name,
+	}));
 }
