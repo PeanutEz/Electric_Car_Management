@@ -1,5 +1,6 @@
 import Router from 'express';
 import { getAllAuctions } from '../services/auction.service';
+import { getAuctionsForAdminController, startAuctionByAdminController } from '../controllers/auction.controller';
 
 const router = Router();
 /**
@@ -54,5 +55,55 @@ const router = Router();
  */
 router.get('/get-all', getAllAuctions);
 
+/**
+ * @swagger
+ * /api/auction/admin-list:
+ *   get:
+ *     summary: Lấy danh sách các phiên đấu giá có product đang auctioning (cho admin)
+ *     tags: [Auctions]
+ *     responses:
+ *       200:
+ *         description: Thành công - Trả về danh sách các phiên đấu giá đang chờ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       500:
+ *         description: Lỗi server
+ */
+router.get('/admin-list', getAuctionsForAdminController);
+
+/**
+ * @swagger
+ * /api/auction/start:
+ *   post:
+ *     summary: Admin bắt đầu đấu giá cho 1 auction cụ thể
+ *     tags: [Auctions]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               auctionId:
+ *                 type: integer
+ *                 example: 2
+ *     responses:
+ *       200:
+ *         description: Đã bắt đầu đấu giá, sẽ tự động đóng sau duration
+ *       400:
+ *         description: Lỗi đầu vào hoặc đã bắt đầu rồi
+ *       500:
+ *         description: Lỗi server
+ */
+router.post('/start', startAuctionByAdminController);
 
 export default router;

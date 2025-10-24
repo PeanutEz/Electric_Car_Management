@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createAuctionByAdmin, getAllAuctions } from '../services/auction.service';
+import { createAuctionByAdmin, getAllAuctions, getAuctionsForAdmin, startAuctionByAdmin } from '../services/auction.service';
 
 export async function createAuction(req: Request, res: Response) {
 	try {
@@ -82,4 +82,31 @@ export async function getAuctions(req: Request, res: Response) {
 			message: error.message,
 		});
 	}
+}
+
+export async function getAuctionsForAdminController(req: Request, res: Response) {
+    try {
+        const auctions = await getAuctionsForAdmin();
+        res.status(200).json({
+            message: 'Lấy danh sách phiên đấu giá đang chờ thành công',
+            data: auctions,
+        });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
+export async function startAuctionByAdminController(req: Request, res: Response) {
+    try {
+        const { auctionId } = req.body;
+        if (!auctionId) return res.status(400).json({ message: 'auctionId is required' });
+        const result = await startAuctionByAdmin(Number(auctionId));
+        if (result.success) {
+            res.status(200).json({ message: result.message });
+        } else {
+            res.status(400).json({ message: result.message });
+        }
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
 }
