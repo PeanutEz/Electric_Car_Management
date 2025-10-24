@@ -34,11 +34,18 @@ export async function getPackage(
 		[userId],
 	);
 	if (total_credit && (total_credit as any)[0].length > 0) {
-		(rows as any)[0].user_total_credit = (total_credit as any)[0][0].total_credit;
-		if ((rows as any)[0].cost - (total_credit as any)[0][0].total_credit <= 0) {
+		(rows as any)[0].user_total_credit = (
+			total_credit as any
+		)[0][0].total_credit;
+		if (
+			(rows as any)[0].cost - (total_credit as any)[0][0].total_credit <=
+			0
+		) {
 			(rows as any)[0].topup_credit = 0;
 		} else {
-			(rows as any)[0].topup_credit = (rows as any)[0].cost - (total_credit as any)[0][0].total_credit;
+			(rows as any)[0].topup_credit =
+				(rows as any)[0].cost -
+				(total_credit as any)[0][0].total_credit;
 		}
 	}
 	return rows as Service[];
@@ -407,13 +414,10 @@ export async function processServicePayment(orderCode: string) {
 
 		if (orderType === 'topup') {
 			message = `Nạp tiền thành công ${orderPrice} VND vào tài khoản.`;
-		} else if (
-			orderType === null
-		) {
+		} else if (orderType === null) {
 			message = 'Thanh toán thành công.';
 		} else if (orderType === 'package') {
-			message =
-				'Thanh toán package thành công.';
+			message = 'Thanh toán package thành công.';
 		}
 
 		return {
@@ -741,4 +745,70 @@ export async function processTopUpPayment(
 		console.error('Top up payment error:', error);
 		throw error;
 	}
+}
+
+// CRUD for services
+export async function createService(
+	service: Partial<Service>,
+): Promise<Service> {
+	const [result]: any = await pool.query(
+		'INSERT INTO services (name, type, description, cost, number_of_post, number_of_push, number_of_verify, service_ref, product_type, duration, feature) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+		[
+			service.name,
+			service.type,
+			service.description,
+			service.cost,
+			service.number_of_post,
+			service.number_of_push,
+			service.number_of_verify,
+			service.service_ref,
+			service.product_type,
+			service.duration,
+			service.feature,
+		],
+	);
+	const [rows]: any = await pool.query(
+		'SELECT * FROM services WHERE id = ?',
+		[result.insertId],
+	);
+	return rows[0];
+}
+
+export async function getServiceById(id: number): Promise<Service | null> {
+	const [rows]: any = await pool.query(
+		'SELECT * FROM services WHERE id = ?',
+		[id],
+	);
+	if (rows.length === 0) return null;
+	return rows[0];
+}
+
+export async function updateService(
+	id: number,
+	service: Partial<Service>,
+): Promise<Service | null> {
+	const fields = Object.keys(service).filter(
+		(key) => service[key as keyof Service] !== undefined,
+	);
+	if (fields.length === 0) return getServiceById(id);
+	const values = fields.map((key) => service[key as keyof Service]);
+	const setClause = fields.map((key) => `${key} = ?`).join(', ');
+	await pool.query(`UPDATE services SET ${setClause} WHERE id = ?`, [
+		...values,
+		id,
+	]);
+	return getServiceById(id);
+}
+
+export async function deleteService(id: number): Promise<boolean> {
+	const [result]: any = await pool.query(
+		'DELETE FROM services WHERE id = ?',
+		[id],
+	);
+	return result.affectedRows > 0;
+}
+
+export async function getServices(): Promise<Service[]> {
+	const [rows]: any = await pool.query('SELECT * FROM services');
+	return rows;
 }

@@ -1,5 +1,5 @@
 import Router from 'express';
-import { addService,editService, listServices, removeService,listOrders, getOrderTransactions } from '../controllers/admin.controller';
+import { addService,editService, listServices, removeService,listOrders, getOrderTransactions, modifyAuction } from '../controllers/admin.controller';
 
 const router = Router();
 
@@ -90,6 +90,6 @@ router.post('/create-package', addService);
 router.put('/update-package/:id', editService);
 router.delete('/delete-package/:id', removeService);
 
-
+router.put('/update-auction', modifyAuction);
 
 export default router;

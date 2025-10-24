@@ -1,5 +1,5 @@
 import Router from 'express';
-import { getOrdersByUserIdAndCodeController, getOrderTransactionDetail } from '../controllers/order.controller';
+import { getOrdersByUserIdAndCodeController, getOrderTransactionDetail, getAllOrderByUserIdController,getOrderDetailController } from '../controllers/order.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 const router = Router();
 
@@ -82,5 +82,93 @@ router.post('/verify', authenticateToken,getOrdersByUserIdAndCodeController);
  *         description: Lỗi server
  */
 router.get('/get-transaction-detail',  authenticateToken, getOrderTransactionDetail);
+
+/**
+ * @swagger
+ * /api/order/all:
+ *   get:
+ *     summary: Lấy tất cả đơn hàng của user (lọc theo status, type, orderId)
+ *     tags: [Transaction]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Lọc theo trạng thái đơn hàng (PAID, pending, ...)
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Lọc theo loại đơn hàng (post, push, package, ...)
+ *       - in: query
+ *         name: orderId
+ *         schema:
+ *           type: integer
+ *         required: false
+ *         description: Lọc theo id đơn hàng cụ thể
+ *     responses:
+ *       200:
+ *         description: Lấy tất cả đơn hàng thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       401:
+ *         description: Không có hoặc token không hợp lệ
+ *       500:
+ *         description: Lỗi server
+ */
+router.get('/all', authenticateToken, getAllOrderByUserIdController);
+
+
+/**
+ * @swagger
+ * /api/order/{id}:
+ *   get:
+ *     summary: Lấy chi tiết đơn hàng theo id
+ *     tags: [Transaction]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID đơn hàng
+ *     responses:
+ *       200:
+ *         description: Lấy chi tiết đơn hàng thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: Order id không hợp lệ
+ *       404:
+ *         description: Không tìm thấy đơn hàng
+ *       500:
+ *         description: Lỗi server
+ */
+router.get('/:id', getOrderDetailController);
+
+
+
 
 export default router;

@@ -5,7 +5,8 @@ import {
 	updatePackage,
 	deletePackage,
    getOrder,
-   getTransactions
+   getTransactions,
+   updateAuction
 } from '../services/admin.service';
 
 export const listServices = async (req: Request, res: Response) => {
@@ -98,6 +99,21 @@ export const getOrderTransactions = async (req: Request, res: Response) => {
 		res.status(200).json({
 			message: 'Lấy danh sách giao dịch thành công',
 			data: transactions,
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
+		});
+	}
+};
+
+export const modifyAuction = async (req: Request, res: Response) => {
+	try {
+		const { auction_id, starting_price, target_price, deposit } = req.body;
+	   const result = await updateAuction(auction_id, starting_price, target_price, deposit);
+		res.status(200).json({
+			message: 'Cập nhật thông tin đấu giá thành công',
+			data: result,
 		});
 	} catch (error: any) {
 		res.status(500).json({

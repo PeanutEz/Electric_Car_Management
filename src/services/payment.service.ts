@@ -322,6 +322,9 @@ export async function processAuctionFeePayment(
 	productId: number,
 	starting_price: number,
 	target_price: number,
+	deposit: number,
+	step: number,
+	note: string,
 ) {
 	const connection = await pool.getConnection();
 
@@ -356,7 +359,6 @@ export async function processAuctionFeePayment(
 
 		const productPrice = parseFloat(product.price);
 		const auctionFee = productPrice * 0.005; // 0.5% giá product
-		const depositAmount = productPrice * 0.1; // 10% giá product
 		const duration = 600; // default 600 seconds
 
 		// Lấy số dư credit của seller
@@ -384,8 +386,8 @@ export async function processAuctionFeePayment(
 
 			// Insert vào bảng orders với type = 'auction_fee'
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, seller_id, code, payment_method, product_id, created_at) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+				`INSERT INTO orders (type, status, price, seller_id, code, payment_method, product_id, created_at, service_id) 
+				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
 				[
 					'auction_fee',
 					'PAID',
@@ -394,6 +396,7 @@ export async function processAuctionFeePayment(
 					orderCode,
 					'CREDIT',
 					productId,
+					17,
 				],
 			);
 
@@ -405,7 +408,7 @@ export async function processAuctionFeePayment(
 
 			// Insert vào bảng auctions
 			const [auctionResult]: any = await connection.query(
-				`INSERT INTO auctions (product_id, seller_id, starting_price, original_price, target_price, deposit, duration) 
+				`INSERT INTO auctions (product_id, seller_id, starting_price, original_price, target_price, deposit, duration, step, note) 
 				 VALUES (?, ?, ?, ?, ?, ?, ?)`,
 				[
 					productId,
@@ -413,8 +416,10 @@ export async function processAuctionFeePayment(
 					starting_price,
 					productPrice,
 					target_price,
-					depositAmount,
+					deposit,
 					duration,
+					step,
+					note,
 				],
 			);
 
@@ -427,7 +432,9 @@ export async function processAuctionFeePayment(
 				orderCode: orderCode,
 				auctionFee: auctionFee,
 				auctionId: auctionResult.insertId,
-				depositAmount: depositAmount,
+				deposit: deposit,
+				step: step,
+				note: note,
 				message: 'Thanh toán phí đấu giá thành công bằng credit',
 				auction: {
 					id: auctionResult.insertId,
@@ -436,7 +443,7 @@ export async function processAuctionFeePayment(
 					starting_price: starting_price,
 					original_price: productPrice,
 					target_price: target_price,
-					deposit: depositAmount,
+					deposit: deposit,
 					duration: duration,
 				},
 			};
@@ -447,8 +454,8 @@ export async function processAuctionFeePayment(
 
 			// Tạo order với status PENDING
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, seller_id, code, payment_method, product_id, created_at) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+				`INSERT INTO orders (type, status, price, seller_id, code, payment_method, product_id, created_at, service_id) 
+				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
 				[
 					'auction_fee',
 					'PENDING',
@@ -457,6 +464,7 @@ export async function processAuctionFeePayment(
 					orderCode.toString(),
 					'PAYOS',
 					productId,
+					17,
 				],
 			);
 
@@ -480,7 +488,9 @@ export async function processAuctionFeePayment(
 				auctionFee: auctionFee,
 				currentCredit: sellerCredit,
 				shortfallAmount: shortfallAmount,
-				depositAmount: depositAmount,
+				deposit: deposit,
+				step: step,
+				note: note,
 				checkoutUrl: paymentResponse.checkoutUrl,
 				message: `Số dư không đủ. Cần thanh toán thêm ${shortfallAmount.toFixed(
 					2,
@@ -582,12 +592,27 @@ export async function confirmAuctionFeePayment(
 
 		await connection.commit();
 
+		const auctionId = auctionResult.insertId;
+
+		// Start auction timer after successful auction creation
+		const { startAuctionTimer } = await import('./auction.service');
+		const { broadcastAuctionClosed } = await import('../config/socket');
+
+		await startAuctionTimer(auctionId, auctionData.duration, () => {
+			// Callback when auction expires
+			broadcastAuctionClosed(auctionId, null, null);
+		});
+
+		console.log(
+			`⏰ Auction ${auctionId} timer started for ${auctionData.duration} seconds`,
+		);
+
 		return {
 			success: true,
 			message: 'Xác nhận thanh toán phí đấu giá thành công',
-			auctionId: auctionResult.insertId,
+			auctionId,
 			auction: {
-				id: auctionResult.insertId,
+				id: auctionId,
 				product_id: auctionData.product_id,
 				seller_id: auctionData.seller_id,
 				starting_price: auctionData.starting_price,
@@ -685,8 +710,8 @@ export async function processDepositPayment(
 
 			// Insert vào bảng orders với type = 'auction_deposit'
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id) 
+				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
 				[
 					'auction_deposit',
 					'PAID',
@@ -695,6 +720,7 @@ export async function processDepositPayment(
 					orderCode,
 					'CREDIT',
 					auction.product_id,
+					18,
 				],
 			);
 
@@ -728,8 +754,8 @@ export async function processDepositPayment(
 
 			// Tạo order với status PENDING
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id) 
+				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
 				[
 					'auction_deposit',
 					'PENDING',
@@ -738,6 +764,7 @@ export async function processDepositPayment(
 					orderCode.toString(),
 					'PAYOS',
 					auction.product_id,
+					18,
 				],
 			);
 

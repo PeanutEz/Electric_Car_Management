@@ -407,7 +407,7 @@ export const auctionFeePaymentController = async (
 		const token = authHeader.split(' ')[1];
 		const sellerId = (jwt.decode(token) as any).id;
 
-		const { product_id, starting_price, target_price } = req.body;
+		const { product_id, starting_price, target_price, deposit, step, note } = req.body;
 
 		// Validate input
 		if (!product_id) {
@@ -437,6 +437,9 @@ export const auctionFeePaymentController = async (
 			parseInt(product_id),
 			starting_price,
 			target_price,
+			deposit,
+			step,
+			note
 		);
 
 		if (result.paymentMethod === 'CREDIT' && !result.needPayment) {
@@ -449,7 +452,9 @@ export const auctionFeePaymentController = async (
 					orderCode: result.orderCode,
 					auctionFee: result.auctionFee,
 					auctionId: result.auctionId,
-					depositAmount: result.depositAmount,
+					deposit: result.deposit,
+					step: result.step,
+					note: result.note,
 					paymentMethod: 'CREDIT',
 					auction: result.auction,
 				},
@@ -466,7 +471,7 @@ export const auctionFeePaymentController = async (
 					auctionFee: result.auctionFee,
 					currentCredit: result.currentCredit,
 					shortfallAmount: result.shortfallAmount,
-					depositAmount: result.depositAmount,
+					deposit: result.deposit,
 					checkoutUrl: result.checkoutUrl,
 					paymentMethod: 'PAYOS',
 					auctionData: result.auctionData,

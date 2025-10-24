@@ -23,6 +23,43 @@ s.description, s.cost, d.credits, d.type as changing,d.unit,o.status,o.created_a
 	return rows.map((row: any) => ({
 		...row,
 		service_type: row.changing === 'Increase' ? 'top up' : row.service_type,
-		service_name: row.changing === 'Increase' ? 'Nạp tiền' : row.service_name,
+		service_name:
+			row.changing === 'Increase' ? 'Nạp tiền' : row.service_name,
 	}));
+}
+
+export async function getAllOrderByUserId(
+	userId: number,
+	status?: string,
+	type?: string,
+	orderId?: number,
+) {
+	let sql = `SELECT * FROM orders WHERE seller_id = ?`;
+	const params: any[] = [userId];
+	if (status) {
+		sql += ' AND status = ?';
+		params.push(status);
+	}
+	if (type) {
+		sql += ' AND type = ?';
+		params.push(type);
+	}
+	if (orderId) {
+		sql += ' AND id = ?';
+		params.push(orderId);
+	}
+	sql += ' ORDER BY created_at DESC';
+	const [rows]: any = await pool.query(sql, params);
+	return rows;
+}
+
+export async function getOrderDetail(orderId: number) {
+	const [rows]: any = await pool.query(
+		`SELECT o.*, d.credits, d.type as changing, d.unit, d.id as transaction_id
+        FROM orders o
+        LEFT JOIN transaction_detail d ON o.id = d.order_id
+        WHERE o.id = ?`,
+		[orderId],
+	);
+	return rows;
 }

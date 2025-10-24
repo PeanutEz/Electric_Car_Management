@@ -6,9 +6,12 @@ export interface Auction {
 	original_price: number;
 	target_price: number;
 	deposit: number;
+	step: number;
+	note?: string;
 	winner_id?: number;
 	winning_price?: number;
    duration?: number;
+
 }
 
 export interface Auction_member {

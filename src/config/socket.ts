@@ -3,6 +3,7 @@ import { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import * as chatService from '../services/chat.service';
 import * as notificationService from '../services/notification.service';
+import * as auctionService from '../services/auction.service';
 
 let io: SocketServer;
 
@@ -270,3 +271,236 @@ export function sendNotificationToUser(
 	}
 }
 
+/**
+ * Setup auction bidding namespace with real-time updates
+ */
+export function setupAuctionSocket() {
+	if (!io) {
+		console.error(
+			'❌ Socket.IO not initialized, cannot setup auction namespace',
+		);
+		return;
+	}
+
+	const auctionNamespace = io.of('/auction');
+
+	// Authentication middleware for auction namespace
+	auctionNamespace.use((socket, next) => {
+		const token = socket.handshake.auth.token;
+
+		if (!token) {
+			return next(new Error('Authentication error'));
+		}
+
+		try {
+			const jwtSecret =
+				process.env.JWT_SECRET ||
+				process.env.ACCESS_TOKEN_SECRET ||
+				'your_super_strong_secret_key_here';
+			const decoded = jwt.verify(token, jwtSecret) as any;
+			(socket.data as SocketData).userId = decoded.id;
+			next();
+		} catch (error) {
+			console.error(
+				'❌ Auction socket token verification failed:',
+				error,
+			);
+			next(new Error('Invalid token'));
+		}
+	});
+
+	auctionNamespace.on('connection', (socket) => {
+		const userId = (socket.data as SocketData).userId;
+		console.log(`✅ User ${userId} connected to auction namespace`);
+
+		/**
+		 * Join a specific auction room
+		 * Client emits: { auctionId: number }
+		 */
+		socket.on('auction:join', async (data: { auctionId: number }) => {
+			try {
+				const { auctionId } = data;
+
+				// Verify auction exists and is active
+				const auction = await auctionService.getActiveAuction(
+					auctionId,
+				);
+				if (!auction) {
+					socket.emit('auction:error', {
+						message: 'Auction not found or not active',
+					});
+					return;
+				}
+
+				// Check if user has joined (paid deposit)
+				const hasJoined = await auctionService.hasUserJoinedAuction(
+					userId,
+					auctionId,
+				);
+				if (!hasJoined) {
+					socket.emit('auction:error', {
+						message: 'You must pay deposit to join this auction',
+					});
+					return;
+				}
+
+				// Join the auction room
+				socket.join(`auction_${auctionId}`);
+
+				// Get remaining time
+				const remainingTime =
+					await auctionService.getAuctionRemainingTime(auctionId);
+
+				// Send current auction state to the user
+				socket.emit('auction:joined', {
+					auctionId,
+					auction,
+					remainingTime,
+					message: 'Successfully joined auction',
+				});
+
+				// Notify others in the room
+				socket.to(`auction_${auctionId}`).emit('auction:user_joined', {
+					userId,
+					message: `User ${userId} joined the auction`,
+				});
+
+				console.log(
+					`✅ User ${userId} joined auction room ${auctionId}`,
+				);
+			} catch (error) {
+				console.error('Error joining auction:', error);
+				socket.emit('auction:error', {
+					message: 'Failed to join auction',
+				});
+			}
+		});
+
+		/**
+		 * Place a bid on an auction
+		 * Client emits: { auctionId: number, bidAmount: number }
+		 */
+		socket.on(
+			'auction:bid',
+			async (data: { auctionId: number; bidAmount: number }) => {
+				try {
+					const { auctionId, bidAmount } = data;
+
+					// Validate input
+					if (!auctionId || !bidAmount || bidAmount <= 0) {
+						socket.emit('auction:error', {
+							message: 'Invalid bid data',
+						});
+						return;
+					}
+
+					// Place the bid
+					const result = await auctionService.placeBid(
+						auctionId,
+						userId,
+						bidAmount,
+					);
+
+					if (!result.success) {
+						socket.emit('auction:error', {
+							message: result.message,
+						});
+						return;
+					}
+
+					// Broadcast bid update to all users in the auction room
+					auctionNamespace
+						.to(`auction_${auctionId}`)
+						.emit('auction:bid_update', {
+							auctionId,
+							winnerId: userId,
+							winningPrice: bidAmount,
+							message: result.message,
+							timestamp: new Date().toISOString(),
+						});
+
+					// If target price reached, auction is closed
+					if (result.message.includes('Target price reached')) {
+						auctionNamespace
+							.to(`auction_${auctionId}`)
+							.emit('auction:closed', {
+								auctionId,
+								reason: 'target_price_reached',
+								winnerId: userId,
+								winningPrice: bidAmount,
+								message:
+									'Auction closed - Target price reached!',
+							});
+						console.log(
+							`🎉 Auction ${auctionId} closed - target price reached by user ${userId}`,
+						);
+					} else {
+						console.log(
+							`💰 New bid on auction ${auctionId}: ${bidAmount} VND by user ${userId}`,
+						);
+					}
+				} catch (error) {
+					console.error('Error placing bid:', error);
+					socket.emit('auction:error', {
+						message: 'Failed to place bid',
+					});
+				}
+			},
+		);
+
+		/**
+		 * Leave an auction room
+		 */
+		socket.on('auction:leave', (data: { auctionId: number }) => {
+			const { auctionId } = data;
+			socket.leave(`auction_${auctionId}`);
+			console.log(`👋 User ${userId} left auction room ${auctionId}`);
+		});
+
+		socket.on('disconnect', () => {
+			console.log(
+				`❌ User ${userId} disconnected from auction namespace`,
+			);
+		});
+	});
+
+	console.log('✅ Auction socket namespace initialized');
+}
+
+/**
+ * Broadcast auction time update to all participants
+ */
+export function broadcastAuctionTimeUpdate(
+	auctionId: number,
+	remainingTime: number,
+): void {
+	if (!io) return;
+
+	const auctionNamespace = io.of('/auction');
+	auctionNamespace.to(`auction_${auctionId}`).emit('auction:time_update', {
+		auctionId,
+		remainingTime,
+	});
+}
+
+/**
+ * Broadcast auction closure to all participants
+ */
+export function broadcastAuctionClosed(
+	auctionId: number,
+	winnerId: number | null,
+	winningPrice: number | null,
+): void {
+	if (!io) return;
+
+	const auctionNamespace = io.of('/auction');
+	auctionNamespace.to(`auction_${auctionId}`).emit('auction:closed', {
+		auctionId,
+		reason: 'duration_expired',
+		winnerId,
+		winningPrice,
+		message: 'Auction closed - Time expired!',
+	});
+
+	console.log(`⏰ Auction ${auctionId} closed due to timeout`);
+}

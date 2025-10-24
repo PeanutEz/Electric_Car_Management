@@ -71,3 +71,14 @@ export async function getTransactions(orderId: number): Promise<Transaction[]> {
    return rows as Transaction[];
 }
 
+export async function updateAuction(auctionId: number, starting_price?: number,target_price?: number, deposit?: number): Promise<any> {
+	if (!auctionId) throw new Error('Invalid auction ID');
+	const updates: any = {};
+	if (starting_price !== undefined) updates.starting_price = starting_price;
+	if (target_price !== undefined) updates.target_price = target_price;
+	if (deposit !== undefined) updates.deposit = deposit;
+
+	await pool.query('UPDATE auctions SET ? WHERE id = ?', [updates, auctionId]);
+	return { id: auctionId, ...updates };
+}
+

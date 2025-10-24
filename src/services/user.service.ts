@@ -491,9 +491,9 @@ export async function getPostByUserId(
 	const formattedPosts = posts.map((post: any) => ({
 		id: post.id,
 		allow_resubmit:
-			!(post.reject_count === 2 && post.is_finally_rejected === 1) ||
-			post.status === 'approve' ||
-			post.status === 'processing',
+			!(post.reject_count === 2 && post.is_finally_rejected === 1) &&
+			!['approved', 'processing', 'auctioning'].includes(post.status) &&
+			post.status === 'rejected',
 		title: post.title,
 		description: post.description,
 		priority: post.priority,

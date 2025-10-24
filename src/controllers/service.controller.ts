@@ -6,6 +6,11 @@ import {
 	checkAndProcessPostPayment,
 	processServicePayment,
 	getPackage,
+	createService,
+	getServiceById,
+	updateService,
+	deleteService,
+	getServices,
 } from '../services/service.service';
 
 export async function listServices(req: Request, res: Response) {
@@ -148,5 +153,74 @@ export async function processServicePaymentController(
 		res.status(500).json({
 			message: error.message,
 		});
+	}
+}
+
+export async function createServiceController(req: Request, res: Response) {
+	try {
+		const service = await createService(req.body);
+		res.status(201).json({
+			message: 'Tạo dịch vụ thành công',
+			data: service,
+		});
+	} catch (error: any) {
+		res.status(500).json({ message: error.message });
+	}
+}
+
+export async function getServiceByIdController(req: Request, res: Response) {
+	try {
+		const id = parseInt(req.params.id);
+		const service = await getServiceById(id);
+		if (!service) {
+			return res.status(404).json({ message: 'Không tìm thấy dịch vụ' });
+		}
+		res.status(200).json({
+			message: 'Lấy dịch vụ thành công',
+			data: service,
+		});
+	} catch (error: any) {
+		res.status(500).json({ message: error.message });
+	}
+}
+
+export async function updateServiceController(req: Request, res: Response) {
+	try {
+		const id = parseInt(req.params.id);
+		const service = await updateService(id, req.body);
+		if (!service) {
+			return res.status(404).json({ message: 'Không tìm thấy dịch vụ' });
+		}
+		res.status(200).json({
+			message: 'Cập nhật dịch vụ thành công',
+			data: service,
+		});
+	} catch (error: any) {
+		res.status(500).json({ message: error.message });
+	}
+}
+
+export async function deleteServiceController(req: Request, res: Response) {
+	try {
+		const id = parseInt(req.params.id);
+		const success = await deleteService(id);
+		if (!success) {
+			return res.status(404).json({ message: 'Không tìm thấy dịch vụ' });
+		}
+		res.status(200).json({ message: 'Xóa dịch vụ thành công' });
+	} catch (error: any) {
+		res.status(500).json({ message: error.message });
+	}
+}
+
+export async function getAllServicesController(req: Request, res: Response) {
+	try {
+		const services = await getServices();
+		res.status(200).json({
+			message: 'Lấy danh sách dịch vụ thành công',
+			data: services,
+		});
+	} catch (error: any) {
+		res.status(500).json({ message: error.message });
 	}
 }
