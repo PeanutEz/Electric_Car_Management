@@ -64,7 +64,7 @@ export async function getActiveAuction(
 	auctionId: number,
 ): Promise<Auction | null> {
 	const [rows]: any = await pool.query(
-		`SELECT a.*, p.status as product_status, p.name as product_name
+		`SELECT a.*, p.status as product_status
      FROM auctions a
      JOIN products p ON a.product_id = p.id
      WHERE a.id = ? AND p.status = 'auctioning'`,
@@ -104,10 +104,10 @@ export async function placeBid(
 
 		// 1. Get auction details with lock
 		const [auctionRows]: any = await connection.query(
-			`SELECT a.*, p.status as product_status 
+			`SELECT a.*, p.status as product_status
        FROM auctions a
        JOIN products p ON a.product_id = p.id
-       WHERE a.id = ? 
+       WHERE a.id = ?
        FOR UPDATE`,
 			[auctionId],
 		);
@@ -147,7 +147,7 @@ export async function placeBid(
 
 		// 5. Update auction with new bid
 		await connection.query(
-			`UPDATE auctions 
+			`UPDATE auctions
        SET winner_id = ?, winning_price = ?
        WHERE id = ?`,
 			[userId, bidAmount, auctionId],
@@ -280,19 +280,14 @@ export async function getAuctionRemainingTime(
 	auctionId: number,
 ): Promise<number> {
 	const [rows]: any = await pool.query(
-		`SELECT duration, created_at FROM auctions WHERE id = ?`,
+		`SELECT duration FROM auctions WHERE id = ?`,
 		[auctionId],
 	);
 
 	if (rows.length === 0) return 0;
 
-	const auction = rows[0];
-	const createdAt = new Date(auction.created_at).getTime();
-	const now = Date.now();
-	const elapsed = Math.floor((now - createdAt) / 1000); // seconds
-	const remaining = Math.max(0, auction.duration - elapsed);
-
-	return remaining;
+	// Nếu không có created_at, chỉ trả về duration (không tính thời gian đã trôi qua)
+	return rows[0].duration;
 }
 
 /**
@@ -301,7 +296,7 @@ export async function getAuctionRemainingTime(
 export async function initializeActiveAuctions(): Promise<void> {
 	try {
 		const [auctions]: any = await pool.query(
-			`SELECT a.id, a.duration, a.created_at, a.winner_id, a.winning_price
+			`SELECT a.id, a.duration, a.winner_id, a.winning_price
        FROM auctions a
        JOIN products p ON a.product_id = p.id
        WHERE p.status = 'auctioning'`,
@@ -320,11 +315,6 @@ export async function initializeActiveAuctions(): Promise<void> {
 
 				await startAuctionTimer(auction.id, remainingTime, () => {
 					// Callback when auction expires
-					broadcastAuctionClosed(
-						auction.id,
-						auction.winner_id,
-						auction.winning_price,
-					);
 				});
 
 				console.log(
@@ -347,47 +337,64 @@ export async function initializeActiveAuctions(): Promise<void> {
  * Lấy danh sách các auction liên kết với product có status = 'auctioning'
  */
 export async function getAuctionsForAdmin() {
-    const [rows]: any = await pool.query(
-        `SELECT a.*, p.status as product_status, p.name as product_name
+	const [rows]: any = await pool.query(
+		`SELECT a.*, p.status as product_status, p.name as product_name
          FROM auctions a
          JOIN products p ON a.product_id = p.id
-         WHERE p.status = 'auctioning'`
-    );
-    return rows;
+         WHERE p.status = 'auctioning'`,
+	);
+	return rows;
 }
 
 /**
  * Admin bấm nút bắt đầu đấu giá: set timer, khi hết timer thì đóng đấu giá và cập nhật product
  */
-export async function startAuctionByAdmin(auctionId: number): Promise<{ success: boolean; message: string }> {
-    // Lấy thông tin auction
-    const [rows]: any = await pool.query(
-        `SELECT a.*, p.status as product_status, p.id as product_id
+export async function startAuctionByAdmin(
+	auctionId: number,
+): Promise<{ success: boolean; message: string }> {
+	// Lấy thông tin auction
+	const [rows]: any = await pool.query(
+		`SELECT a.*, p.status as product_status, p.id as product_id
          FROM auctions a
          JOIN products p ON a.product_id = p.id
          WHERE a.id = ? AND p.status = 'auctioning'`,
-        [auctionId]
-    );
-    if (rows.length === 0) {
-        return { success: false, message: 'Auction not found or product not auctioning' };
-    }
-    const auction = rows[0];
-    // Nếu đã có timer thì không set lại
-    if (auctionTimers.has(auctionId)) {
-        return { success: false, message: 'Auction already started' };
-    }
-    // Set timer
-    await startAuctionTimer(auctionId, auction.duration, async () => {
-        // Khi hết thời gian, kiểm tra winner_id và winning_price
-        const [auct]: any = await pool.query('SELECT winner_id, winning_price, product_id FROM auctions WHERE id = ?', [auctionId]);
-        if (auct.length === 0) return;
-        const { winner_id, winning_price, product_id } = auct[0];
-        let newStatus = 'not auctioned';
-        if (winner_id && winning_price) {
-            newStatus = 'auctioned';
-        }
-        await pool.query('UPDATE products SET status = ? WHERE id = ?', [newStatus, product_id]);
-        await pool.query('UPDATE auctions SET status = ? WHERE id = ?', ['ended', auctionId]);
-    });
-    return { success: true, message: 'Auction started, will auto close after duration' };
+		[auctionId],
+	);
+	if (rows.length === 0) {
+		return {
+			success: false,
+			message: 'Auction not found or product not auctioning',
+		};
+	}
+	const auction = rows[0];
+	// Nếu đã có timer thì không set lại
+	if (auctionTimers.has(auctionId)) {
+		return { success: false, message: 'Auction already started' };
+	}
+	// Set timer
+	await startAuctionTimer(auctionId, auction.duration, async () => {
+		// Khi hết thời gian, kiểm tra winner_id và winning_price
+		const [auct]: any = await pool.query(
+			'SELECT winner_id, winning_price, product_id FROM auctions WHERE id = ?',
+			[auctionId],
+		);
+		if (auct.length === 0) return;
+		const { winner_id, winning_price, product_id } = auct[0];
+		let newStatus = 'not auctioned';
+		if (winner_id && winning_price) {
+			newStatus = 'auctioned';
+		}
+		await pool.query('UPDATE products SET status = ? WHERE id = ?', [
+			newStatus,
+			product_id,
+		]);
+		await pool.query('UPDATE auctions SET status = ? WHERE id = ?', [
+			'ended',
+			auctionId,
+		]);
+	});
+	return {
+		success: true,
+		message: 'Auction started, will auto close after duration',
+	};
 }
