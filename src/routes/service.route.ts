@@ -195,23 +195,16 @@ router.get('/packages', authenticateToken, listPackages);
 /**
  * @swagger
  * /api/service:
- *   post:
- *     summary: Tạo mới dịch vụ
+ *   get:
+ *     summary: Lấy danh sách tất cả dịch vụ
  *     tags: [Services]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Service'
  *     responses:
- *       201:
- *         description: Tạo dịch vụ thành công
+ *       200:
+ *         description: Lấy danh sách dịch vụ thành công
  *       500:
  *         description: Lỗi server
  */
-router.post('/', createServiceController);
-
+router.get('/', getAllServicesController);
 
 /**
  * @swagger
@@ -222,10 +215,10 @@ router.post('/', createServiceController);
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
+ *         description: ID của dịch vụ
  *         schema:
  *           type: integer
- *         required: true
- *         description: ID dịch vụ
  *     responses:
  *       200:
  *         description: Lấy dịch vụ thành công
@@ -236,29 +229,82 @@ router.post('/', createServiceController);
  */
 router.get('/:id', getServiceByIdController);
 
-
 /**
  * @swagger
- * /api/service/{id}:
- *   put:
- *     summary: Cập nhật dịch vụ
+ * /api/service:
+ *   post:
+ *     summary: Tạo mới một dịch vụ
  *     tags: [Services]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *         required: true
- *         description: ID dịch vụ
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Service'
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               cost:
+ *                 type: number
+ *               number_of_post:
+ *                 type: integer
+ *               number_of_push:
+ *                 type: integer
+ *               number_of_verify:
+ *                 type: integer
+ *               service_ref:
+ *                 type: string
+ *               product_type:
+ *                 type: string
+ *               duration:
+ *                 type: string
+ *               feature:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Tạo dịch vụ thành công
+ *       500:
+ *         description: Lỗi server
+ */
+router.post('/', createServiceController);
+
+/**
+ * @swagger
+ * /api/service/{id}:
+ *   put:
+ *     summary: Cập nhật dịch vụ theo ID
+ *     tags: [Services]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID của dịch vụ cần cập nhật
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               cost:
+ *                 type: number
+ *               number_of_post:
+ *                 type: integer
+ *               feature:
+ *                 type: string
  *     responses:
  *       200:
- *         description: Cập nhật dịch vụ thành công
+ *         description: Cập nhật thành công
  *       404:
  *         description: Không tìm thấy dịch vụ
  *       500:
@@ -266,23 +312,22 @@ router.get('/:id', getServiceByIdController);
  */
 router.put('/:id', updateServiceController);
 
-
 /**
  * @swagger
  * /api/service/{id}:
  *   delete:
- *     summary: Xóa dịch vụ
+ *     summary: Xóa dịch vụ theo ID
  *     tags: [Services]
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
+ *         description: ID của dịch vụ
  *         schema:
  *           type: integer
- *         required: true
- *         description: ID dịch vụ
  *     responses:
  *       200:
- *         description: Xóa dịch vụ thành công
+ *         description: Xóa thành công
  *       404:
  *         description: Không tìm thấy dịch vụ
  *       500:
@@ -290,20 +335,6 @@ router.put('/:id', updateServiceController);
  */
 router.delete('/:id', deleteServiceController);
 
-
-/**
- * @swagger
- * /api/service:
- *   get:
- *     summary: Lấy tất cả dịch vụ (full info)
- *     tags: [Services]
- *     responses:
- *       200:
- *         description: Lấy danh sách dịch vụ thành công
- *       500:
- *         description: Lỗi server
- */
-router.get('/', getAllServicesController);
 
 
 export default router;
