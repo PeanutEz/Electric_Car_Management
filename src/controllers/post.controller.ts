@@ -300,35 +300,8 @@ export async function createPost(req: Request, res: Response) {
 			});
 		}
 
-		// Parse category từ JSON string
-		// let category;
-		// try {
-		// 	category =
-		// 		typeof postData.category === 'string'
-		// 			? JSON.parse(postData.category)
-		// 			: postData.category;
-		// } catch (error) {
-		// 	return res.status(400).json({
-		// 		message: 'Category phải là JSON hợp lệ',
-		// 	});
-		// }
-
-		// if (!category || !category.id || !category.type) {
-		// 	return res.status(400).json({
-		// 		message: 'Category phải có id và type',
-		// 	});
-		// }
-
 		let imageUrl = '';
 		let imageUrls: string[] = [];
-
-		// Upload ảnh chính nếu có
-		// if (files?.image && files.image[0]) {
-		//   const uploadResult = await uploadService.uploadImage(
-		//     files.image[0].buffer
-		//   );
-		//   imageUrl = uploadResult.secure_url;
-		// }
 
 		// Upload nhiều ảnh nếu có
 		if (files?.images && files.images.length > 0) {

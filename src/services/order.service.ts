@@ -70,14 +70,13 @@ export async function getAllOrderByUserId(
             p.address, p.description, p.product_category_id, p.year, p.image,
             c.type AS category_type, c.slug AS category_slug, c.name AS category_name,
 
-
             p.color, v.seats, v.mileage_km, v.power,
             b.capacity AS battery_capacity, b.health AS battery_health,
             b.chemistry AS battery_chemistry, b.voltage AS battery_voltage, b.dimension AS battery_dimension
           FROM orders o
           INNER JOIN users u ON u.id = o.buyer_id
           INNER JOIN services s ON s.id = o.service_id
-          INNER JOIN auctions a ON a.id = o.product_id
+          INNER JOIN auctions a ON a.product_id = o.product_id
           INNER JOIN products p ON p.id = a.product_id
           INNER JOIN product_categories c ON c.id = p.product_category_id
           LEFT JOIN vehicles v ON v.product_id = p.id
@@ -86,7 +85,7 @@ export async function getAllOrderByUserId(
         `;
 				break;
 
-			// --- CASE POST (sửa để lấy thêm dữ liệu từ cả vehicles & batteries) ---
+			// --- CASE POST ---
 			case 'post':
 				sql = `
           SELECT
@@ -96,11 +95,9 @@ export async function getAllOrderByUserId(
             s.cost AS service_cost, s.name AS service_name, s.description AS service_description,
             s.number_of_post, s.number_of_push, s.feature,
 
-
             p.title AS product_title, p.brand, p.model, p.price AS product_price,
             p.address, p.description, p.product_category_id, p.year, p.image,
             c.type AS category_type, c.slug AS category_slug, c.name AS category_name,
-
 
             p.color, v.seats, v.mileage_km, v.power,
             b.capacity AS battery_capacity, b.health AS battery_health,
@@ -158,7 +155,7 @@ export async function getAllOrderByUserId(
 				id: r.order_id,
 				type: r.type,
 				status: r.status,
-				price: r.price,
+				price: parseFloat(r.price) || 0, // 👈 parse price
 				created_at: r.created_at,
 				updated_at: r.updated_at,
 				buyer: {
@@ -169,7 +166,6 @@ export async function getAllOrderByUserId(
 				},
 			};
 
-			// ⚙️ CASE: POST
 			if (r.type === 'post') {
 				const isVehicle = r.category_type === 'vehicle';
 				const isBattery = r.category_type === 'battery';
@@ -178,7 +174,7 @@ export async function getAllOrderByUserId(
 					id: r.product_id,
 					brand: r.brand,
 					model: r.model,
-					price: r.product_price,
+					price: parseFloat(r.product_price) || 0, // 👈 parse product price
 					address: r.address,
 					description: r.description,
 					category: {
@@ -224,12 +220,11 @@ export async function getAllOrderByUserId(
 						id: r.service_id,
 						name: r.service_name,
 						description: r.service_description,
-						price: r.service_cost,
+						price: parseFloat(r.service_cost) || 0, // 👈 parse service price
 					},
 				};
 			}
 
-			// ⚙️ CASE: AUCTION
 			if (r.type === 'auction') {
 				return {
 					...base,
@@ -244,7 +239,7 @@ export async function getAllOrderByUserId(
 							id: r.product_id,
 							brand: r.brand,
 							model: r.model,
-							price: r.product_price,
+							price: parseFloat(r.product_price) || 0, // 👈 parse product price
 							address: r.address,
 							description: r.description,
 							category: {
@@ -263,19 +258,18 @@ export async function getAllOrderByUserId(
 					},
 					auction: {
 						id: r.auction_id,
-						startingBid: r.starting_price,
-						original_price: r.original_price,
-						buyNowPrice: r.target_price,
-						bidIncrement: r.step,
-						deposit: r.deposit,
+						startingBid: parseFloat(r.starting_price) || 0,
+						original_price: parseFloat(r.original_price) || 0,
+						buyNowPrice: parseFloat(r.target_price) || 0,
+						bidIncrement: parseFloat(r.step) || 0,
+						deposit: parseFloat(r.deposit) || 0,
 						winner: r.winner_id,
-						winning_price: r.winning_price,
+						winning_price: parseFloat(r.winning_price) || 0,
 						note: r.note,
 					},
 				};
 			}
 
-			// ⚙️ CASE: PACKAGE, TOPUP, DEPOSIT
 			if (['package', 'pakage', 'topup', 'deposit'].includes(r.type)) {
 				return {
 					...base,
@@ -284,7 +278,7 @@ export async function getAllOrderByUserId(
 						name: r.service_name,
 						type: r.service_type,
 						description: r.service_description,
-						price: r.service_cost,
+						price: parseFloat(r.service_cost) || 0, // 👈 parse service price
 						feature: r.feature,
 					},
 				};

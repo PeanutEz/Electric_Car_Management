@@ -66,10 +66,7 @@ export const getPaymentInfo = async (req: Request, res: Response) => {
 export const payosWebhookHandler = async (req: Request, res: Response) => {
 	try {
 		const payload = req.body;
-		await pool.query(
-			'INSERT INTO payos_webhooks_parsed (payload) values (?)',
-			[JSON.stringify(payload)],
-		);
+
 		const orderCode = payload.data.orderCode;
 
 		if (!orderCode) {
