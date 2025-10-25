@@ -103,228 +103,14 @@ export async function handlePayOSWebhook(webhookData: any) {
 	}
 }
 
-/**
- * Seller đặt cọc 10% giá product khi có buyer mua xe
- * @param sellerId - ID của seller
- * @param productId - ID của product
- * @param buyerId - ID của buyer
- * @returns Payment URL hoặc order info nếu đủ tiền
- */
-export async function processSellerDeposit(
-	sellerId: number,
-	productId: number,
-	buyerId: number,
-) {
-	const connection = await pool.getConnection();
-
-	try {
-		await connection.beginTransaction();
-
-		// Lấy thông tin product và price
-		const [productRows]: any = await connection.query(
-			'SELECT price, status, created_by FROM products WHERE id = ?',
-			[productId],
-		);
-
-		if (!productRows || productRows.length === 0) {
-			throw new Error('Product không tồn tại');
-		}
-
-		const product = productRows[0];
-
-		// Kiểm tra xem seller có phải là người tạo product không
-		if (product.created_by !== sellerId) {
-			throw new Error('Bạn không phải là chủ sở hữu của product này');
-		}
-
-		// Kiểm tra trạng thái product
-		if (product.status === 'processing') {
-			throw new Error('Product đang trong quá trình xử lý');
-		}
-
-		if (product.status !== 'approved') {
-			throw new Error('Product chưa được duyệt');
-		}
-
-		const productPrice = parseFloat(product.price);
-		const depositAmount = productPrice * 0.1; // 10% giá product
-
-		// Lấy số dư credit của seller
-		const [userRows]: any = await connection.query(
-			'SELECT total_credit FROM users WHERE id = ?',
-			[sellerId],
-		);
-
-		if (!userRows || userRows.length === 0) {
-			throw new Error('User không tồn tại');
-		}
-		const sellerCredit = parseFloat(userRows[0].total_credit);
-		const topupCredit = depositAmount - sellerCredit;
-		console.log(sellerCredit + ' - ' + depositAmount + ' = ' + topupCredit);
-		// Nếu đủ tiền, trừ credit và tạo order
-		if (sellerCredit >= depositAmount) {
-			// Trừ credit của seller
-			await connection.query(
-				'UPDATE users SET total_credit = total_credit - ? WHERE id = ?',
-				[depositAmount, sellerId],
-			);
-
-			// Tạo order code
-			const orderCode = Math.floor(Math.random() * 1000000).toString();
-
-			// Insert vào bảng orders
-			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, seller_id, buyer_id, code, payment_method, product_id, created_at) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-				[
-					'deposit',
-					'PAID',
-					depositAmount,
-					sellerId,
-					buyerId,
-					orderCode,
-					'CREDIT',
-					productId,
-				],
-			);
-
-			// Cập nhật status của product thành "processing"
-			await connection.query(
-				'UPDATE products SET status = ? WHERE id = ?',
-				['processing', productId],
-			);
-
-			await connection.commit();
-
-			return {
-				success: true,
-				paymentMethod: 'CREDIT',
-				orderId: orderResult.insertId,
-				orderCode: orderCode,
-				amount: depositAmount,
-				message: 'Đặt cọc thành công bằng credit',
-			};
-		} else {
-			// Không đủ tiền, tạo payment link PayOS
-			const orderCode = Math.floor(Math.random() * 1000000);
-
-			// Tạo order với status PENDING
-			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, seller_id, buyer_id, code, payment_method, product_id, created_at) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-				[
-					'deposit',
-					'PENDING',
-					depositAmount,
-					sellerId,
-					buyerId,
-					orderCode.toString(),
-					'PAYOS',
-					productId,
-				],
-			);
-
-			await connection.commit();
-
-			// Tạo payment link PayOS
-			const paymentResponse = await payos.paymentRequests.create({
-				orderCode,
-				amount: depositAmount,
-				description: `Đặt cọc 10% cho product #${productId}`,
-				returnUrl: `http://localhost:4001/payment-success?orderId=${orderResult.insertId}`,
-				cancelUrl: 'http://localhost:4001/payment-cancel',
-			});
-
-			return {
-				success: true,
-				paymentMethod: 'PAYOS',
-				orderId: orderResult.insertId,
-				orderCode: orderCode.toString(),
-				amount: depositAmount,
-				topupCredit: topupCredit,
-				checkoutUrl: paymentResponse.checkoutUrl,
-				message: 'Vui lòng thanh toán qua PayOS',
-			};
-		}
-	} catch (error: any) {
-		await connection.rollback();
-		throw new Error(error.message || 'Lỗi khi xử lý đặt cọc');
-	} finally {
-		connection.release();
-	}
-}
-
-/**
- * Callback sau khi thanh toán PayOS thành công cho deposit
- * @param orderId - ID của order
- */
-export async function confirmDepositPayment(orderId: number) {
-	const connection = await pool.getConnection();
-
-	try {
-		await connection.beginTransaction();
-
-		// Lấy thông tin order
-		const [orderRows]: any = await connection.query(
-			'SELECT product_id, status FROM orders WHERE id = ? AND type = ?',
-			[orderId, 'deposit'],
-		);
-
-		if (!orderRows || orderRows.length === 0) {
-			throw new Error('Order không tồn tại');
-		}
-
-		const order = orderRows[0];
-
-		if (order.status === 'PAID') {
-			throw new Error('Order đã được thanh toán');
-		}
-
-		// Cập nhật status của order thành PAID
-		await connection.query('UPDATE orders SET status = ? WHERE id = ?', [
-			'PAID',
-			orderId,
-		]);
-
-		// Cập nhật status của product thành "processing"
-		await connection.query('UPDATE products SET status = ? WHERE id = ?', [
-			'processing',
-			order.product_id,
-		]);
-
-		await connection.commit();
-
-		return {
-			success: true,
-			message: 'Xác nhận thanh toán đặt cọc thành công',
-		};
-	} catch (error: any) {
-		await connection.rollback();
-		throw new Error(error.message || 'Lỗi khi xác nhận thanh toán');
-	} finally {
-		connection.release();
-	}
-}
-
-/**
- * Seller thanh toán phí đấu giá (0.5% giá product)
- * Nếu đủ tiền → Trừ credit, tạo order PAID, update product status = 'auctioning', insert auction
- * Nếu không đủ → Tạo PayOS payment link
- * @param sellerId - ID của seller
- * @param productId - ID của product
- * @param startingPrice - Giá khởi điểm đấu giá
- * @param targetPrice - Giá mong muốn
- * @param duration - Thời gian đấu giá (giờ)
- * @returns Payment result hoặc auction info
- */
 export async function processAuctionFeePayment(
 	sellerId: number,
-	productId: number,
-	starting_price: number,
+	step: number,
 	target_price: number,
 	deposit: number,
-	step: number,
 	note: string,
+	productId: number,
+	starting_price: number,
 ) {
 	const connection = await pool.getConnection();
 
@@ -359,7 +145,7 @@ export async function processAuctionFeePayment(
 
 		const productPrice = parseFloat(product.price);
 		const auctionFee = productPrice * 0.005; // 0.5% giá product
-		const duration = 600; // default 600 seconds
+		const duration = 120; // default 120 seconds
 
 		// Lấy số dư credit của seller
 		const [userRows]: any = await connection.query(
@@ -386,7 +172,7 @@ export async function processAuctionFeePayment(
 
 			// Insert vào bảng orders với type = 'auction_fee'
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, seller_id, code, payment_method, product_id, created_at, service_id) 
+				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id) 
 				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
 				[
 					'auction_fee',
@@ -409,7 +195,7 @@ export async function processAuctionFeePayment(
 			// Insert vào bảng auctions
 			const [auctionResult]: any = await connection.query(
 				`INSERT INTO auctions (product_id, seller_id, starting_price, original_price, target_price, deposit, duration, step, note) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				[
 					productId,
 					sellerId,
@@ -454,8 +240,8 @@ export async function processAuctionFeePayment(
 
 			// Tạo order với status PENDING
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, seller_id, code, payment_method, product_id, created_at, service_id) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
+				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id) 
+				VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
 				[
 					'auction_fee',
 					'PENDING',
@@ -536,7 +322,7 @@ export async function confirmAuctionFeePayment(
 
 		// Lấy thông tin order
 		const [orderRows]: any = await connection.query(
-			'SELECT product_id, seller_id, status, price FROM orders WHERE id = ? AND type = ?',
+			'SELECT product_id, buyer_id, status, price FROM orders WHERE id = ? AND type = ?',
 			[orderId, 'auction_fee'],
 		);
 
@@ -873,6 +659,54 @@ export async function confirmAuctionDepositPayment(
 		throw new Error(
 			error.message || 'Lỗi khi xác nhận đặt cọc tham gia đấu giá',
 		);
+	} finally {
+		connection.release();
+	}
+}
+
+export async function confirmDepositPayment(orderId: number) {
+	const connection = await pool.getConnection();
+
+	try {
+		await connection.beginTransaction();
+
+		// Lấy thông tin order
+		const [orderRows]: any = await connection.query(
+			'SELECT product_id, status FROM orders WHERE id = ? AND type = ?',
+			[orderId, 'deposit'],
+		);
+
+		if (!orderRows || orderRows.length === 0) {
+			throw new Error('Order không tồn tại');
+		}
+
+		const order = orderRows[0];
+
+		if (order.status === 'PAID') {
+			throw new Error('Order đã được thanh toán');
+		}
+
+		// Cập nhật status của order thành PAID
+		await connection.query('UPDATE orders SET status = ? WHERE id = ?', [
+			'PAID',
+			orderId,
+		]);
+
+		// Cập nhật status của product thành "processing"
+		await connection.query('UPDATE products SET status = ? WHERE id = ?', [
+			'processing',
+			order.product_id,
+		]);
+
+		await connection.commit();
+
+		return {
+			success: true,
+			message: 'Xác nhận thanh toán đặt cọc thành công',
+		};
+	} catch (error: any) {
+		await connection.rollback();
+		throw new Error(error.message || 'Lỗi khi xác nhận thanh toán');
 	} finally {
 		connection.release();
 	}

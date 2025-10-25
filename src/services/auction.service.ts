@@ -1,12 +1,22 @@
 import pool from '../config/db';
 import { Auction } from '../models/auction.model';
+import { getIO } from '../config/socket';
 
 // Store active auction timers
 const auctionTimers = new Map<number, NodeJS.Timeout>();
 
 export async function getAllAuctions(): Promise<Auction[]> {
-	const [rows] = await pool.query('SELECT * FROM auctions');
+	const [rows]: any = await pool.query(`SELECT * FROM auctions`);
 	return rows as Auction[];
+}
+
+export async function getAuctionByProductId(productId: number) {
+	const [rows]: any = await pool.query(
+		`SELECT * FROM auctions WHERE product_id = ?`,
+		[productId],
+	);
+	if (rows.length === 0) return null;
+	return rows[0] as Auction;
 }
 
 export async function createAuctionByAdmin(
@@ -153,11 +163,23 @@ export async function placeBid(
 			[userId, bidAmount, auctionId],
 		);
 
+		// Log bid in console
+		const remainingTime = await getAuctionRemainingTime(auctionId);
+		console.log(
+			`💰 NEW BID! Auction ${auctionId} - User ${userId} bid ${bidAmount.toLocaleString(
+				'vi-VN',
+			)} VND (${formatTimeDisplay(remainingTime)} remaining)`,
+		);
+
 		// 6. Check if target price is reached
 		if (bidAmount >= auction.target_price) {
 			// Close auction immediately
 			await closeAuction(auctionId, connection);
 			await connection.commit();
+
+			console.log(
+				`🎉 TARGET PRICE REACHED! Auction ${auctionId} closed - Winner: User ${userId}`,
+			);
 
 			return {
 				success: true,
@@ -192,6 +214,7 @@ export async function placeBid(
 
 /**
  * Close an auction and update product status
+ * Called automatically when timer expires or target price reached
  */
 export async function closeAuction(
 	auctionId: number,
@@ -205,9 +228,9 @@ export async function closeAuction(
 			await conn.beginTransaction();
 		}
 
-		// Get auction and product info
+		// Get auction info
 		const [auctionRows]: any = await conn.query(
-			`SELECT product_id FROM auctions WHERE id = ?`,
+			`SELECT product_id, winner_id, winning_price FROM auctions WHERE id = ?`,
 			[auctionId],
 		);
 
@@ -215,12 +238,17 @@ export async function closeAuction(
 			throw new Error('Auction not found');
 		}
 
-		const productId = auctionRows[0].product_id;
+		const { product_id, winner_id, winning_price } = auctionRows[0];
 
-		// Update product status to 'auctioned'
+		// Update auction status to closed
+		await conn.query(`UPDATE auctions SET status = 'closed' WHERE id = ?`, [
+			auctionId,
+		]);
+
+		// Update product status to 'auctioned' (regardless of winner)
 		await conn.query(
 			`UPDATE products SET status = 'auctioned' WHERE id = ?`,
-			[productId],
+			[product_id],
 		);
 
 		// Clear timer if exists
@@ -233,9 +261,15 @@ export async function closeAuction(
 			await conn.commit();
 		}
 
-		console.log(
-			`Auction ${auctionId} closed, product ${productId} status updated to 'auctioned'`,
-		);
+		// Broadcast closure via Socket.IO
+		const io = getIO();
+		io.of('/auction')
+			.to(`auction_${auctionId}`)
+			.emit('auction:closed', {
+				auctionId,
+				winner_id: winner_id || null,
+				winning_price: winning_price || null,
+			});
 	} catch (error) {
 		if (!connection) {
 			await conn.rollback();
@@ -262,15 +296,95 @@ export async function startAuctionTimer(
 		clearTimeout(auctionTimers.get(auctionId)!);
 	}
 
-	// Set new timer
+	console.log(
+		`⏰ Auction ${auctionId} started - Duration: ${formatTimeDisplay(
+			duration,
+		)}`,
+	);
+
+	let remainingSeconds = duration;
+
+	// Countdown display interval (every second)
+	const countdownInterval = setInterval(() => {
+		remainingSeconds--;
+
+		// Display countdown every 10 seconds, or when < 60 seconds show every second
+		if (remainingSeconds % 10 === 0 || remainingSeconds < 60) {
+			const timeDisplay = formatTimeDisplay(remainingSeconds);
+			if (remainingSeconds < 60) {
+				console.log(
+					`⚠️  Auction ${auctionId} - Time remaining: ${timeDisplay} (ENDING SOON!)`,
+				);
+			} else if (remainingSeconds < 300) {
+				// < 5 minutes
+				console.log(
+					`⏳ Auction ${auctionId} - Time remaining: ${timeDisplay}`,
+				);
+			} else {
+				console.log(
+					`⏰ Auction ${auctionId} - Time remaining: ${timeDisplay}`,
+				);
+			}
+		}
+
+		// Clear interval when time is up
+		if (remainingSeconds <= 0) {
+			clearInterval(countdownInterval);
+		}
+	}, 1000);
+
+	// Set expiration timer
 	const timer = setTimeout(async () => {
-		console.log(`Auction ${auctionId} duration expired`);
+		clearInterval(countdownInterval);
+		console.log(`\n🔔 Auction ${auctionId} TIME'S UP! Closing auction...`);
+
+		// Get final auction state
+		const [finalAuction]: any = await pool.query(
+			`SELECT winner_id, winning_price FROM auctions WHERE id = ?`,
+			[auctionId],
+		);
+
+		const hasWinner =
+			finalAuction.length > 0 &&
+			finalAuction[0].winner_id &&
+			finalAuction[0].winning_price;
+
+		if (hasWinner) {
+			console.log(
+				`✅ Auction ${auctionId} has winner: User ${
+					finalAuction[0].winner_id
+				} with ${finalAuction[0].winning_price.toLocaleString(
+					'vi-VN',
+				)} VND`,
+			);
+		} else {
+			console.log(
+				`⚠️  Auction ${auctionId} ended with NO bids - closing without winner`,
+			);
+		}
+
 		await closeAuction(auctionId);
 		onExpire();
 		auctionTimers.delete(auctionId);
 	}, duration * 1000); // duration in seconds
 
 	auctionTimers.set(auctionId, timer);
+}
+
+/**
+ * Format seconds to readable time (HH:MM:SS or MM:SS)
+ */
+function formatTimeDisplay(seconds: number): string {
+	const hours = Math.floor(seconds / 3600);
+	const minutes = Math.floor((seconds % 3600) / 60);
+	const secs = seconds % 60;
+
+	if (hours > 0) {
+		return `${hours}h ${minutes.toString().padStart(2, '0')}m ${secs
+			.toString()
+			.padStart(2, '0')}s`;
+	}
+	return `${minutes}m ${secs.toString().padStart(2, '0')}s`;
 }
 
 /**
@@ -315,10 +429,17 @@ export async function initializeActiveAuctions(): Promise<void> {
 
 				await startAuctionTimer(auction.id, remainingTime, () => {
 					// Callback when auction expires
+					broadcastAuctionClosed(
+						auction.id,
+						auction.winner_id,
+						auction.winning_price,
+					);
 				});
 
 				console.log(
-					`⏰ Started timer for auction ${auction.id} with ${remainingTime}s remaining`,
+					`✅ Timer initialized for auction ${
+						auction.id
+					} - ${formatTimeDisplay(remainingTime)} remaining`,
 				);
 			} else {
 				// Auction time already expired, close it
@@ -338,7 +459,7 @@ export async function initializeActiveAuctions(): Promise<void> {
  */
 export async function getAuctionsForAdmin() {
 	const [rows]: any = await pool.query(
-		`SELECT a.*, p.status as product_status, p.name as product_name
+		`SELECT a.*, p.status as product_status
          FROM auctions a
          JOIN products p ON a.product_id = p.id
          WHERE p.status = 'auctioning'`,

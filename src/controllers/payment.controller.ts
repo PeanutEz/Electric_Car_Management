@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import {
 	createPayosPayment,
 	getPaymentStatus,
-	processSellerDeposit,
 	confirmDepositPayment,
 	processAuctionFeePayment,
 	confirmAuctionFeePayment,
@@ -276,81 +275,6 @@ export const topUpPaymentController = async (req: Request, res: Response) => {
 };
 
 /**
- * Seller Deposit Payment Controller
- * Body: { product_id: number, buyer_id: number }
- * Seller đặt cọc 10% giá product khi có buyer mua xe
- */
-export const sellerDepositController = async (req: Request, res: Response) => {
-	try {
-		const authHeader = req.headers.authorization;
-		if (!authHeader) {
-			return res.status(401).json({ message: 'Unauthorized' });
-		}
-		const token = authHeader.split(' ')[1];
-		const sellerId = (jwt.decode(token) as any).id;
-
-		const { product_id, buyer_id } = req.body;
-
-		// Validate input
-		if (!product_id || !buyer_id) {
-			return res.status(400).json({
-				success: false,
-				message: 'Missing required fields: product_id, buyer_id',
-			});
-		}
-
-		if (isNaN(product_id) || isNaN(buyer_id)) {
-			return res.status(400).json({
-				success: false,
-				message: 'product_id and buyer_id must be numbers',
-			});
-		}
-
-		// Process seller deposit
-		const result = await processSellerDeposit(
-			sellerId,
-			parseInt(product_id),
-			parseInt(buyer_id),
-		);
-
-		if (result.paymentMethod === 'CREDIT') {
-			// Đủ tiền, đã trừ credit và tạo order
-			return res.status(200).json({
-				success: true,
-				message: result.message,
-				data: {
-					orderId: result.orderId,
-					orderCode: result.orderCode,
-					amount: result.amount,
-					paymentMethod: 'CREDIT',
-				},
-			});
-		} else {
-			// Không đủ tiền, cần thanh toán qua PayOS
-			return res.status(402).json({
-				success: true,
-				needPayment: true,
-				message: result.message,
-				data: {
-					orderId: result.orderId,
-					orderCode: result.orderCode,
-					amount: result.amount,
-					topupCredit: result.topupCredit,
-					checkoutUrl: result.checkoutUrl,
-					paymentMethod: 'PAYOS',
-				},
-			});
-		}
-	} catch (error: any) {
-		console.error('Seller deposit error:', error);
-		return res.status(500).json({
-			success: false,
-			message: error.message || 'Xử lý đặt cọc thất bại',
-		});
-	}
-};
-
-/**
  * Confirm Deposit Payment Controller
  * Callback sau khi thanh toán PayOS thành công
  * Body: { order_id: number }
@@ -407,7 +331,8 @@ export const auctionFeePaymentController = async (
 		const token = authHeader.split(' ')[1];
 		const sellerId = (jwt.decode(token) as any).id;
 
-		const { product_id, starting_price, target_price, deposit, step, note } = req.body;
+		//const { product_id, starting_price, target_price, deposit, step, note } = req.body;
+		const { bidIncrement, buyNowPrice, deposit, note, product_id, startingBid } = req.body;
 
 		// Validate input
 		if (!product_id) {
@@ -417,29 +342,29 @@ export const auctionFeePaymentController = async (
 			});
 		}
 
-		if (isNaN(starting_price) || isNaN(target_price)) {
+		if (isNaN(startingBid) || isNaN(buyNowPrice) || isNaN(deposit) || isNaN(bidIncrement)) {
 			return res.status(400).json({
 				success: false,
-				message: 'starting_price and target_price must be numbers',
+				message: 'startingBid, buyNowPrice, deposit and bidIncrement must be numbers',
 			});
 		}
 
-		if (starting_price >= target_price) {
+		if (startingBid >= buyNowPrice) {
 			return res.status(400).json({
 				success: false,
-				message: 'starting_price must be less than target_price',
+				message: 'startingBid must be less than buyNowPrice',
 			});
 		}
 
 		// Process auction fee payment
 		const result = await processAuctionFeePayment(
 			sellerId,
-			parseInt(product_id),
-			starting_price,
-			target_price,
+			bidIncrement,
+			buyNowPrice,
 			deposit,
-			step,
-			note
+			note,
+			parseInt(product_id),
+			startingBid,
 		);
 
 		if (result.paymentMethod === 'CREDIT' && !result.needPayment) {

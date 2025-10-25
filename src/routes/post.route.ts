@@ -7,7 +7,6 @@ import {
 	createPost,
 	searchForPosts,
 	getPostApprovedController,
-	deletePost,
 	editPost
 } from '../controllers/post.controller';
 import {
@@ -795,8 +794,5 @@ router.post(
  *         description: Lỗi server
  */
 router.put('/update-post', editPost);
-
-
-router.get('/delete-post/:id', deletePost);
 
 export default router;

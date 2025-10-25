@@ -85,10 +85,10 @@ router.get('/get-transaction-detail',  authenticateToken, getOrderTransactionDet
 
 /**
  * @swagger
- * /api/order/all:
+ * /api/order/order-by-user:
  *   get:
  *     summary: Lấy tất cả đơn hàng của user (lọc theo status, type, orderId)
- *     tags: [Transaction]
+ *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -129,15 +129,14 @@ router.get('/get-transaction-detail',  authenticateToken, getOrderTransactionDet
  *       500:
  *         description: Lỗi server
  */
-router.get('/all', authenticateToken, getAllOrderByUserIdController);
-
+router.get('/order-by-user', authenticateToken, getAllOrderByUserIdController);
 
 /**
  * @swagger
  * /api/order/{id}:
  *   get:
  *     summary: Lấy chi tiết đơn hàng theo id
- *     tags: [Transaction]
+ *     tags: [Order]
  *     parameters:
  *       - in: path
  *         name: id

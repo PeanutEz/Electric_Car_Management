@@ -1,6 +1,6 @@
 import Router from 'express';
 import { getAllAuctions } from '../services/auction.service';
-import { getAuctionsForAdminController, startAuctionByAdminController } from '../controllers/auction.controller';
+import { getAuctionsForAdminController, startAuctionByAdminController,getAuctionByProductIdController  } from '../controllers/auction.controller';
 
 const router = Router();
 /**
@@ -57,7 +57,68 @@ router.get('/get-all', getAllAuctions);
 
 /**
  * @swagger
- * /api/auction/admin-list:
+ * /api/auction/get-by-product:
+ *   get:
+ *     summary: Lấy thông tin phiên đấu giá theo product_id
+ *     description: Trả về thông tin phiên đấu giá tương ứng với product_id được truyền vào qua query.
+ *     tags:
+ *       - Auctions
+ *     parameters:
+ *       - in: query
+ *         name: product_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID của sản phẩm cần lấy phiên đấu giá
+ *     responses:
+ *       200:
+ *         description: Lấy thông tin phiên đấu giá thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Lấy thông tin phiên đấu giá thành công
+ *                 data:
+ *                   $ref: '#/components/schemas/Auction'
+ *       400:
+ *         description: Thiếu product_id hoặc không hợp lệ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: productId is required
+ *       404:
+ *         description: Không tìm thấy phiên đấu giá
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Auction not found
+ *       500:
+ *         description: Lỗi máy chủ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal server error
+ */
+router.get('/get-by-product', getAuctionByProductIdController);
+
+/**
+ * @swagger
+ * /api/auction/active:
  *   get:
  *     summary: Lấy danh sách các phiên đấu giá có product đang auctioning (cho admin)
  *     tags: [Auctions]
@@ -78,7 +139,7 @@ router.get('/get-all', getAllAuctions);
  *       500:
  *         description: Lỗi server
  */
-router.get('/admin-list', getAuctionsForAdminController);
+router.get('/active', getAuctionsForAdminController);
 
 /**
  * @swagger

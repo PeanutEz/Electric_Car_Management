@@ -104,7 +104,7 @@ batteries
 ## 📦 Table: `auctions`
 id | product_id | seller_id | starting_price | original_price | target_price | deposit | winner_id | winning_price | duration
 -- | ----------- | ---------- | --------------- | --------------- | ------------- | -------- | ---------- | -------------- | --------
-1  | 2           | 1          | 20000.00        | 30000.00        | 400000.00     | 5000.00  | (NULL)     | (NULL)         | 0
+1  | 2           | 1          | 20000.00        | 30000.00        | 400000.00     | 5000.00  | (NULL)     | (NULL)         | 300
 
 
 auction_members
