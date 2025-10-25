@@ -202,7 +202,7 @@ export async function checkAndProcessPostPayment(
 			// ✅ Sửa lỗi ở đây: thêm đúng số lượng value (9 cột, 9 dấu ?)
 			const orderCode = Math.floor(Math.random() * 1000000);
 			const [row]: any = await conn.query(
-				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
 				[
 					orderCode,
 					'post',
@@ -213,6 +213,7 @@ export async function checkAndProcessPostPayment(
 					'PAID',
 					'CREDIT',
 					new Date(), // ✅ thay cho NOW() để khớp số lượng
+					'PENDING'
 				],
 			);
 
@@ -248,7 +249,7 @@ export async function checkAndProcessPostPayment(
 
 			// ✅ Sửa câu INSERT tương tự ở đây (đủ 9 giá trị)
 			await pool.query(
-				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
 				[
 					orderCode,
 					'post',
@@ -259,6 +260,7 @@ export async function checkAndProcessPostPayment(
 					'PENDING',
 					'PAYOS',
 					new Date(),
+					'PENDING'
 				],
 			);
 
@@ -599,6 +601,8 @@ export async function processServicePayment(orderCode: string) {
 			orderCode,
 		]);
 
+		await pool.query(`update order set tracking = 'SUCCESS' where code = ?`, [orderCode]);
+
 		// Cộng tiền vào total_credit
 		await pool.query(
 			'update users set total_credit = total_credit + ? where id = ?',
@@ -638,6 +642,8 @@ export async function processServicePayment(orderCode: string) {
 			'CANCELLED',
 			orderCode,
 		]);
+
+		await pool.query(`update order set tracking = 'FAILED' where code = ?`, [orderCode]);
 
 		return {
 			user: await getUserById(userId),
@@ -756,7 +762,7 @@ export async function processPackagePayment(
 			// Tạo order để tracking (PAID ngay)
 			const orderCode = Math.floor(Math.random() * 1000000);
 			const [orderResult]: any = await conn.query(
-				'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
+				'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
 				[
 					orderCode,
 					'package',
@@ -765,6 +771,7 @@ export async function processPackagePayment(
 					serviceCost,
 					'PAID',
 					'CREDIT',
+					'PENDING'
 				],
 			);
 
@@ -793,7 +800,7 @@ export async function processPackagePayment(
 			// Tạo order với status PENDING
 			const orderCode = Math.floor(Math.random() * 1000000);
 			await pool.query(
-				'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
+				'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
 				[
 					orderCode,
 					'package',
@@ -802,6 +809,7 @@ export async function processPackagePayment(
 					serviceCost,
 					'PENDING',
 					'PAYOS',
+					'PENDING'
 				],
 			);
 
@@ -894,7 +902,7 @@ export async function processTopUpPayment(
 		// 3. Create order with PENDING status
 		const orderCode = Math.floor(Math.random() * 1000000);
 		const [orderResult]: any = await pool.query(
-			'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
+			'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
 			[
 				orderCode,
 				'topup', // type = 'topup' để phân biệt với package/post
@@ -903,6 +911,7 @@ export async function processTopUpPayment(
 				amount,
 				'PENDING',
 				'PAYOS',
+				'PENDING'
 			],
 		);
 

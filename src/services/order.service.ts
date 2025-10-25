@@ -1,4 +1,4 @@
-import pool  from '../config/db';
+import pool from '../config/db';
 
 export async function getOrdersByUserIdAndCode(
 	userId: number,
@@ -65,7 +65,7 @@ export async function getOrderDetail(orderId: number) {
 //             s.number_of_post, s.number_of_push, s.feature,
 //             a.id AS auction_id, a.starting_price, a.original_price, a.target_price,
 //             a.deposit, a.winner_id, a.winning_price, a.step, a.note,
-           
+
 //             p.title AS product_title, p.brand, p.model, p.price AS product_price,
 //             p.address, p.description, p.product_category_id, p.year, p.image,
 //             c.type AS category_type, c.slug AS category_slug, c.name AS category_name,
@@ -373,9 +373,9 @@ export async function getAllOrderByUserId(
 
 		let sql = '';
 
-switch ((type || '').toLowerCase()) {
-  case 'auction':
-    sql = `
+		switch ((type || '').toLowerCase()) {
+			case 'auction':
+				sql = `
       SELECT
         o.id AS order_id, o.type, o.status, o.price, o.service_id, o.product_id, o.buyer_id,
         o.created_at, o.code AS order_code, o.payment_method, o.updated_at,
@@ -394,17 +394,17 @@ switch ((type || '').toLowerCase()) {
       ORDER BY o.created_at DESC
       LIMIT ${page_size} OFFSET ${offset};
     `;
-    break;
+				break;
 
-  case 'post':
-    sql = `
+			case 'post':
+				sql = `
       SELECT
         o.id AS order_id, o.type, o.status, o.price, o.service_id, o.product_id, o.buyer_id,
         o.created_at, o.code AS order_code, o.payment_method, o.updated_at,
         u.full_name, u.email, u.phone,
         s.cost AS service_cost, s.name AS service_name, s.description AS service_description,
         s.number_of_post, s.number_of_push, s.feature,
-        p.title AS product_title, p.brand, p.model, p.price AS product_price,
+        p.title AS product_title, p.brand, p.model, p.price AS product_price, p.status as product_status,
         p.address, p.description, p.product_category_id, p.year, p.image,
         c.type AS category_type, c.slug AS category_slug, c.name AS category_name,
         p.color, v.seats, v.mileage_km, v.power,
@@ -414,10 +414,10 @@ switch ((type || '').toLowerCase()) {
       ORDER BY o.created_at DESC
       LIMIT ${page_size} OFFSET ${offset};
     `;
-    break;
+				break;
 
-  default:
-    sql = `
+			default:
+				sql = `
       SELECT
         o.id AS order_id, o.type, o.status, o.price, o.service_id, o.product_id, o.buyer_id,
         o.created_at, o.code AS order_code, o.payment_method, o.updated_at,
@@ -428,8 +428,8 @@ switch ((type || '').toLowerCase()) {
       ORDER BY o.created_at DESC
       LIMIT ${page_size} OFFSET ${offset};
     `;
-    break;
-}
+				break;
+		}
 
 		// ✅ Chạy song song cả 2 query
 		const [[{ total }]]: any = await pool.query(countSql);
@@ -475,25 +475,54 @@ switch ((type || '').toLowerCase()) {
 
 				const productExtra = isVehicle
 					? {
-							color: r.color,
-							seats: r.seats,
-							mileage: r.mileage_km ? `${r.mileage_km} km` : null,
-							power: r.power,
-							battery_capacity: r.battery_capacity,
-							is_verified: !!r.is_verified,
-					  }
+						color: r.color,
+						seats: r.seats,
+						mileage: r.mileage_km ? `${r.mileage_km} km` : null,
+						power: r.power,
+						battery_capacity: r.battery_capacity,
+						is_verified: !!r.is_verified,
+					}
 					: isBattery
-					? {
+						? {
 							capacity: r.battery_capacity,
 							health: r.battery_health,
 							chemistry: r.battery_chemistry,
 							voltage: r.battery_voltage,
 							dimension: r.battery_dimension,
-					  }
-					: {};
+						}
+						: {};
+
+				// status của post 
+				let finalStatus = r.status.toLowerCase(); // Mặc định theo order.status
+
+				if (r.status.toLowerCase() === 'pending') {
+					finalStatus = 'pending';
+				} else if (r.status.toLowerCase() === 'paid') {
+					const normalizedStatus = r.product_status.toLowerCase()
+						? r.product_status.toString().trim().toLowerCase()
+						: '';
+
+					switch (normalizedStatus) {
+						case 'pending':
+							finalStatus = 'processing';
+							break;
+						case 'approved':
+						case 'auctioning':
+						case 'auctioned':
+							finalStatus = 'success';
+							break;
+						case 'rejected':
+							finalStatus = 'fail';
+							break;
+						default:
+							finalStatus = r.status;
+					}
+				}
+				// status của post
 
 				return {
 					...base,
+					status: finalStatus, // 👈 Ghi đè lại status tại đây
 					post: {
 						id: r.product_id,
 						title: r.product_title,

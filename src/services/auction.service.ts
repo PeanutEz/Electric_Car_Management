@@ -513,6 +513,8 @@ export async function startAuctionByAdmin(
 			'ended',
 			auctionId,
 		]);
+
+		
 	});
 	return {
 		success: true,

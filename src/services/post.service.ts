@@ -615,6 +615,9 @@ export async function updatePostByAdmin(
 				WHERE id = ?;
 			`;
 			params = [reason || 'Không có lý do', id];
+
+            await pool.query(`update orders set tracking = 'PROCESSING' where product_id = ?`, [id]);
+
 		} else if (post.reject_count === 1 && post.is_finally_rejected === 0) {
 			query = `
 				UPDATE products
@@ -626,6 +629,10 @@ export async function updatePostByAdmin(
 				WHERE id = ?;
 			`;
 			params = [reason || 'Không có lý do', id];
+
+		   await pool.query(`update orders set tracking = 'FAILED' where product_id = ?`, [id]);
+
+
 		} else if (post.reject_count >= 2 && post.is_finally_rejected === 1) {
 			throw new Error('Hành động bị nghi ngờ tấn công hệ thống');
 		}
@@ -636,6 +643,8 @@ export async function updatePostByAdmin(
 				updated_at = NOW()
 			WHERE id = ?;
 		`;
+
+		await pool.query(`update orders set tracking = 'SUCCESS' where product_id = ?`, [id]);
 		params = [id];
 	} else {
 		throw new Error('Trạng thái không hợp lệ');

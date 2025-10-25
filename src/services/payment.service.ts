@@ -158,8 +158,8 @@ export async function processAuctionFeePayment(
 
 			// Insert vào bảng orders với type = 'auction_fee'
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
+				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
+				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
 				[
 					'auction',
 					'PAID',
@@ -169,6 +169,7 @@ export async function processAuctionFeePayment(
 					'CREDIT',
 					productId,
 					17,
+					'AUCTION_PROCESSING'
 				],
 			);
 
@@ -226,8 +227,8 @@ export async function processAuctionFeePayment(
 
 			// Tạo order với status PENDING
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id) 
-				VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
+				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
+				VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
 				[
 					'auction',
 					'PENDING',
@@ -237,6 +238,7 @@ export async function processAuctionFeePayment(
 					'PAYOS',
 					productId,
 					17,
+					'PENDING'
 				],
 			);
 
@@ -338,6 +340,11 @@ export async function confirmAuctionFeePayment(
 		// Cập nhật status của order thành PAID
 		await connection.query('UPDATE orders SET status = ? WHERE id = ?', [
 			'PAID',
+			orderId,
+		]);
+
+		await connection.query('UPDATE orders SET tracking = ? WHERE id = ?', [
+			'AUCTION_PROCESSING',
 			orderId,
 		]);
 
