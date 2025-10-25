@@ -228,7 +228,7 @@ export async function paginatePosts(
 		query.concat(` and p.year = ${year} `);
 	}
 
-    query += 'ORDER BY p.updated_at desc, p.id desc LIMIT ? OFFSET ?';
+	query += 'ORDER BY p.updated_at desc, p.id desc LIMIT ? OFFSET ?';
 
 
 	const [rows] = await pool.query(query, [limit, offset]);
@@ -660,7 +660,7 @@ export async function updatePostByAdmin(
 
 		// Lưu notification vào database
 		const notification = await notificationService.createNotification({
-			user_id: post.created_by, 
+			user_id: post.created_by,
 			post_id: id,
 			message: notificationMessage,
 		});
@@ -742,30 +742,30 @@ export async function createNewPost(
 			throw new Error('Invalid category ID');
 		}
 
-		// const [result] = await conn.query(
-		// 	'INSERT INTO products (product_category_id, brand, model, price, year,color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority, previousOwners) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)',
-		// 	[
-		// 		category_id,
-		// 		brand,
-		// 		model,
-		// 		price,
-		// 		year,
-		// 		color,
-		// 		warranty,
-		// 		description,
-		// 		address,
-		// 		title,
-		// 		image,
-		// 		'pending', // trạng thái mặc định là 'pending'
-		// 		userId,
-		// 		now,
-		// 		endDate,
-		// 		1, // priority mặc định là 1
-		// 		previousOwners,
-		// 	],
-		// );
+		const [result] = await conn.query(
+			'INSERT INTO products (product_category_id, brand, model, price, year, color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority, previousOwners) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			[
+				category_id,
+				brand,
+				model,
+				price,
+				year,
+				color,
+				warranty,
+				description,
+				address,
+				title,
+				image,
+				'pending',
+				userId,
+				now,
+				endDate,
+				1,
+				previousOwners,
+			],
+		);
 
-		
+
 
 		const insertId = (result as any).insertId;
 
@@ -839,7 +839,7 @@ export async function updateUserPost(
 		'SELECT type as category_type FROM product_categories WHERE id = ?',
 		[product_category_id],
 	);
-	
+
 	const category_type = rows[0]?.category_type;
 	if (rows.length === 0) {
 		throw new Error('Invalid category ID');
@@ -919,7 +919,7 @@ export async function updateUserPost(
 				id,
 			],
 		);
-	} 
+	}
 	else if (category_type === 'battery') {
 		const {
 			brand,
