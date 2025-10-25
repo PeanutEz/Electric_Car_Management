@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import {
 	createAuctionByAdmin,
-	getAllAuctions,
 	getAuctionsForAdmin,
 	startAuctionByAdmin,
 	getAuctionByProductId
@@ -76,20 +75,6 @@ export async function createAuction(req: Request, res: Response) {
 	}
 }
 
-export async function getAuctions(req: Request, res: Response) {
-	try {
-		const auctions = await getAllAuctions();
-		res.status(200).json({
-			message: 'Lấy danh sách phiên đấu giá thành công',
-			data: auctions,
-		});
-	} catch (error: any) {
-		res.status(500).json({
-			message: error.message,
-		});
-	}
-}
-
 export async function getAuctionByProductIdController(req: Request, res: Response) {
 	try {
 		const productId = parseInt(req.query.product_id as string);
@@ -136,7 +121,7 @@ export async function startAuctionByAdminController(
 			return res.status(400).json({ message: 'auctionId is required' });
 		const result = await startAuctionByAdmin(Number(auctionId));
 		if (result.success) {
-			res.status(200).json({ message: result.message });
+			res.status(200).json({ message: result.message, data: result.data });
 		} else {
 			res.status(400).json({ message: result.message });
 		}

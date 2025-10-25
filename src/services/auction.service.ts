@@ -1,14 +1,12 @@
 import pool from '../config/db';
 import { Auction } from '../models/auction.model';
 import { getIO } from '../config/socket';
+import { create } from 'domain';
 
 // Store active auction timers
 const auctionTimers = new Map<number, NodeJS.Timeout>();
 
-export async function getAllAuctions(): Promise<Auction[]> {
-	const [rows]: any = await pool.query(`SELECT * FROM auctions`);
-	return rows as Auction[];
-}
+
 
 export async function getAuctionByProductId(productId: number) {
 	const [rows]: any = await pool.query(
@@ -222,6 +220,13 @@ export async function closeAuction(
 ): Promise<void> {
 	const conn = connection || (await pool.getConnection());
 	const shouldRelease = !connection;
+	const [rows]: any = await pool.query(
+		`SELECT a.*, p.status as product_status, p.id as product_id, p.created_by
+         FROM auctions a
+         JOIN products p ON a.product_id = p.id
+         WHERE a.id = ? AND p.status = 'auctioning'`,
+		[auctionId],
+	);
 
 	try {
 		if (!connection) {
@@ -244,6 +249,11 @@ export async function closeAuction(
 		await conn.query(`UPDATE products SET status = 'auctioned' WHERE id = ?`, [
 			auctionId,
 		]);
+
+		await pool.query(
+				`UPDATE orders SET tracking = 'AUCTION_SUCCESS' where status = 'PAID' and type = 'auction' and product_id = ? and buyer_id = ?`,
+				[rows[0].product_id, rows[0].created_by],
+			);
 
 		// Update product status to 'auctioned' (regardless of winner)
 		await conn.query(
@@ -291,6 +301,7 @@ export async function startAuctionTimer(
 	duration: number,
 	onExpire: () => void,
 ): Promise<void> {
+
 	// Clear existing timer if any
 	if (auctionTimers.has(auctionId)) {
 		clearTimeout(auctionTimers.get(auctionId)!);
@@ -305,7 +316,7 @@ export async function startAuctionTimer(
 	let remainingSeconds = duration;
 
 	// Countdown display interval (every second)
-	const countdownInterval = setInterval(() => {
+	const countdownInterval = setInterval(async () => {
 		remainingSeconds--;
 
 		// Display countdown every 10 seconds, or when < 60 seconds show every second
@@ -326,13 +337,12 @@ export async function startAuctionTimer(
 				);
 			}
 		}
-
 		// Clear interval when time is up
 		if (remainingSeconds <= 0) {
 			clearInterval(countdownInterval);
 		}
 	}, 1000);
-
+   
 	// Set expiration timer
 	const timer = setTimeout(async () => {
 		clearInterval(countdownInterval);
@@ -367,7 +377,7 @@ export async function startAuctionTimer(
 		onExpire();
 		auctionTimers.delete(auctionId);
 	}, duration * 1000); // duration in seconds
-
+   
 	auctionTimers.set(auctionId, timer);
 }
 
@@ -472,7 +482,7 @@ export async function getAuctionsForAdmin() {
  */
 export async function startAuctionByAdmin(
 	auctionId: number,
-): Promise<{ success: boolean; message: string }> {
+) {
 	// Lấy thông tin auction
 	const [rows]: any = await pool.query(
 		`SELECT a.*, p.status as product_status, p.id as product_id
@@ -516,8 +526,10 @@ export async function startAuctionByAdmin(
 
 		
 	});
+	const [result]: any = await pool.query('select * from auctions a inner join products p on a.product_id = p.id where a.id = ?', [auctionId]);
 	return {
 		success: true,
 		message: 'Auction started, will auto close after duration',
+		data: result[0],
 	};
 }

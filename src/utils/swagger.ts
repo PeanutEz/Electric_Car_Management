@@ -41,5 +41,18 @@ const options = {
 const specs = swaggerJsdoc(options);
 
 export function setupSwagger(app: Express) {
-	app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+	app.use(
+		'/api-docs',
+		swaggerUi.serve,
+		swaggerUi.setup(specs, {
+			explorer: true, // Cho phép bật explorer mode
+			swaggerOptions: {
+				filter: true, // ✅ Hiển thị ô search API
+				displayRequestDuration: true, // Hiển thị thời gian thực thi
+				// docExpansion: 'none', // Collapse tất cả API khi load
+				persistAuthorization: true, // Giữ lại token JWT khi reload trang
+			},
+			customSiteTitle: 'Electric Car Management API Docs',
+		}),
+	);
 }

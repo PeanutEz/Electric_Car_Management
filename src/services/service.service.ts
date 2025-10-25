@@ -213,7 +213,7 @@ export async function checkAndProcessPostPayment(
 					'PAID',
 					'CREDIT',
 					new Date(), // ✅ thay cho NOW() để khớp số lượng
-					'PENDING'
+					'PROCESSING'
 				],
 			);
 
@@ -621,10 +621,28 @@ export async function processServicePayment(orderCode: string) {
 
 		if (orderType === 'topup') {
 			message = `Nạp tiền thành công ${orderPrice} VND vào tài khoản.`;
-		} else if (orderType === null) {
+			await pool.query('update orders set tracking = ? where code = ?', [
+				'SUCCESS',
+				orderCode,
+			]);
+		} else if (orderType === null || orderType === 'post') {
 			message = 'Thanh toán thành công.';
+			await pool.query('update orders set tracking = ? where code = ?', [
+				'SUCCESS',
+				orderCode,
+			]);
 		} else if (orderType === 'package') {
 			message = 'Thanh toán package thành công.';
+			await pool.query('update orders set tracking = ? where code = ?', [
+				'SUCCESS',
+				orderCode,
+			]);
+		} else if (orderType === 'auction') {
+			message = 'Thanh toán dịch vụ đấu giá thành công.';
+			await pool.query('update orders set tracking = ? where code = ?', [
+				'SUCCESS',
+				orderCode,
+			]);
 		}
 
 		return {
@@ -771,7 +789,7 @@ export async function processPackagePayment(
 					serviceCost,
 					'PAID',
 					'CREDIT',
-					'PENDING'
+					'SUCCESS'
 				],
 			);
 

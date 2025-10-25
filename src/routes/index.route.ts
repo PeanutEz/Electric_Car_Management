@@ -12,6 +12,7 @@ import AdminRouter from './admin.route';
 import ChatRouter from './chat.route';
 import NotificationRouter from './notification.route';
 import AuctionRouter from './auction.route';
+import PackageRouter from './package.route';
 
 
 const routes = Router();
@@ -29,5 +30,6 @@ routes.use('/api/admin', AdminRouter);
 routes.use('/api/chat', ChatRouter);
 routes.use('/api/notification', NotificationRouter);
 routes.use('/api/auction', AuctionRouter);
+routes.use('/api/package', PackageRouter);
 
 export default routes;

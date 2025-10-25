@@ -1,5 +1,5 @@
 import Router from 'express';
-import { getOrdersByUserIdAndCodeController, getOrderTransactionDetail, getAllOrderByUserIdController,getOrderDetailController } from '../controllers/order.controller';
+import { getOrdersByUserIdAndCodeController, getOrderTransactionDetail, getAllOrderByUserIdController,getOrderDetailController, getAllOrdersController } from '../controllers/order.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 const router = Router();
 
@@ -10,6 +10,59 @@ const router = Router();
  *   description: API quản lý giao dịch
  */
 
+
+/**
+ * @swagger
+ * /api/order/get-all:
+ *   get:
+ *     summary: Lấy tất cả đơn hàng
+ *     description: API này trả về danh sách tất cả đơn hàng trong hệ thống.
+ *     tags:
+ *       - Orders
+ *     responses:
+ *       200:
+ *         description: Lấy tất cả đơn hàng thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Lấy tất cả đơn hàng thành công
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 1
+ *                       user_id:
+ *                         type: integer
+ *                         example: 12
+ *                       total_price:
+ *                         type: number
+ *                         example: 1500000
+ *                       tracking:
+ *                         type: string
+ *                         example: Đang xử lý
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                         example: 2025-10-25T14:30:00Z
+ *       500:
+ *         description: Lỗi máy chủ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal Server Error
+ */
+router.get('/get-all', getAllOrdersController);
 
 router.post('/verify', authenticateToken,getOrdersByUserIdAndCodeController);
 
@@ -87,13 +140,13 @@ router.get('/get-transaction-detail',  authenticateToken, getOrderTransactionDet
  * @swagger
  * /api/order/order-by-user:
  *   get:
- *     summary: Lấy tất cả đơn hàng của user (lọc theo status, type, orderId)
+ *     summary: Lấy tất cả đơn hàng của user (lọc theo tracking, type, orderId)
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: status
+ *         name: tracking
  *         schema:
  *           type: string
  *         required: false

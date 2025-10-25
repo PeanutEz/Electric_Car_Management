@@ -4,6 +4,7 @@ import {
 	getTransactionDetail,
 	getAllOrderByUserId,
 	getOrderDetail,
+	getAllOrders
 } from '../services/order.service';
 import jwt from 'jsonwebtoken';
 
@@ -33,6 +34,19 @@ export async function getOrdersByUserIdAndCodeController(
 	}
 }
 
+export async function getAllOrdersController(req: Request, res: Response) {
+	try {
+		const orders = await getAllOrders();
+		res.status(200).json({
+			message: 'Lấy tất cả đơn hàng thành công',
+			data: orders,
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
+		});
+	}
+}
 
 export async function getOrderTransactionDetail(req: Request, res: Response) {
 	try {
@@ -104,7 +118,7 @@ export async function getAllOrderByUserIdController(
 		const userId = id;
 
 		// 📥 Lấy params từ query
-		const { status, type, orderId, page, page_size } = req.query;
+		const { tracking, type, orderId, page, page_size } = req.query;
 
 		// 🔢 Parse phân trang
 		const parsedPage = page ? Math.max(1, Number(page)) : 1;
@@ -113,7 +127,7 @@ export async function getAllOrderByUserIdController(
 		// ⚙️ Gọi service
 		const orders = await getAllOrderByUserId(
 			userId,
-			status ? String(status) : undefined,
+			tracking ? String(tracking) : undefined,
 			type ? String(type) : undefined,
 			orderId ? Number(orderId) : undefined,
 			parsedPage,

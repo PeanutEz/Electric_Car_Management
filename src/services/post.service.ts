@@ -778,6 +778,11 @@ export async function createNewPost(
 
 		const insertId = (result as any).insertId;
 
+		await conn.query(
+			'UPDATE orders SET product_id = ? order by id DESC LIMIT 1',
+			[insertId],
+		);
+
 		// Lưu các ảnh phụ vào bảng product_imgs
 		if (images && Array.isArray(images) && images.length > 0) {
 			for (const imageUrl of images) {

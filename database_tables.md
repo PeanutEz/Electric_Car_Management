@@ -17,18 +17,16 @@
 
 ---
 ## 📦 Table: `services`
-| ID | Name                                   | Type    | Cost   | Number_of_post | Number_of_push | Number_of_verify | Service_ref | Product_type |
-| -- | -------------------------------------- | ------- | ------ | -------------- | -------------- | ---------------- | ----------- | ------------ |
-| 1  | Đăng post cho vehicle có phí           | post    | 50000  | 1              | 0              | 0                | 1           | vehicle      |
-| 2  | Đăng post cho battery có phí           | post    | 50000  | 1              | 0              | 0                | 2           | battery      |
-| 3  | Đẩy post cho vehicle có phí            | push    | 50000  | 0              | 1              | 0                | 3           | vehicle      |
-| 4  | Đẩy post cho battery có phí            | push    | 50000  | 0              | 1              | 0                | 4           | battery      |
-| 5  | Kiểm duyệt cho vehicle có phí          | verify  | 50000  | 0              | 0              | 1                | 5           | vehicle      |
-| 6  | Kiểm duyệt cho battery có phí          | verify  | 50000  | 0              | 0              | 1                | 6           | battery      |
-| 7  | Gói Pro                                | package | 100000 | 3              | 3              | 0                | 1,3           | vehicle      |
-| 8  | Gói Enterprise                         | package | 300000 | 5              | 5              | 0                | 1,3         | vehicle      |
-| 9  | Gói Pro                                | package | 100000 | 3              | 3              | 0                | 2,4           | battery      |
-| 10 | Gói Enterprise                         | package | 300000 | 5              | 5              | 0                | 2,4         | battery      |
+| ID | Name                                   | Type    | Cost   | Number_of_post | Number_of_push | Service_ref | Product_type |
+| -- | -------------------------------------- | ------- | ------ | -------------- | -------------- | ----------- | ------------ |
+| 1  | Đăng post cho vehicle có phí           | post    | 50000  | 1              | 0              | 1           | vehicle      |
+| 2  | Đăng post cho battery có phí           | post    | 50000  | 1              | 0              | 2           | battery      |
+| 3  | Đẩy post cho vehicle có phí            | push    | 50000  | 0              | 1              | 3           | vehicle      |
+| 4  | Đẩy post cho battery có phí            | push    | 50000  | 0              | 1              | 4           | battery      |
+| 7  | Gói Pro                                | package | 100000 | 3              | 3              | 1,3           | vehicle      |
+| 8  | Gói Enterprise                         | package | 300000 | 5              | 5              | 1,3         | vehicle      |
+| 9  | Gói Pro                                | package | 100000 | 3              | 3              | 2,4           | battery      |
+| 10 | Gói Enterprise                         | package | 300000 | 5              | 5              | 2,4         | battery      |
 
 
 

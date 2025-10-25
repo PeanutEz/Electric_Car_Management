@@ -1,7 +1,6 @@
 import Router from 'express';
-import { getAllAuctions } from '../services/auction.service';
 import { getAuctionsForAdminController, startAuctionByAdminController,getAuctionByProductIdController  } from '../controllers/auction.controller';
-
+import { listAuctions } from '../controllers/auc.controller';
 const router = Router();
 /**
  * @swagger
@@ -53,7 +52,7 @@ const router = Router();
  *       500:
  *         description: Lỗi server
  */
-router.get('/get-all', getAllAuctions);
+router.get('/get-all', listAuctions);
 
 /**
  * @swagger

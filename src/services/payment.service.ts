@@ -487,12 +487,12 @@ export async function processDepositPayment(
 			// Tạo order code
 			const orderCode = Math.floor(Math.random() * 1000000).toString();
 
-			// Insert vào bảng orders với type = 'auction_deposit'
+			// Insert vào bảng orders với type = 'deposit'
 			const [orderResult]: any = await connection.query(
 				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id) 
 				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
 				[
-					'auction_deposit',
+					'deposit',
 					'PAID',
 					depositAmount,
 					buyerId,
@@ -536,7 +536,7 @@ export async function processDepositPayment(
 				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id) 
 				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
 				[
-					'auction_deposit',
+					'deposit',
 					'PENDING',
 					depositAmount,
 					buyerId,
@@ -554,8 +554,8 @@ export async function processDepositPayment(
 				orderCode: orderCode,
 				amount: Math.round(shortfallAmount),
 				description: `Đặt cọc tham gia đấu giá`,
-				returnUrl: `http://localhost:4001/payment-success?type=auction_deposit&orderId=${orderResult.insertId}&auctionId=${auctionId}`,
-				cancelUrl: `http://localhost:4001/payment-cancel?type=auction_deposit`,
+				returnUrl: `http://localhost:4001/payment-success?type=deposit&orderId=${orderResult.insertId}&auctionId=${auctionId}`,
+				cancelUrl: `http://localhost:4001/payment-cancel?type=deposit`,
 			});
 
 			return {
@@ -602,7 +602,7 @@ export async function confirmAuctionDepositPayment(
 		// Kiểm tra order
 		const [orderRows]: any = await connection.query(
 			'SELECT id, status, price, buyer_id FROM orders WHERE id = ? AND type = ?',
-			[orderId, 'auction_deposit'],
+			[orderId, 'deposit'],
 		);
 
 		if (!orderRows || orderRows.length === 0) {
