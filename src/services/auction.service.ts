@@ -241,7 +241,7 @@ export async function closeAuction(
 		const { product_id, winner_id, winning_price } = auctionRows[0];
 
 		// Update auction status to closed
-		await conn.query(`UPDATE auctions SET status = 'closed' WHERE id = ?`, [
+		await conn.query(`UPDATE products SET status = 'auctioned' WHERE id = ?`, [
 			auctionId,
 		]);
 

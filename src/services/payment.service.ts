@@ -175,7 +175,7 @@ export async function processAuctionFeePayment(
 				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id) 
 				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
 				[
-					'auction_fee',
+					'auction',
 					'PAID',
 					auctionFee,
 					sellerId,
@@ -243,7 +243,7 @@ export async function processAuctionFeePayment(
 				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id) 
 				VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
 				[
-					'auction_fee',
+					'auction',
 					'PENDING',
 					auctionFee,
 					sellerId,
@@ -261,7 +261,7 @@ export async function processAuctionFeePayment(
 				orderCode,
 				amount: Math.ceil(shortfallAmount),
 				description: `${productId}`,
-				returnUrl: `http://localhost:4001/payment-success?orderId=${orderResult.insertId}&type=auction_fee`,
+				returnUrl: `http://localhost:4001/payment-success?orderId=${orderResult.insertId}&type=auction`,
 				cancelUrl: 'http://localhost:4001/payment-cancel',
 			});
 
@@ -323,7 +323,7 @@ export async function confirmAuctionFeePayment(
 		// Lấy thông tin order
 		const [orderRows]: any = await connection.query(
 			'SELECT product_id, buyer_id, status, price FROM orders WHERE id = ? AND type = ?',
-			[orderId, 'auction_fee'],
+			[orderId, 'auction'],
 		);
 
 		if (!orderRows || orderRows.length === 0) {

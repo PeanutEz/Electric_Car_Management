@@ -1,4 +1,4 @@
-import pool from '../config/db';
+import pool  from '../config/db';
 
 export async function getOrdersByUserIdAndCode(
 	userId: number,
@@ -14,9 +14,9 @@ export async function getOrdersByUserIdAndCode(
 export async function getTransactionDetail(userId: number) {
 	const [rows]: any = await pool.query(
 		`select u.id as user_id,u.full_name,u.email, u.phone, u.total_credit, s.type as service_type,s.name as service_name,
-      s.description, s.cost, d.credits, d.type as changing,d.unit,o.status,o.created_at  from transaction_detail d 
-									inner join orders o on o.id = d.order_id 
-									inner join services s on s.id = o.service_id 
+      s.description, s.cost, d.credits, d.type as changing,d.unit,o.status,o.created_at  from transaction_detail d
+                                    inner join orders o on o.id = d.order_id
+                                    inner join services s on s.id = o.service_id
                                     inner join users u on u.id = d.user_id where d.user_id = ?`,
 		[userId],
 	);
@@ -28,31 +28,6 @@ export async function getTransactionDetail(userId: number) {
 	}));
 }
 
-export async function getAllOrderByUserId(
-	userId: number,
-	status?: string,
-	type?: string,
-	orderId?: number,
-) {
-	let sql = `SELECT * FROM orders WHERE buyer_id = ?`;
-	const params: any[] = [userId];
-	if (status) {
-		sql += ' AND status = ?';
-		params.push(status);
-	}
-	if (type) {
-		sql += ' AND type = ?';
-		params.push(type);
-	}
-	if (orderId) {
-		sql += ' AND id = ?';
-		params.push(orderId);
-	}
-	sql += ' ORDER BY created_at DESC';
-	const [rows]: any = await pool.query(sql, params);
-	return rows;
-}
-
 export async function getOrderDetail(orderId: number) {
 	const [rows]: any = await pool.query(
 		`SELECT o.*, d.credits, d.type as changing, d.unit, d.id as transaction_id
@@ -62,4 +37,265 @@ export async function getOrderDetail(orderId: number) {
 		[orderId],
 	);
 	return rows;
+}
+
+export async function getAllOrderByUserId(
+	userId: number,
+	status?: string,
+	type?: string,
+	orderId?: number,
+) {
+	try {
+		const filters: string[] = [`o.buyer_id = ${userId}`];
+		if (status) filters.push(`o.status = '${status}'`);
+		if (orderId) filters.push(`o.id = ${orderId}`);
+		const where = filters.join(' AND ');
+
+		let sql = '';
+
+		switch ((type || '').toLowerCase()) {
+			// --- CASE AUCTION ---
+			case 'auction':
+				sql = `
+          SELECT
+            o.id AS order_id, o.type, o.status, o.price, o.service_id, o.product_id, o.buyer_id,
+            o.created_at, o.code AS order_code, o.payment_method, o.updated_at,
+            u.full_name, u.email, u.phone,
+            s.cost AS service_cost, s.name AS service_name, s.description AS service_description,
+            s.number_of_post, s.number_of_push, s.feature,
+            a.id AS auction_id, a.starting_price, a.original_price, a.target_price,
+            a.deposit, a.winner_id, a.winning_price, a.step, a.note,
+           
+            p.title AS product_title, p.brand, p.model, p.price AS product_price,
+            p.address, p.description, p.product_category_id, p.year, p.image,
+            c.type AS category_type, c.slug AS category_slug, c.name AS category_name,
+
+
+            p.color, v.seats, v.mileage_km, v.power,
+            b.capacity AS battery_capacity, b.health AS battery_health,
+            b.chemistry AS battery_chemistry, b.voltage AS battery_voltage, b.dimension AS battery_dimension
+          FROM orders o
+          INNER JOIN users u ON u.id = o.buyer_id
+          INNER JOIN services s ON s.id = o.service_id
+          INNER JOIN auctions a ON a.id = o.product_id
+          INNER JOIN products p ON p.id = a.product_id
+          INNER JOIN product_categories c ON c.id = p.product_category_id
+          LEFT JOIN vehicles v ON v.product_id = p.id
+          LEFT JOIN batteries b ON b.product_id = p.id
+          WHERE o.type = 'auction' AND ${where}
+        `;
+				break;
+
+			// --- CASE POST (sửa để lấy thêm dữ liệu từ cả vehicles & batteries) ---
+			case 'post':
+				sql = `
+          SELECT
+            o.id AS order_id, o.type, o.status, o.price, o.service_id, o.product_id, o.buyer_id,
+            o.created_at, o.code AS order_code, o.payment_method, o.updated_at,
+            u.full_name, u.email, u.phone,
+            s.cost AS service_cost, s.name AS service_name, s.description AS service_description,
+            s.number_of_post, s.number_of_push, s.feature,
+
+
+            p.title AS product_title, p.brand, p.model, p.price AS product_price,
+            p.address, p.description, p.product_category_id, p.year, p.image,
+            c.type AS category_type, c.slug AS category_slug, c.name AS category_name,
+
+
+            p.color, v.seats, v.mileage_km, v.power,
+            b.capacity AS battery_capacity, b.health AS battery_health,
+            b.chemistry AS battery_chemistry, b.voltage AS battery_voltage, b.dimension AS battery_dimension
+          FROM orders o
+          INNER JOIN users u ON u.id = o.buyer_id
+          INNER JOIN services s ON s.id = o.service_id
+          INNER JOIN products p ON p.id = o.product_id
+          INNER JOIN product_categories c ON c.id = p.product_category_id
+          LEFT JOIN vehicles v ON v.product_id = p.id
+          LEFT JOIN batteries b ON b.product_id = p.id
+          WHERE o.type = 'post' AND ${where}
+        `;
+				break;
+
+			// --- CASE PACKAGE, TOPUP, DEPOSIT ---
+			case 'package':
+			case 'pakage':
+			case 'deposit':
+			case 'topup':
+				sql = `
+          SELECT
+            o.id AS order_id, o.type, o.status, o.price, o.service_id, o.product_id, o.buyer_id,
+            o.created_at, o.code AS order_code, o.payment_method, o.updated_at,
+            u.full_name, u.email, u.phone,
+            s.cost AS service_cost, s.name AS service_name, s.description AS service_description,
+            s.type AS service_type, s.feature
+          FROM orders o
+          INNER JOIN services s ON s.id = o.service_id
+          INNER JOIN users u ON u.id = o.buyer_id
+          WHERE o.type = '${type}' AND ${where}
+        `;
+				break;
+
+			default:
+				sql = `
+          SELECT
+            o.id AS order_id, o.type, o.status, o.price, o.service_id, o.product_id, o.buyer_id,
+            o.created_at, o.code AS order_code, o.payment_method, o.updated_at,
+            u.full_name, u.email, u.phone,
+            s.cost AS service_cost, s.name AS service_name, s.description AS service_description,
+            s.type AS service_type, s.feature
+          FROM orders o
+          INNER JOIN services s ON s.id = o.service_id
+          INNER JOIN users u ON u.id = o.buyer_id
+          WHERE ${where}
+        `;
+				break;
+		}
+
+		const [rows]: any = await pool.query(sql);
+
+		const formatted = rows.map((r: any) => {
+			const base = {
+				id: r.order_id,
+				type: r.type,
+				status: r.status,
+				price: r.price,
+				created_at: r.created_at,
+				updated_at: r.updated_at,
+				buyer: {
+					id: r.buyer_id,
+					full_name: r.full_name,
+					email: r.email,
+					phone: r.phone,
+				},
+			};
+
+			// ⚙️ CASE: POST
+			if (r.type === 'post') {
+				const isVehicle = r.category_type === 'vehicle';
+				const isBattery = r.category_type === 'battery';
+
+				const productBase = {
+					id: r.product_id,
+					brand: r.brand,
+					model: r.model,
+					price: r.product_price,
+					address: r.address,
+					description: r.description,
+					category: {
+						id: r.product_category_id,
+						typeSlug: r.category_slug,
+						name: r.category_name,
+					},
+					year: r.year,
+					image: r.image,
+					images: [],
+				};
+
+				const productExtra = isVehicle
+					? {
+							color: r.color,
+							seats: r.seats,
+							mileage: r.mileage_km ? `${r.mileage_km} km` : null,
+							power: r.power,
+							battery_capacity: r.battery_capacity,
+							is_verified: !!r.is_verified,
+					  }
+					: isBattery
+					? {
+							capacity: r.battery_capacity,
+							health: r.battery_health,
+							chemistry: r.battery_chemistry,
+							voltage: r.battery_voltage,
+							dimension: r.battery_dimension,
+					  }
+					: {};
+
+				return {
+					...base,
+					post: {
+						id: r.product_id,
+						title: r.product_title,
+						priority: 1,
+						created_at: '',
+						updated_at: '',
+						product: { ...productBase, ...productExtra },
+					},
+					service: {
+						id: r.service_id,
+						name: r.service_name,
+						description: r.service_description,
+						price: r.service_cost,
+					},
+				};
+			}
+
+			// ⚙️ CASE: AUCTION
+			if (r.type === 'auction') {
+				return {
+					...base,
+					viewingAppointment: {
+						address: r.address,
+						time: new Date(Date.now() + 2 * 3600_000).toISOString(),
+					},
+					post: {
+						id: r.product_id,
+						title: r.product_title,
+						product: {
+							id: r.product_id,
+							brand: r.brand,
+							model: r.model,
+							price: r.product_price,
+							address: r.address,
+							description: r.description,
+							category: {
+								id: r.product_category_id,
+								typeSlug: r.category_slug,
+								name: r.category_name,
+							},
+							year: r.year,
+							color: r.color,
+							seats: r.seats,
+							mileage: r.mileage_km ? `${r.mileage_km} km` : null,
+							battery_capacity: r.battery_capacity,
+							power: r.power,
+							is_verified: !!r.is_verified,
+						},
+					},
+					auction: {
+						id: r.auction_id,
+						startingBid: r.starting_price,
+						original_price: r.original_price,
+						buyNowPrice: r.target_price,
+						bidIncrement: r.step,
+						deposit: r.deposit,
+						winner: r.winner_id,
+						winning_price: r.winning_price,
+						note: r.note,
+					},
+				};
+			}
+
+			// ⚙️ CASE: PACKAGE, TOPUP, DEPOSIT
+			if (['package', 'pakage', 'topup', 'deposit'].includes(r.type)) {
+				return {
+					...base,
+					service: {
+						id: r.service_id,
+						name: r.service_name,
+						type: r.service_type,
+						description: r.service_description,
+						price: r.service_cost,
+						feature: r.feature,
+					},
+				};
+			}
+
+			return base;
+		});
+
+		return formatted;
+	} catch (error) {
+		console.error('❌ Error in getAllOrderByUserId:', error);
+		throw error;
+	}
 }

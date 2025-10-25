@@ -613,3 +613,12 @@ export async function changeAndConfirmPassword(
 	]);
 	return true;
 }
+
+export async function topUpOfUser(userId: number) {
+	const [rows]: any = await pool.query(
+		'SELECT total_credit FROM users WHERE id = ?',
+		[userId],
+	);
+	const user = rows[0];
+	return user.total_credit;
+}

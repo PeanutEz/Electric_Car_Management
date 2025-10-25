@@ -222,6 +222,11 @@ export async function checkAndProcessPostPayment(
 
 		const userCredit = parseFloat(userRows[0].total_credit);
 
+		const [productId]: any = await conn.query(
+			'SELECT id FROM products WHERE created_by = ?',
+			[userId],
+		);
+
 		// 3. Kiểm tra credit có đủ không
 		if (userCredit >= serviceCost) {
 			// ✅ Đủ credit → Trừ tiền + Cộng quota + Trừ 1 quota để đăng bài
@@ -247,8 +252,8 @@ export async function checkAndProcessPostPayment(
 			// Tạo order để tracking
 			const orderCode = Math.floor(Math.random() * 1000000);
 			const [row] = await conn.query(
-				'INSERT INTO orders (code, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-				[orderCode, serviceId, userId, serviceCost, 'PAID', 'CREDIT'],
+				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+				[orderCode, 'post', serviceId, productId, userId, serviceCost, 'PAID', 'CREDIT'],
 			);
 
 			const insertedOrderId = (row as any).insertId;
@@ -275,10 +280,12 @@ export async function checkAndProcessPostPayment(
 
 			// Tạo order trong database với status PENDING
 			await pool.query(
-				'INSERT INTO orders (code, service_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
 				[
 					orderCode,
+					'post',
 					serviceId,
+					productId,
 					userId,
 					amountNeeded,
 					'PENDING',
@@ -393,13 +400,6 @@ export async function processServicePayment(orderCode: string) {
 		await pool.query(
 			'update users set total_credit = total_credit + ? where id = ?',
 			[orderPrice, userId],
-		);
-		console.log(
-			'orderId, userId, price, type:',
-			orderId,
-			userId,
-			price,
-			orderType,
 		);
 
 		// Log transaction
@@ -695,7 +695,7 @@ export async function processTopUpPayment(
 			[
 				orderCode,
 				'topup', // type = 'topup' để phân biệt với package/post
-				null, // service_id = null vì đây là nạp tiền
+				21, // service_id = 21 vì đây là nạp tiền
 				userId,
 				amount,
 				'PENDING',
