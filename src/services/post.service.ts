@@ -742,28 +742,30 @@ export async function createNewPost(
 			throw new Error('Invalid category ID');
 		}
 
-		const [result] = await conn.query(
-			'INSERT INTO products (product_category_id, brand, model, price, year,color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority, previousOwners) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)',
-			[
-				category_id,
-				brand,
-				model,
-				price,
-				year,
-				color,
-				warranty,
-				description,
-				address,
-				title,
-				image,
-				'pending', // trạng thái mặc định là 'pending'
-				userId,
-				now,
-				endDate,
-				1, // priority mặc định là 1
-				previousOwners,
-			],
-		);
+		// const [result] = await conn.query(
+		// 	'INSERT INTO products (product_category_id, brand, model, price, year,color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority, previousOwners) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)',
+		// 	[
+		// 		category_id,
+		// 		brand,
+		// 		model,
+		// 		price,
+		// 		year,
+		// 		color,
+		// 		warranty,
+		// 		description,
+		// 		address,
+		// 		title,
+		// 		image,
+		// 		'pending', // trạng thái mặc định là 'pending'
+		// 		userId,
+		// 		now,
+		// 		endDate,
+		// 		1, // priority mặc định là 1
+		// 		previousOwners,
+		// 	],
+		// );
+
+		
 
 		const insertId = (result as any).insertId;
 
