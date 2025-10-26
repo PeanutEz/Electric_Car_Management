@@ -23,7 +23,7 @@ export async function getOwnAuction(seller_id: number, page = 1, limit = 10) {
 		`
     SELECT a.starting_price AS startingBid, a.original_price, a.target_price AS buyNowPrice,
            a.deposit, a.winning_price, a.step AS bidIncrement, a.note,
-           a.status AS result, a.start_at, a.end_at, p.title
+           a.status AS result, a.start_at, a.end_at, p.title, p.id AS product_id, a.id
     FROM auctions a
     INNER JOIN products p ON p.id = a.product_id
     WHERE a.seller_id = ?
@@ -54,32 +54,35 @@ export async function getOwnAuction(seller_id: number, page = 1, limit = 10) {
 	); // nếu seller cũng là user
 
 	return {
-		data: rows.map((r: any) => ({
-			Auction: {
+		data: {
+			auctions: rows.map((r: any) => ({
+				id: r.id,
+				product_id: r.product_id,
 				title: r.title,
 				startingBid: parseFloat(r.startingBid),
 				originalPrice: parseFloat(r.original_price),
 				buyNowPrice: parseFloat(r.buyNowPrice),
 				deposit: parseFloat(r.deposit),
 				bidIncrement: parseFloat(r.bidIncrement),
+				topBid: parseFloat(r.winning_price),
 				note: r.note,
 				startAt: r.start_at,
 				endAt: r.end_at,
+				status: r.result,
+			})),
+			static: {
+				ownAuctions: Number(stats.ownAuctions) || 0,
+				ownLiveAuctions: Number(stats.ownLiveAuctions) || 0,
+				participationAuctions:
+					Number(participationStats.participationAuctions) || 0,
+				participationLiveAuctions:
+					Number(participationStats.participationLiveAuctions) || 0,
 			},
-			result: r.result,
-		})),
-		static: {
-			ownAuctions: Number(stats.ownAuctions) || 0,
-			ownLiveAuctions: Number(stats.ownLiveAuctions) || 0,
-			participationAuctions:
-				Number(participationStats.participationAuctions) || 0,
-			participationLiveAuctions:
-				Number(participationStats.participationLiveAuctions) || 0,
-		},
-		pagination: {
-			page,
-			limit,
-			pageSize: rows.length,
+			pagination: {
+				page,
+				limit,
+				pageSize: rows.length,
+			},
 		},
 	};
 }
@@ -99,13 +102,16 @@ export async function getParticipatedAuction(
       a.original_price,
       a.target_price AS buyNowPrice,
       a.deposit,
+		a.winner_id,
       a.winning_price AS topBid,
       a.step AS bidIncrement,
       a.note,
       a.status AS result,
       a.start_at,
       a.end_at,
-      m.bid_price AS currentPrice
+      m.bid_price AS currentPrice,
+		p.id AS product_id,
+		a.id AS id
     FROM auctions a
     LEFT JOIN products p ON p.id = a.product_id
     INNER JOIN auction_members m ON m.auction_id = a.id
@@ -114,8 +120,49 @@ export async function getParticipatedAuction(
 		[user_id, limit, offset],
 	);
 
+	const [[stats]]: any = await pool.query(
+		`
+    SELECT
+      COUNT(*) AS ownAuctions,
+      SUM(CASE WHEN status = 'live' THEN 1 ELSE 0 END) AS ownLiveAuctions
+    FROM auctions
+    WHERE seller_id = ?`,
+		[user_id],
+	);
+
+	const [[participationStats]]: any = await pool.query(
+		`
+    SELECT
+      COUNT(DISTINCT a.id) AS participationAuctions,
+      SUM(CASE WHEN a.status = 'live' THEN 1 ELSE 0 END) AS participationLiveAuctions
+    FROM auctions a
+    INNER JOIN auction_members m ON m.auction_id = a.id
+    WHERE m.user_id = ?`,
+		[user_id],
+	); // nếu seller cũng là user
+
+	// const formatted = {
+	// 	auction: rows.map((r: any) => ({
+	// 		id: r.id,
+	// 		product_id: r.product_id,
+	// 		title: r.title,
+	// 		startingBid: parseFloat(r.startingBid),
+	// 		originalPrice: parseFloat(r.original_price),
+	// 		buyNowPrice: parseFloat(r.buyNowPrice),
+	// 		deposit: parseFloat(r.deposit),
+	// 		topBid: parseFloat(r.topBid),
+	// 		bidIncrement: parseFloat(r.bidIncrement),
+	// 		note: r.note,
+	// 		startAt: r.start_at,
+	// 		endAt: r.end_at,
+	// 		status: r.result,
+	// 		currentPrice: parseFloat(r.currentPrice),
+	// 	})),
+	// };
 	const formatted = rows.map((r: any) => ({
-		Auction: {
+		auction: {
+			id: r.id,
+			product_id: r.product_id,
 			title: r.title,
 			startingBid: parseFloat(r.startingBid),
 			originalPrice: parseFloat(r.original_price),
@@ -126,19 +173,28 @@ export async function getParticipatedAuction(
 			note: r.note,
 			startAt: r.start_at,
 			endAt: r.end_at,
+			status: r.result,
 			currentPrice: parseFloat(r.currentPrice),
 		},
-		result: r.result,
+		result: r.result !== 'ended' ? 'pending' : (r.winner_id === user_id ? 'win' : 'lose'),
 	}));
 
 	const [[{ total }]]: any = await pool.query(
 		`SELECT COUNT(*) as total
-     FROM auction_members m
-     WHERE m.user_id = ?`,
+	  FROM auction_members m
+	  WHERE m.user_id = ?`,
 		[user_id],
 	);
+	const summary = {
+		ownAuctions: Number(stats.ownAuctions) || 0,
+		ownLiveAuctions: Number(stats.ownLiveAuctions) || 0,
+		participationAuctions:
+			Number(participationStats.participationAuctions) || 0,
+		participationLiveAuctions:
+			Number(participationStats.participationLiveAuctions) || 0,
+	};
 
-	return { rows: formatted, total };
+	return { auctions: formatted, total, summary };
 }
 
 export async function createAuctionByAdmin(

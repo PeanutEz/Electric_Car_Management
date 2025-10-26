@@ -125,7 +125,7 @@ export async function getParticipatedAuctionController(
 		const limit =
 			parseInt((req.query.limit || req.query.pageSize) as string) || 10;
 
-		const { rows, total } = await getParticipatedAuction(
+		const { auctions, total,summary } = await getParticipatedAuction(
 			user_id,
 			page,
 			limit,
@@ -133,13 +133,18 @@ export async function getParticipatedAuctionController(
 
 		return res.status(200).json({
 			message: 'Fetched participated auctions successfully',
-			data: rows,
-			pagination: {
-				currentPage: page,
-				pageSize: limit,
-				totalItems: total,
-				totalPages: Math.ceil(total / limit),
-			},
+			data: {
+				auctions,
+				pagination: {
+					currentPage: page,
+					pageSize: limit,
+					totalItems: total,
+					totalPages: Math.ceil(total / limit),
+				},
+				static: {
+					...summary
+				}
+			}
 		});
 	} catch (error) {
 		console.error(error);
