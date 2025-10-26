@@ -90,6 +90,72 @@ router.post('/create-package', addService);
 router.put('/update-package/:id', editService);
 router.delete('/delete-package/:id', removeService);
 
+/**
+ * @swagger
+ * /auction/update-auction:
+ *   put:
+ *     summary: Cập nhật thông tin phiên đấu giá
+ *     description: Cập nhật giá khởi điểm, giá mục tiêu, tiền đặt cọc hoặc thời lượng của phiên đấu giá.
+ *     tags: [Auction]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - auction_id
+ *             properties:
+ *               auction_id:
+ *                 type: integer
+ *                 example: 5
+ *               starting_price:
+ *                 type: number
+ *                 example: 1000000
+ *               target_price:
+ *                 type: number
+ *                 example: 5000000
+ *               deposit:
+ *                 type: number
+ *                 example: 200000
+ *               duration:
+ *                 type: integer
+ *                 description: Số giờ kéo dài phiên đấu giá
+ *                 example: 48
+ *     responses:
+ *       200:
+ *         description: Cập nhật thông tin đấu giá thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Cập nhật thông tin đấu giá thành công
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 5
+ *                     starting_price:
+ *                       type: number
+ *                       example: 1000000
+ *                     target_price:
+ *                       type: number
+ *                       example: 5000000
+ *                     deposit:
+ *                       type: number
+ *                       example: 200000
+ *                     duration:
+ *                       type: integer
+ *                       example: 48
+ *       400:
+ *         description: Thiếu hoặc sai thông tin đầu vào
+ *       500:
+ *         description: Lỗi máy chủ
+ */
 router.put('/update-auction', modifyAuction);
 
 export default router;

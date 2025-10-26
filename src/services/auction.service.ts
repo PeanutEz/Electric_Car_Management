@@ -6,8 +6,6 @@ import { create } from 'domain';
 // Store active auction timers
 const auctionTimers = new Map<number, NodeJS.Timeout>();
 
-
-
 export async function getAuctionByProductId(productId: number) {
 	const [rows]: any = await pool.query(
 		`SELECT * FROM auctions WHERE product_id = ?`,
@@ -15,6 +13,132 @@ export async function getAuctionByProductId(productId: number) {
 	);
 	if (rows.length === 0) return null;
 	return rows[0] as Auction;
+}
+
+export async function getOwnAuction(seller_id: number, page = 1, limit = 10) {
+	const offset = (page - 1) * limit;
+
+	// Lấy danh sách phiên đấu giá (phân trang)
+	const [rows]: any = await pool.query(
+		`
+    SELECT a.starting_price AS startingBid, a.original_price, a.target_price AS buyNowPrice,
+           a.deposit, a.winning_price, a.step AS bidIncrement, a.note,
+           a.status AS result, a.start_at, a.end_at, p.title
+    FROM auctions a
+    INNER JOIN products p ON p.id = a.product_id
+    WHERE a.seller_id = ?
+    LIMIT ? OFFSET ?`,
+		[seller_id, limit, offset],
+	);
+
+	// Lấy thống kê
+	const [[stats]]: any = await pool.query(
+		`
+    SELECT
+      COUNT(*) AS ownAuctions,
+      SUM(CASE WHEN status = 'live' THEN 1 ELSE 0 END) AS ownLiveAuctions
+    FROM auctions
+    WHERE seller_id = ?`,
+		[seller_id],
+	);
+
+	const [[participationStats]]: any = await pool.query(
+		`
+    SELECT
+      COUNT(DISTINCT a.id) AS participationAuctions,
+      SUM(CASE WHEN a.status = 'live' THEN 1 ELSE 0 END) AS participationLiveAuctions
+    FROM auctions a
+    INNER JOIN auction_members m ON m.auction_id = a.id
+    WHERE m.user_id = ?`,
+		[seller_id],
+	); // nếu seller cũng là user
+
+	return {
+		data: rows.map((r: any) => ({
+			Auction: {
+				title: r.title,
+				startingBid: parseFloat(r.startingBid),
+				originalPrice: parseFloat(r.original_price),
+				buyNowPrice: parseFloat(r.buyNowPrice),
+				deposit: parseFloat(r.deposit),
+				bidIncrement: parseFloat(r.bidIncrement),
+				note: r.note,
+				startAt: r.start_at,
+				endAt: r.end_at,
+			},
+			result: r.result,
+		})),
+		static: {
+			ownAuctions: Number(stats.ownAuctions) || 0,
+			ownLiveAuctions: Number(stats.ownLiveAuctions) || 0,
+			participationAuctions:
+				Number(participationStats.participationAuctions) || 0,
+			participationLiveAuctions:
+				Number(participationStats.participationLiveAuctions) || 0,
+		},
+		pagination: {
+			page,
+			limit,
+			pageSize: rows.length,
+		},
+	};
+}
+
+export async function getParticipatedAuction(
+	user_id: number,
+	page = 1,
+	limit = 10,
+) {
+	const offset = (page - 1) * limit;
+
+	const [rows]: any = await pool.query(
+		`
+    SELECT
+      p.title,
+      a.starting_price AS startingBid,
+      a.original_price,
+      a.target_price AS buyNowPrice,
+      a.deposit,
+      a.winning_price AS topBid,
+      a.step AS bidIncrement,
+      a.note,
+      a.status AS result,
+      a.start_at,
+      a.end_at,
+      m.bid_price AS currentPrice
+    FROM auctions a
+    LEFT JOIN products p ON p.id = a.product_id
+    INNER JOIN auction_members m ON m.auction_id = a.id
+    WHERE m.user_id = ?
+    LIMIT ? OFFSET ?`,
+		[user_id, limit, offset],
+	);
+
+	const formatted = rows.map((r: any) => ({
+		Auction: {
+			title: r.title,
+			startingBid: parseFloat(r.startingBid),
+			originalPrice: parseFloat(r.original_price),
+			buyNowPrice: parseFloat(r.buyNowPrice),
+			deposit: parseFloat(r.deposit),
+			topBid: parseFloat(r.topBid),
+			bidIncrement: parseFloat(r.bidIncrement),
+			note: r.note,
+			startAt: r.start_at,
+			endAt: r.end_at,
+			currentPrice: parseFloat(r.currentPrice),
+		},
+		result: r.result,
+	}));
+
+	const [[{ total }]]: any = await pool.query(
+		`SELECT COUNT(*) as total
+     FROM auction_members m
+     WHERE m.user_id = ?`,
+		[user_id],
+	);
+
+	return { rows: formatted, total };
 }
 
 export async function createAuctionByAdmin(
@@ -161,6 +285,14 @@ export async function placeBid(
 			[userId, bidAmount, auctionId],
 		);
 
+		// ✅ Update auction_members với bid_price mới nhất của user
+		await connection.query(
+			`UPDATE auction_members 
+       SET bid_price = ?, updated_at = NOW() 
+       WHERE user_id = ? AND auction_id = ?`,
+			[bidAmount, userId, auctionId],
+		);
+
 		// Log bid in console
 		const remainingTime = await getAuctionRemainingTime(auctionId);
 		console.log(
@@ -246,20 +378,26 @@ export async function closeAuction(
 		const { product_id, winner_id, winning_price } = auctionRows[0];
 
 		// Update auction status to closed
-		await conn.query(`UPDATE products SET status = 'auctioned' WHERE id = ?`, [
-			auctionId,
-		]);
+		await conn.query(
+			`UPDATE products SET status = 'auctioned' WHERE id = ?`,
+			[auctionId],
+		);
 
 		await pool.query(
-				`UPDATE orders SET tracking = 'AUCTION_SUCCESS' where status = 'PAID' and type = 'auction' and product_id = ? and buyer_id = ?`,
-				[rows[0].product_id, rows[0].created_by],
-			);
+			`UPDATE orders SET tracking = 'AUCTION_SUCCESS' where status = 'PAID' and type = 'auction' and product_id = ? and buyer_id = ?`,
+			[rows[0].product_id, rows[0].created_by],
+		);
 
 		// Update product status to 'auctioned' (regardless of winner)
 		await conn.query(
 			`UPDATE products SET status = 'auctioned' WHERE id = ?`,
 			[product_id],
 		);
+
+		// ✅ Update auction status to 'ended'
+		await conn.query(`UPDATE auctions SET status = 'ended' WHERE id = ?`, [
+			auctionId,
+		]);
 
 		// Clear timer if exists
 		if (auctionTimers.has(auctionId)) {
@@ -301,7 +439,6 @@ export async function startAuctionTimer(
 	duration: number,
 	onExpire: () => void,
 ): Promise<void> {
-
 	// Clear existing timer if any
 	if (auctionTimers.has(auctionId)) {
 		clearTimeout(auctionTimers.get(auctionId)!);
@@ -342,7 +479,7 @@ export async function startAuctionTimer(
 			clearInterval(countdownInterval);
 		}
 	}, 1000);
-   
+
 	// Set expiration timer
 	const timer = setTimeout(async () => {
 		clearInterval(countdownInterval);
@@ -377,7 +514,7 @@ export async function startAuctionTimer(
 		onExpire();
 		auctionTimers.delete(auctionId);
 	}, duration * 1000); // duration in seconds
-   
+
 	auctionTimers.set(auctionId, timer);
 }
 
@@ -478,14 +615,39 @@ export async function getAuctionsForAdmin() {
 }
 
 /**
+ * Lấy leaderboard (danh sách bidders) của một auction
+ * @param auctionId - ID của auction
+ * @returns Danh sách users với bid_price và thời gian bid gần nhất
+ */
+export async function getAuctionLeaderboard(auctionId: number) {
+	const [rows]: any = await pool.query(
+		`SELECT 
+			am.user_id,
+			u.full_name,
+			u.email,
+			am.bid_price,
+			am.updated_at as last_bid_time,
+			CASE 
+				WHEN a.winner_id = am.user_id THEN 1 
+				ELSE 0 
+			END as is_current_winner
+		FROM auction_members am
+		JOIN users u ON u.id = am.user_id
+		JOIN auctions a ON a.id = am.auction_id
+		WHERE am.auction_id = ?
+		ORDER BY am.bid_price DESC`,
+		[auctionId],
+	);
+	return rows;
+}
+
+/**
  * Admin bấm nút bắt đầu đấu giá: set timer, khi hết timer thì đóng đấu giá và cập nhật product
  */
-export async function startAuctionByAdmin(
-	auctionId: number,
-) {
+export async function startAuctionByAdmin(auctionId: number) {
 	// Lấy thông tin auction
 	const [rows]: any = await pool.query(
-		`SELECT a.*, p.status as product_status, p.id as product_id
+		`SELECT a.*, p.status as product_status, p.id as product_id, p.created_by as seller_id
          FROM auctions a
          JOIN products p ON a.product_id = p.id
          WHERE a.id = ? AND p.status = 'auctioning'`,
@@ -502,6 +664,27 @@ export async function startAuctionByAdmin(
 	if (auctionTimers.has(auctionId)) {
 		return { success: false, message: 'Auction already started' };
 	}
+
+	// ✅ Update order tracking thành AUCTION_PROCESSING khi admin duyệt
+	await pool.query(
+		`UPDATE orders 
+		SET tracking = 'AUCTION_PROCESSING' 
+		WHERE status = 'PAID' 
+		AND type = 'auction' 
+		AND product_id = ? 
+		AND buyer_id = ?`,
+		[auction.product_id, auction.seller_id],
+	);
+
+	// ✅ Update auction status thành 'live' khi bắt đầu
+	await pool.query(`UPDATE auctions SET status = 'live' WHERE id = ?`, [
+		auctionId,
+	]);
+
+	console.log(
+		`✅ Admin approved auction ${auctionId} - Status: LIVE, Order tracking: AUCTION_PROCESSING`,
+	);
+
 	// Set timer
 	await startAuctionTimer(auctionId, auction.duration, async () => {
 		// Khi hết thời gian, kiểm tra winner_id và winning_price
@@ -523,10 +706,11 @@ export async function startAuctionByAdmin(
 			'ended',
 			auctionId,
 		]);
-
-		
 	});
-	const [result]: any = await pool.query('select * from auctions a inner join products p on a.product_id = p.id where a.id = ?', [auctionId]);
+	const [result]: any = await pool.query(
+		'select * from auctions a inner join products p on a.product_id = p.id where a.id = ?',
+		[auctionId],
+	);
 	return {
 		success: true,
 		message: 'Auction started, will auto close after duration',

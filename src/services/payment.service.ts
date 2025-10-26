@@ -169,7 +169,7 @@ export async function processAuctionFeePayment(
 					'CREDIT',
 					productId,
 					17,
-					'AUCTION_PROCESSING'
+					'PENDING'
 				],
 			);
 
@@ -344,7 +344,7 @@ export async function confirmAuctionFeePayment(
 		]);
 
 		await connection.query('UPDATE orders SET tracking = ? WHERE id = ?', [
-			'AUCTION_PROCESSING',
+			'PENDING',
 			orderId,
 		]);
 

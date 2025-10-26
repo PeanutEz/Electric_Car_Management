@@ -3,8 +3,11 @@ import {
 	createAuctionByAdmin,
 	getAuctionsForAdmin,
 	startAuctionByAdmin,
-	getAuctionByProductId
+	getAuctionByProductId,
+	getOwnAuction,
+	getParticipatedAuction,
 } from '../services/auction.service';
+import jwt from 'jsonwebtoken';
 
 export async function createAuction(req: Request, res: Response) {
 	try {
@@ -75,7 +78,79 @@ export async function createAuction(req: Request, res: Response) {
 	}
 }
 
-export async function getAuctionByProductIdController(req: Request, res: Response) {
+export async function getOwnAuctionController(req: Request, res: Response) {
+	try {
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res.status(401).json({ message: 'Unauthorized' });
+		}
+		const token = authHeader.split(' ')[1];
+		const user = jwt.decode(token) as any;
+		const seller_id = user.id;
+
+		const page = parseInt(req.query.page as string) || 1;
+		const limit = parseInt(req.query.limit as string) || 10;
+
+		const result = await getOwnAuction(seller_id, page, limit);
+
+		return res.status(200).json({
+			message: 'Auctions fetched successfully',
+			...result,
+		});
+	} catch (error) {
+		console.error(error);
+		return res.status(500).json({ message: 'Server error' });
+	}
+}
+
+export async function getParticipatedAuctionController(
+	req: Request,
+	res: Response,
+) {
+	try {
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res.status(401).json({ message: 'Unauthorized' });
+		}
+
+		const token = authHeader.split(' ')[1];
+		const user = jwt.decode(token) as any;
+		const user_id = user.id;
+
+		if (isNaN(user_id)) {
+			return res.status(400).json({ message: 'Invalid user_id' });
+		}
+
+		const page = parseInt(req.query.page as string) || 1;
+		const limit =
+			parseInt((req.query.limit || req.query.pageSize) as string) || 10;
+
+		const { rows, total } = await getParticipatedAuction(
+			user_id,
+			page,
+			limit,
+		);
+
+		return res.status(200).json({
+			message: 'Fetched participated auctions successfully',
+			data: rows,
+			pagination: {
+				currentPage: page,
+				pageSize: limit,
+				totalItems: total,
+				totalPages: Math.ceil(total / limit),
+			},
+		});
+	} catch (error) {
+		console.error(error);
+		return res.status(500).json({ message: 'Server error' });
+	}
+}
+
+export async function getAuctionByProductIdController(
+	req: Request,
+	res: Response,
+) {
 	try {
 		const productId = parseInt(req.query.product_id as string);
 		if (!productId) {
@@ -121,7 +196,10 @@ export async function startAuctionByAdminController(
 			return res.status(400).json({ message: 'auctionId is required' });
 		const result = await startAuctionByAdmin(Number(auctionId));
 		if (result.success) {
-			res.status(200).json({ message: result.message, data: result.data });
+			res.status(200).json({
+				message: result.message,
+				data: result.data,
+			});
 		} else {
 			res.status(400).json({ message: result.message });
 		}

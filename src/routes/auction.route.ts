@@ -1,6 +1,7 @@
 import Router from 'express';
-import { getAuctionsForAdminController, startAuctionByAdminController,getAuctionByProductIdController  } from '../controllers/auction.controller';
+import { getAuctionsForAdminController, startAuctionByAdminController,getAuctionByProductIdController, getOwnAuctionController, getParticipatedAuctionController  } from '../controllers/auction.controller';
 import { listAuctions } from '../controllers/auc.controller';
+import { authenticateToken } from '../middleware/AuthMiddleware';
 const router = Router();
 /**
  * @swagger
@@ -165,5 +166,35 @@ router.get('/active', getAuctionsForAdminController);
  *         description: Lỗi server
  */
 router.post('/start', startAuctionByAdminController);
+
+/**
+ * @swagger
+ * /api/auction/own:
+ *   get:
+ *     summary: Get all auctions created by a specific seller
+ *     tags: [Auctions]
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *       404:
+ *         description: No auctions found
+ */
+router.get("/own",authenticateToken, getOwnAuctionController);
+
+
+/**
+ * @swagger
+ * /api/auction/participated:
+ *   get:
+ *     summary: Get all auctions a user has participated in
+ *     tags: [Auctions]
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *       404:
+ *         description: No participated auctions found
+ */
+router.get("/participated",authenticateToken, getParticipatedAuctionController);
+
 
 export default router;

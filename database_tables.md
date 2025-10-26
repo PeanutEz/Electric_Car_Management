@@ -100,16 +100,34 @@ batteries
 | `updated_at`         | `DATETIME`      | `DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`          | Ngày cập nhật gần nhất                      |
 
 ## 📦 Table: `auctions`
-id | product_id | seller_id | starting_price | original_price | target_price | deposit | winner_id | winning_price | duration
--- | ----------- | ---------- | --------------- | --------------- | ------------- | -------- | ---------- | -------------- | --------
-1  | 2           | 1          | 20000.00        | 30000.00        | 400000.00     | 5000.00  | (NULL)     | (NULL)         | 300
+| id | product_id | seller_id | starting_price | original_price | target_price | deposit | winner_id | winning_price | duration | status |
+| -- | ----------- | ---------- | --------------- | --------------- | ------------- | -------- | ---------- | -------------- | -------- | ------ |
+| 1  | 2           | 1          | 20000.00        | 30000.00        | 400000.00     | 5000.00  | (NULL)     | (NULL)         | 300      | draft  |
+| 2  | 5           | 3          | 50000.00        | 100000.00       | 200000.00     | 10000.00 | 12         | 150000.00      | 600      | live   |
+| 3  | 8           | 5          | 30000.00        | 80000.00        | 150000.00     | 8000.00  | 15         | 120000.00      | 300      | ended  |
+
+**Status values:**
+- `draft` - Chưa thanh toán phí đấu giá
+- `pending` - Đã thanh toán, chờ admin duyệt (orders.tracking = 'PENDING')
+- `live` - Đang diễn ra đấu giá (admin đã duyệt, timer đang chạy, orders.tracking = 'AUCTION_PROCESSING')
+- `ended` - Đã kết thúc (timer hết, có thể có hoặc không có winner)
+- `cancelled` - Đã hủy bỏ
 
 
-auction_members
-+----+----------+-------------+---------------+---------------------+
-| id | user_id  | auction_id  | desire_price  | updated_at          |
-+----+----------+-------------+---------------+---------------------+
-|  1 | 25       | 1           | 24000.00      | 2025-10-23 15:30:00 |
-|  2 | 28       | 1           | 26000.00      | 2025-10-23 15:35:00 |
-|  3 | 26       | 2           | 1200.00       | 2025-10-23 16:10:00 |
-+----+----------+-------------+---------------+---------------------+
+## 📦 Table: `auction_members`
+| id | user_id | auction_id | bid_price | updated_at          |
+|----|---------|------------|-----------|---------------------|
+| 1  | 25      | 1          | 24000.00  | 2025-10-23 15:30:00 |
+| 2  | 28      | 1          | 26000.00  | 2025-10-23 15:35:00 |
+| 3  | 26      | 2          | 1200.00   | 2025-10-23 16:10:00 |
+
+**Description:**
+- `bid_price` - Giá bid cao nhất mà user này đã đặt trong auction (được cập nhật mỗi khi user bid)
+- `updated_at` - Thời điểm bid gần nhất (tự động update khi user đặt bid mới)
+- Real-time tracking: Mỗi khi user đặt giá, `bid_price` và `updated_at` sẽ được update ngay lập tức
+
+**How it works:**
+1. User join auction → Insert record với `bid_price = 0` hoặc `NULL`
+2. User place bid → Update `bid_price = <new_amount>`, `updated_at = NOW()`
+3. User bid again → Update `bid_price = <higher_amount>`, `updated_at = NOW()`
+4. Query leaderboard → Sort by `bid_price DESC` để xem ranking

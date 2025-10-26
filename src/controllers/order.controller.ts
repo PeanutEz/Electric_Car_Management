@@ -4,7 +4,7 @@ import {
 	getTransactionDetail,
 	getAllOrderByUserId,
 	getOrderDetail,
-	getAllOrders
+	getAllOrders,
 } from '../services/order.service';
 import jwt from 'jsonwebtoken';
 
@@ -137,12 +137,15 @@ export async function getAllOrderByUserIdController(
 		// ✅ Trả về kết quả có phân trang
 		res.status(200).json({
 			message: 'Lấy tất cả đơn hàng của user thành công',
-			data: orders.data,
-			pagination: {
-				page: parsedPage,
-				page_size: parsedPageSize,
-				total: orders.total,
-				total_pages: orders.total_pages,
+			data: {
+				orders: orders.data,
+				static: orders.stats,
+				pagination: {
+					page: parsedPage,
+					page_size: parsedPageSize,
+					total: orders.total,
+					total_pages: orders.total_pages,
+				},
 			},
 		});
 	} catch (error: any) {
@@ -150,7 +153,6 @@ export async function getAllOrderByUserIdController(
 		res.status(500).json({ message: error.message });
 	}
 }
-
 
 export async function getOrderDetailController(req: Request, res: Response) {
 	try {
