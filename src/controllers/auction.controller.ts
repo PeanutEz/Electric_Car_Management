@@ -136,10 +136,9 @@ export async function getParticipatedAuctionController(
 			data: {
 				auctions,
 				pagination: {
-					currentPage: page,
-					pageSize: limit,
-					totalItems: total,
-					totalPages: Math.ceil(total / limit),
+					page: page,
+					limit: limit,
+					pageSize: Math.ceil(total / limit),
 				},
 				static: {
 					...summary
