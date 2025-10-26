@@ -8,7 +8,7 @@ const auctionTimers = new Map<number, NodeJS.Timeout>();
 
 export async function getAuctionByProductId(productId: number) {
 	const [rows]: any = await pool.query(
-		`SELECT * FROM auctions WHERE product_id = ?`,
+		`SELECT a.*, p.title FROM auctions a inner join products p on a.product_id = p.id WHERE a.product_id = ?`,
 		[productId],
 	);
 	if (rows.length === 0) return null;
@@ -252,7 +252,7 @@ export async function getActiveAuction(
 	auctionId: number,
 ): Promise<Auction | null> {
 	const [rows]: any = await pool.query(
-		`SELECT a.*, p.status as product_status
+		`SELECT a.*, p.status as product_status, p.title
      FROM auctions a
      JOIN products p ON a.product_id = p.id
      WHERE a.id = ? AND p.status = 'auctioning'`,
@@ -292,7 +292,7 @@ export async function placeBid(
 
 		// 1. Get auction details with lock
 		const [auctionRows]: any = await connection.query(
-			`SELECT a.*, p.status as product_status
+			`SELECT a.*, p.status as product_status, p.title
        FROM auctions a
        JOIN products p ON a.product_id = p.id
        WHERE a.id = ?
@@ -409,7 +409,7 @@ export async function closeAuction(
 	const conn = connection || (await pool.getConnection());
 	const shouldRelease = !connection;
 	const [rows]: any = await pool.query(
-		`SELECT a.*, p.status as product_status, p.id as product_id, p.created_by
+		`SELECT a.*, p.status as product_status, p.id as product_id, p.created_by, p.title
          FROM auctions a
          JOIN products p ON a.product_id = p.id
          WHERE a.id = ? AND p.status = 'auctioning'`,

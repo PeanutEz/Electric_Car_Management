@@ -13,7 +13,7 @@ import ChatRouter from './chat.route';
 import NotificationRouter from './notification.route';
 import AuctionRouter from './auction.route';
 import PackageRouter from './package.route';
-
+import ContractRouter from './contract.route';
 
 const routes = Router();
 
@@ -31,5 +31,6 @@ routes.use('/api/chat', ChatRouter);
 routes.use('/api/notification', NotificationRouter);
 routes.use('/api/auction', AuctionRouter);
 routes.use('/api/package', PackageRouter);
+routes.use('/api/contract', ContractRouter);
 
 export default routes;
