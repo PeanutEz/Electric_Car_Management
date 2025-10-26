@@ -8,7 +8,9 @@ const auctionTimers = new Map<number, NodeJS.Timeout>();
 
 export async function getAuctionByProductId(productId: number) {
 	const [rows]: any = await pool.query(
-		`SELECT * FROM auctions WHERE product_id = ?`,
+		`SELECT a.*, p.title, p.description FROM auctions a INNER JOIN products p ON a.product_id = p.id
+		WHERE a.product_id = ?
+		`,
 		[productId],
 	);
 	if (rows.length === 0) return null;

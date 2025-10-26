@@ -189,8 +189,8 @@ export async function registerUser(userData: User) {
 	);
 
 	const [result]: any = await pool.query(
-		`insert into users (full_name, email, password, avatar, created_at) VALUES (?, ?, ?, ?, NOW())`,
-		[full_name, email, hashedPassword, defaultAvatar],
+		`insert into users (full_name, email, password, avatar, created_at) VALUES (?, ?, ?, ?, ?)`,
+		[full_name, email, hashedPassword, defaultAvatar, getVietnamTime()],
 	);
 	const insertedId = result.insertId;
 

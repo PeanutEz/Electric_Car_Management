@@ -5,7 +5,7 @@ import payos from '../config/payos';
 import { getPaymentStatus } from './payment.service';
 import { buildUrl } from '../utils/url';
 import e from 'express';
-import { toMySQLDateTime } from '../utils/datetime';
+import { getVietnamTime,toMySQLDateTime } from '../utils/datetime';
 
 export async function getAllServices(): Promise<Service[]> {
 	const [rows] = await pool.query(
@@ -203,7 +203,7 @@ export async function checkAndProcessPostPayment(
 			// ✅ Sửa lỗi ở đây: thêm đúng số lượng value (9 cột, 9 dấu ?)
 			const orderCode = Math.floor(Math.random() * 1000000);
 			const [row]: any = await conn.query(
-				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
 				[
 					orderCode,
 					'post',
@@ -213,7 +213,7 @@ export async function checkAndProcessPostPayment(
 					serviceCost,
 					'PAID',
 					'CREDIT',
-					// NOW() sẽ tự động dùng múi giờ Việt Nam (GMT+7) do connection config
+					getVietnamTime(),
 					'PROCESSING',
 				],
 			);
