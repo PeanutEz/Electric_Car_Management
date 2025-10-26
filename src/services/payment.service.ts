@@ -448,9 +448,9 @@ export async function processDepositPayment(
 		}
 
 		// Kiểm tra xem đấu giá đã kết thúc chưa
-		if (auction.winner_id !== null) {
-			throw new Error('Đấu giá đã kết thúc');
-		}
+		// if (auction.winner_id !== null) {
+		// 	throw new Error('Đấu giá đã kết thúc');
+		// }
 
 		// Kiểm tra xem buyer đã tham gia đấu giá này chưa
 		const [existingMemberRows]: any = await connection.query(
@@ -463,7 +463,7 @@ export async function processDepositPayment(
 		}
 
 		const depositAmount = parseFloat(auction.deposit);
-
+		console.log(depositAmount);
 		// Lấy số dư credit của buyer
 		const [userRows]: any = await connection.query(
 			'SELECT total_credit FROM users WHERE id = ?',

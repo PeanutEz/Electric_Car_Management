@@ -2,6 +2,7 @@ import pool from '../config/db';
 import { Auction } from '../models/auction.model';
 import { getIO } from '../config/socket';
 import { create } from 'domain';
+import { getVietnamTime } from '../utils/datetime';
 
 // Store active auction timers
 const auctionTimers = new Map<number, NodeJS.Timeout>();
@@ -458,7 +459,8 @@ export async function closeAuction(
 		);
 
 		// ✅ Update auction status to 'ended'
-		await conn.query(`UPDATE auctions SET status = 'ended' WHERE id = ?`, [
+		await conn.query(`UPDATE auctions SET status = 'ended', end_time = ? WHERE id = ?`, [
+			getVietnamTime(),
 			auctionId,
 		]);
 
@@ -816,8 +818,8 @@ export async function startAuctionByAdmin(auctionId: number) {
 	}
 	const auction = rows[0];
 
-	// ✅ Kiểm tra status phải là 'verify' hoặc 'pending' mới được start
-	if (auction.status !== 'verify' && auction.status !== 'pending') {
+	// ✅ Kiểm tra status phải là 'verify'
+	if (auction.status !== 'verify') {
 		return {
 			success: false,
 			message: `Cannot start auction with status '${auction.status}'. Auction must be verified first.`,
@@ -847,14 +849,20 @@ export async function startAuctionByAdmin(auctionId: number) {
 		AND buyer_id = ?`,
 		[auction.product_id, auction.seller_id],
 	);
+	const currentTime = getVietnamTime();
+	
+
 
 	// ✅ Update auction status thành 'live' khi bắt đầu
-	await pool.query(`UPDATE auctions SET status = 'live' WHERE id = ?`, [
+	await pool.query(`UPDATE auctions SET status = 'live', start_time = ? WHERE id = ?`, [
+		currentTime,
 		auctionId,
 	]);
 
+	
+
 	console.log(
-		`✅ Admin approved auction ${auctionId} - Status: LIVE, Order tracking: AUCTION_PROCESSING`,
+		`✅ Admin approved auction ${auctionId} - Status: LIVE, Order tracking: AUCTION_PROCESSING, Current time: ${currentTime}`,
 	);
 
 	// Set timer
