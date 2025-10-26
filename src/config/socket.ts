@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import * as chatService from '../services/chat.service';
 import * as notificationService from '../services/notification.service';
 import * as auctionService from '../services/auction.service';
+import { getVietnamISOString } from '../utils/datetime';
 
 let io: SocketServer;
 
@@ -416,7 +417,7 @@ export function setupAuctionSocket() {
 							winnerId: userId,
 							winningPrice: bidAmount,
 							message: result.message,
-							timestamp: new Date().toISOString(),
+							timestamp: getVietnamISOString(), // ✅ Múi giờ Việt Nam (GMT+7)
 						});
 
 					// If target price reached, auction is closed

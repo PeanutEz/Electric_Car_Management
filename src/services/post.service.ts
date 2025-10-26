@@ -5,7 +5,7 @@ import { Battery, Vehicle } from '../models/product.model';
 import { generateText } from '../services/gemini.service';
 import * as notificationService from './notification.service';
 import { sendNotificationToUser } from '../config/socket';
-
+import { getVietnamTime, addHoursToVietnamTime } from '../utils/datetime';
 
 export async function getPostApproved(
 	page: number,
@@ -40,7 +40,7 @@ export async function getPostApproved(
 			INNER JOIN product_categories pc ON pc.id = p.product_category_id
 			LEFT JOIN batteries b on b.product_id = p.id
 			LEFT JOIN vehicles v on v.product_id = p.id`;
-		query += ` WHERE p.status = 'approved'`;
+		query += ` WHERE p.status in('approved','auctioning')`;
 		if (year !== undefined && !isNaN(year))
 			query += ` AND p.year = ${year}`;
 		if (color !== undefined && color !== '' && color !== null)
@@ -69,7 +69,7 @@ export async function getPostApproved(
 				query += ` FROM products p
 					INNER JOIN product_categories pc ON pc.id = p.product_category_id
 					INNER JOIN batteries b on b.product_id = p.id`;
-				query += ` WHERE p.status = 'approved' AND pc.slug = 'battery'`;
+				query += ` WHERE p.status in('approved','auctioning') AND pc.slug = 'battery'`;
 				if (year !== undefined && !isNaN(year))
 					query += ` AND p.year = ${year}`;
 				if (color !== undefined && color !== '' && color !== null)
@@ -107,7 +107,7 @@ export async function getPostApproved(
 				query += ` FROM products p
 					INNER JOIN product_categories pc ON pc.id = p.product_category_id
 					INNER JOIN vehicles v on v.product_id = p.id`;
-				query += ` WHERE p.status = 'approved' AND pc.slug = 'vehicle'`;
+				query += ` WHERE p.status in('approved','auctioning') AND pc.slug = 'vehicle'`;
 				if (year !== undefined && !isNaN(year))
 					query += ` AND p.year = ${year}`;
 				if (color !== undefined && color !== '' && color !== null)
@@ -143,7 +143,7 @@ export async function getPostApproved(
 			default:
 				query += ` FROM products p
 					INNER JOIN product_categories pc ON pc.id = p.product_category_id
-					WHERE p.status = 'approved'`;
+					WHERE p.status in('approved','auctioning')`;
 				query += ` LIMIT ? OFFSET ?`;
 				break;
 		}
@@ -161,46 +161,46 @@ export async function getPostApproved(
 		product:
 			r.slug === 'vehicle'
 				? {
-					id: r.product_id,
-					brand: r.brand,
-					model: r.model,
-					price: r.price,
-					year: r.year,
-					address: r.address,
-					image: r.image,
-					color: r.color,
-					seats: r.seats,
-					mileage: r.mileage_km,
-					power: r.power,
-					health: r.health,
-					previousOwners: r.previousOwners,
-					images: [],
-					category: {
-						id: r.category_id,
-						name: r.category_name,
-						typeSlug: r.slug,
-					},
-				}
+						id: r.product_id,
+						brand: r.brand,
+						model: r.model,
+						price: r.price,
+						year: r.year,
+						address: r.address,
+						image: r.image,
+						color: r.color,
+						seats: r.seats,
+						mileage: r.mileage_km,
+						power: r.power,
+						health: r.health,
+						previousOwners: r.previousOwners,
+						images: [],
+						category: {
+							id: r.category_id,
+							name: r.category_name,
+							typeSlug: r.slug,
+						},
+				  }
 				: {
-					id: r.product_id,
-					brand: r.brand,
-					model: r.model,
-					price: r.price,
-					year: r.year,
-					address: r.address,
-					image: r.image,
-					color: r.color,
-					capacity: r.capacity,
-					voltage: r.voltage,
-					health: r.health,
-					previousOwners: r.previousOwners,
-					images: [],
-					category: {
-						id: r.category_id,
-						name: r.category_name,
-						typeSlug: r.slug,
-					},
-				},
+						id: r.product_id,
+						brand: r.brand,
+						model: r.model,
+						price: r.price,
+						year: r.year,
+						address: r.address,
+						image: r.image,
+						color: r.color,
+						capacity: r.capacity,
+						voltage: r.voltage,
+						health: r.health,
+						previousOwners: r.previousOwners,
+						images: [],
+						category: {
+							id: r.category_id,
+							name: r.category_name,
+							typeSlug: r.slug,
+						},
+				  },
 	}));
 }
 
@@ -230,7 +230,6 @@ export async function paginatePosts(
 
 	query += 'ORDER BY p.updated_at desc, p.id desc LIMIT ? OFFSET ?';
 
-
 	const [rows] = await pool.query(query, [limit, offset]);
 
 	// Lấy IDs của products
@@ -259,56 +258,56 @@ export async function paginatePosts(
 		product:
 			r.category_type === 'vehicle'
 				? {
-					id: r.product_id,
-					brand: r.brand,
-					model: r.model,
-					price: r.price,
-					description: r.description,
-					status: r.status,
-					year: r.year,
-					created_by: r.created_by,
-					warranty: r.warranty,
-					address: r.address,
-					color: r.color,
-					seats: r.seats,
-					mileage: r.mileage_km,
-					power: r.power,
-					health: r.health,
-					previousOwners: r.previousOwners,
-					images: images
-						.filter((img) => img.product_id === r.id)
-						.map((img) => img.url),
-					category: {
-						id: r.category_id,
-						typeSlug: r.slug,
-						name: r.category_name,
-					},
-				}
+						id: r.product_id,
+						brand: r.brand,
+						model: r.model,
+						price: r.price,
+						description: r.description,
+						status: r.status,
+						year: r.year,
+						created_by: r.created_by,
+						warranty: r.warranty,
+						address: r.address,
+						color: r.color,
+						seats: r.seats,
+						mileage: r.mileage_km,
+						power: r.power,
+						health: r.health,
+						previousOwners: r.previousOwners,
+						images: images
+							.filter((img) => img.product_id === r.id)
+							.map((img) => img.url),
+						category: {
+							id: r.category_id,
+							typeSlug: r.slug,
+							name: r.category_name,
+						},
+				  }
 				: {
-					id: r.product_id,
-					brand: r.brand,
-					model: r.model,
-					price: r.price,
-					description: r.description,
-					status: r.status,
-					year: r.year,
-					color: r.color,
-					created_by: r.created_by,
-					warranty: r.warranty,
-					address: r.address,
-					capacity: r.capacity,
-					voltage: r.voltage,
-					health: r.health,
-					previousOwners: r.previousOwners,
-					images: images
-						.filter((img) => img.product_id === r.id)
-						.map((img) => img.url),
-					category: {
-						id: r.category_id,
-						typeSlug: r.slug,
-						name: r.category_name,
-					},
-				},
+						id: r.product_id,
+						brand: r.brand,
+						model: r.model,
+						price: r.price,
+						description: r.description,
+						status: r.status,
+						year: r.year,
+						color: r.color,
+						created_by: r.created_by,
+						warranty: r.warranty,
+						address: r.address,
+						capacity: r.capacity,
+						voltage: r.voltage,
+						health: r.health,
+						previousOwners: r.previousOwners,
+						images: images
+							.filter((img) => img.product_id === r.id)
+							.map((img) => img.url),
+						category: {
+							id: r.category_id,
+							typeSlug: r.slug,
+							name: r.category_name,
+						},
+				  },
 	}));
 }
 
@@ -418,14 +417,14 @@ export async function getPostsById(id: number): Promise<Post[]> {
 	// Lấy thông tin sản phẩm
 	const [rows]: any = await pool.query(
 		'SELECT p.id, p.status, p.brand, p.model, p.price, p.address,p.created_by,p.created_at,p.updated_at, p.description, p.year,p.warranty,p.previousOwners, p.address,' +
-		'p.image,p.color, pc.name AS category_name, pc.id AS category_id, ' +
-		'pc.slug AS category_type, v.mileage_km, v.seats,v.power,v.health as vehicle_health, bat.capacity, bat.voltage, bat.health as batery_health, ' +
-		'p.end_date, p.title, p.pushed_at, p.priority ' +
-		'FROM products p ' +
-		'LEFT JOIN product_categories pc ON p.product_category_id = pc.id ' +
-		'LEFT JOIN vehicles v ON v.product_id = p.id ' +
-		'LEFT JOIN batteries bat ON bat.product_id = p.id ' +
-		'WHERE p.id = ?',
+			'p.image,p.color, pc.name AS category_name, pc.id AS category_id, ' +
+			'pc.slug AS category_type, v.mileage_km, v.seats,v.power,v.health as vehicle_health, bat.capacity, bat.voltage, bat.health as batery_health, ' +
+			'p.end_date, p.title, p.pushed_at, p.priority ' +
+			'FROM products p ' +
+			'LEFT JOIN product_categories pc ON p.product_category_id = pc.id ' +
+			'LEFT JOIN vehicles v ON v.product_id = p.id ' +
+			'LEFT JOIN batteries bat ON bat.product_id = p.id ' +
+			'WHERE p.id = ?',
 		[id],
 	);
 
@@ -506,54 +505,54 @@ Ví dụ:
 		product:
 			r.category_type === 'vehicle'
 				? {
-					id: r.id,
-					brand: r.brand,
-					model: r.model,
-					price: parseFloat(r.price),
-					description: r.description,
-					status: r.status,
-					year: r.year,
-					created_by: r.created_by,
-					warranty: r.warranty,
-					address: r.address,
-					color: r.color,
-					seats: r.seats,
-					mileage: r.mileage_km,
-					power: r.power,
-					health: r.vehicle_health,
-					previousOwners: r.previousOwners,
-					category: {
-						id: r.category_id,
-						name: r.category_name,
-						typeSlug: r.category_type,
-					},
-					image: r.image,
-					images: images,
-				}
+						id: r.id,
+						brand: r.brand,
+						model: r.model,
+						price: parseFloat(r.price),
+						description: r.description,
+						status: r.status,
+						year: r.year,
+						created_by: r.created_by,
+						warranty: r.warranty,
+						address: r.address,
+						color: r.color,
+						seats: r.seats,
+						mileage: r.mileage_km,
+						power: r.power,
+						health: r.vehicle_health,
+						previousOwners: r.previousOwners,
+						category: {
+							id: r.category_id,
+							name: r.category_name,
+							typeSlug: r.category_type,
+						},
+						image: r.image,
+						images: images,
+				  }
 				: {
-					id: r.id,
-					brand: r.brand,
-					model: r.model,
-					price: parseFloat(r.price),
-					description: r.description,
-					status: r.status,
-					year: r.year,
-					color: r.color,
-					created_by: r.created_by,
-					warranty: r.warranty,
-					address: r.address,
-					capacity: r.capacity,
-					voltage: r.voltage,
-					health: r.batery_health,
-					previousOwners: r.previousOwners,
-					category: {
-						id: r.category_id,
-						name: r.category_name,
-						typeSlug: r.category_type,
-					},
-					image: r.image,
-					images: images,
-				},
+						id: r.id,
+						brand: r.brand,
+						model: r.model,
+						price: parseFloat(r.price),
+						description: r.description,
+						status: r.status,
+						year: r.year,
+						color: r.color,
+						created_by: r.created_by,
+						warranty: r.warranty,
+						address: r.address,
+						capacity: r.capacity,
+						voltage: r.voltage,
+						health: r.batery_health,
+						previousOwners: r.previousOwners,
+						category: {
+							id: r.category_id,
+							name: r.category_name,
+							typeSlug: r.category_type,
+						},
+						image: r.image,
+						images: images,
+				  },
 		seller: {
 			id: seller[0]?.id,
 			full_name: seller[0]?.full_name,
@@ -616,8 +615,10 @@ export async function updatePostByAdmin(
 			`;
 			params = [reason || 'Không có lý do', id];
 
-            await pool.query(`update orders set tracking = 'PROCESSING' where product_id = ?`, [id]);
-
+			await pool.query(
+				`update orders set tracking = 'PROCESSING' where product_id = ?`,
+				[id],
+			);
 		} else if (post.reject_count === 1 && post.is_finally_rejected === 0) {
 			query = `
 				UPDATE products
@@ -630,9 +631,10 @@ export async function updatePostByAdmin(
 			`;
 			params = [reason || 'Không có lý do', id];
 
-		   await pool.query(`update orders set tracking = 'FAILED' where product_id = ?`, [id]);
-
-
+			await pool.query(
+				`update orders set tracking = 'FAILED' where product_id = ?`,
+				[id],
+			);
 		} else if (post.reject_count >= 2 && post.is_finally_rejected === 1) {
 			throw new Error('Hành động bị nghi ngờ tấn công hệ thống');
 		}
@@ -644,7 +646,10 @@ export async function updatePostByAdmin(
 			WHERE id = ?;
 		`;
 
-		await pool.query(`update orders set tracking = 'SUCCESS' where product_id = ?`, [id]);
+		await pool.query(
+			`update orders set tracking = 'SUCCESS' where product_id = ?`,
+			[id],
+		);
 		params = [id];
 	} else {
 		throw new Error('Trạng thái không hợp lệ');
@@ -656,14 +661,17 @@ export async function updatePostByAdmin(
 	try {
 		let notificationTitle = '';
 		let notificationMessage = '';
-		let notificationType: 'bài post này được phê duyệt' | 'bài post này bị từ chối' =
-			'bài post này được phê duyệt';
+		let notificationType:
+			| 'bài post này được phê duyệt'
+			| 'bài post này bị từ chối' = 'bài post này được phê duyệt';
 
 		if (status === 'approved') {
 			notificationMessage = `Bài đăng của bạn đã được admin phê duyệt và hiển thị công khai.`;
 			notificationType = 'bài post này được phê duyệt';
 		} else if (status === 'rejected') {
-			notificationMessage = `Bài đăng của bạn đã bị từ chối. Lý do: ${reason || 'Không có lý do cụ thể'}`;
+			notificationMessage = `Bài đăng của bạn đã bị từ chối. Lý do: ${
+				reason || 'Không có lý do cụ thể'
+			}`;
 			notificationType = 'bài post này bị từ chối';
 		}
 
@@ -675,10 +683,7 @@ export async function updatePostByAdmin(
 		});
 
 		// Gửi notification real-time qua WebSocket
-		sendNotificationToUser(
-			post.created_by,
-			notification
-		);
+		sendNotificationToUser(post.created_by, notification);
 
 		console.log(
 			`📨 Notification sent to user ${post.user_id} for post ${id}`,
@@ -690,7 +695,6 @@ export async function updatePostByAdmin(
 
 	return getPostsById(id) as unknown as Vehicle | Battery;
 }
-
 
 //tạo bài post gồm các trường sau
 //battery: brand, model, capacity, voltage, health, year, price, warranty, address, title, description, images
@@ -727,8 +731,9 @@ export async function createNewPost(
 			[serviceId],
 		);
 
+		// ✅ Sử dụng múi giờ Việt Nam (GMT+7)
 		const milisecondsInDay = 24 * 60 * 60 * 1000;
-		const now = new Date();
+		const now = getVietnamTime();
 		const endDate = new Date(
 			now.getTime() + duration[0]?.duration * milisecondsInDay,
 		);
@@ -752,7 +757,7 @@ export async function createNewPost(
 		}
 
 		const [result] = await conn.query(
-			'INSERT INTO products (product_category_id, brand, model, price, year, color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority, previousOwners) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			'INSERT INTO products (product_category_id, brand, model, price, year, color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority, previousOwners) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)',
 			[
 				category_id,
 				brand,
@@ -767,14 +772,12 @@ export async function createNewPost(
 				image,
 				'pending',
 				userId,
-				now,
+				// NOW() sẽ tự động dùng múi giờ Việt Nam (GMT+7) do connection config
 				endDate,
 				1,
 				previousOwners,
 			],
 		);
-
-
 
 		const insertId = (result as any).insertId;
 
@@ -874,8 +877,10 @@ export async function updateUserPost(
 	// 	throw new Error('Bài viết này không thể chỉnh sửa hoặc đã bị từ chối vĩnh viễn');
 	// }
 
-	if ((post.reject_count === 2 && post.is_finally_rejected === 1)) {
-		throw new Error('Bài viết này không thể chỉnh sửa hoặc đã bị từ chối vĩnh viễn');
+	if (post.reject_count === 2 && post.is_finally_rejected === 1) {
+		throw new Error(
+			'Bài viết này không thể chỉnh sửa hoặc đã bị từ chối vĩnh viễn',
+		);
 	}
 
 	// ✅ Nếu đủ điều kiện => cho phép update + set status = pending
@@ -933,8 +938,7 @@ export async function updateUserPost(
 				id,
 			],
 		);
-	}
-	else if (category_type === 'battery') {
+	} else if (category_type === 'battery') {
 		const {
 			brand,
 			model,

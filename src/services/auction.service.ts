@@ -8,7 +8,7 @@ const auctionTimers = new Map<number, NodeJS.Timeout>();
 
 export async function getAuctionByProductId(productId: number) {
 	const [rows]: any = await pool.query(
-		`SELECT a.*, p.title FROM auctions a inner join products p on a.product_id = p.id WHERE a.product_id = ?`,
+		`SELECT * FROM auctions WHERE product_id = ?`,
 		[productId],
 	);
 	if (rows.length === 0) return null;
@@ -176,7 +176,12 @@ export async function getParticipatedAuction(
 			status: r.result,
 			currentPrice: parseFloat(r.currentPrice),
 		},
-		result: r.result !== 'ended' ? 'pending' : (r.winner_id === user_id ? 'win' : 'lose'),
+		result:
+			r.result !== 'ended'
+				? 'pending'
+				: r.winner_id === user_id
+				? 'win'
+				: 'lose',
 	}));
 
 	const [[{ total }]]: any = await pool.query(
@@ -252,7 +257,7 @@ export async function getActiveAuction(
 	auctionId: number,
 ): Promise<Auction | null> {
 	const [rows]: any = await pool.query(
-		`SELECT a.*, p.status as product_status, p.title
+		`SELECT a.*, p.status as product_status
      FROM auctions a
      JOIN products p ON a.product_id = p.id
      WHERE a.id = ? AND p.status = 'auctioning'`,
@@ -292,7 +297,7 @@ export async function placeBid(
 
 		// 1. Get auction details with lock
 		const [auctionRows]: any = await connection.query(
-			`SELECT a.*, p.status as product_status, p.title
+			`SELECT a.*, p.status as product_status
        FROM auctions a
        JOIN products p ON a.product_id = p.id
        WHERE a.id = ?
@@ -409,7 +414,7 @@ export async function closeAuction(
 	const conn = connection || (await pool.getConnection());
 	const shouldRelease = !connection;
 	const [rows]: any = await pool.query(
-		`SELECT a.*, p.status as product_status, p.id as product_id, p.created_by, p.title
+		`SELECT a.*, p.status as product_status, p.id as product_id, p.created_by
          FROM auctions a
          JOIN products p ON a.product_id = p.id
          WHERE a.id = ? AND p.status = 'auctioning'`,
@@ -698,6 +703,98 @@ export async function getAuctionLeaderboard(auctionId: number) {
 }
 
 /**
+ * Admin verify auction và set duration
+ * Update status từ 'draft' → 'verify'
+ * @param auctionId - ID của auction
+ * @param duration - Thời gian đấu giá (giây)
+ * @returns Success message và auction data
+ */
+export async function verifyAuctionByAdmin(
+	auctionId: number,
+	duration: number,
+): Promise<{ success: boolean; message: string; data?: any }> {
+	const connection = await pool.getConnection();
+
+	try {
+		await connection.beginTransaction();
+
+		// 1. Kiểm tra auction tồn tại và có status = 'draft'
+		const [auctionRows]: any = await connection.query(
+			`SELECT a.*, p.status as product_status, p.id as product_id
+			 FROM auctions a
+			 JOIN products p ON a.product_id = p.id
+			 WHERE a.id = ?`,
+			[auctionId],
+		);
+
+		if (auctionRows.length === 0) {
+			await connection.rollback();
+			return {
+				success: false,
+				message: 'Auction not found',
+			};
+		}
+
+		const auction = auctionRows[0];
+
+		// 2. Check nếu status không phải 'draft'
+		if (auction.status !== 'draft') {
+			await connection.rollback();
+			return {
+				success: false,
+				message: `Cannot verify auction with status '${auction.status}'. Only 'draft' auctions can be verified.`,
+			};
+		}
+
+		// 3. Validate duration
+		if (!duration || duration <= 0) {
+			await connection.rollback();
+			return {
+				success: false,
+				message: 'Duration must be greater than 0 seconds',
+			};
+		}
+
+		// 4. Update duration và status thành 'verify'
+		await connection.query(
+			`UPDATE auctions 
+			 SET duration = ?, status = 'verify' 
+			 WHERE id = ?`,
+			[duration, auctionId],
+		);
+
+		await connection.commit();
+
+		// 5. Lấy thông tin auction sau khi update
+		const [updatedAuction]: any = await pool.query(
+			`SELECT a.*, p.title, p.status as product_status
+			 FROM auctions a
+			 JOIN products p ON a.product_id = p.id
+			 WHERE a.id = ?`,
+			[auctionId],
+		);
+
+		const durationDisplay = formatTimeDisplay(duration);
+
+		console.log(
+			`✅ Admin verified auction ${auctionId} - Duration: ${durationDisplay}, Status: VERIFY`,
+		);
+
+		return {
+			success: true,
+			message: `Auction verified successfully. Duration set to ${durationDisplay}`,
+			data: updatedAuction[0],
+		};
+	} catch (error) {
+		await connection.rollback();
+		console.error('Error verifying auction:', error);
+		throw error;
+	} finally {
+		connection.release();
+	}
+}
+
+/**
  * Admin bấm nút bắt đầu đấu giá: set timer, khi hết timer thì đóng đấu giá và cập nhật product
  */
 export async function startAuctionByAdmin(auctionId: number) {
@@ -706,16 +803,33 @@ export async function startAuctionByAdmin(auctionId: number) {
 		`SELECT a.*, p.status as product_status, p.id as product_id, p.created_by as seller_id
          FROM auctions a
          JOIN products p ON a.product_id = p.id
-         WHERE a.id = ? AND p.status = 'auctioning'`,
+         WHERE a.id = ?`,
 		[auctionId],
 	);
 	if (rows.length === 0) {
 		return {
 			success: false,
-			message: 'Auction not found or product not auctioning',
+			message: 'Auction not found',
 		};
 	}
 	const auction = rows[0];
+
+	// ✅ Kiểm tra status phải là 'verify' hoặc 'pending' mới được start
+	if (auction.status !== 'verify' && auction.status !== 'pending') {
+		return {
+			success: false,
+			message: `Cannot start auction with status '${auction.status}'. Auction must be verified first.`,
+		};
+	}
+
+	// ✅ Kiểm tra product phải có status = 'auctioning'
+	if (auction.product_status !== 'auctioning') {
+		return {
+			success: false,
+			message: 'Product must have status "auctioning" to start auction',
+		};
+	}
+
 	// Nếu đã có timer thì không set lại
 	if (auctionTimers.has(auctionId)) {
 		return { success: false, message: 'Auction already started' };

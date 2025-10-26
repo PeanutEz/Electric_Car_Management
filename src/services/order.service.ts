@@ -1,4 +1,5 @@
 import pool from '../config/db';
+import { addHoursToVietnamTime } from '../utils/datetime';
 
 export async function getOrdersByUserIdAndCode(
 	userId: number,
@@ -327,9 +328,8 @@ export async function getAllOrderByUserId(
 						...base,
 						viewingAppointment: {
 							address: r.address,
-							time: new Date(
-								Date.now() + 2 * 3600_000,
-							).toISOString(),
+							// ✅ Thêm 2 giờ vào giờ Việt Nam hiện tại
+							time: addHoursToVietnamTime(2).toISOString(),
 						},
 						post: {
 							id: r.product_id,

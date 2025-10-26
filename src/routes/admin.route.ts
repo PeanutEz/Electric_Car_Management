@@ -1,5 +1,5 @@
 import Router from 'express';
-import { addService,editService, listServices, removeService,listOrders, getOrderTransactions, modifyAuction } from '../controllers/admin.controller';
+import { addService,editService, listServices, removeService,listOrders, getOrderTransactions, modifyAuction, verifyAuction } from '../controllers/admin.controller';
 
 const router = Router();
 
@@ -157,5 +157,76 @@ router.delete('/delete-package/:id', removeService);
  *         description: Lỗi máy chủ
  */
 router.put('/update-auction', modifyAuction);
+
+/**
+ * @swagger
+ * /api/admin/verify-auction:
+ *   post:
+ *     summary: Xác minh phiên đấu giá (admin)
+ *     description: Admin xác minh và kích hoạt phiên đấu giá với thời lượng cụ thể.
+ *     tags: [Admin]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - auctionId
+ *               - duration
+ *             properties:
+ *               auctionId:
+ *                 type: integer
+ *                 example: 12
+ *                 description: ID của phiên đấu giá cần xác minh.
+ *               duration:
+ *                 type: integer
+ *                 example: 3600
+ *                 description: Thời lượng phiên đấu giá (tính bằng giây).
+ *     responses:
+ *       200:
+ *         description: Xác minh phiên đấu giá thành công.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Phiên đấu giá đã được xác minh và kích hoạt thành công."
+ *                 data:
+ *                   type: object
+ *                   description: Thông tin chi tiết sau khi xác minh.
+ *       400:
+ *         description: Dữ liệu không hợp lệ hoặc xác minh thất bại.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid auction ID"
+ *       500:
+ *         description: Lỗi hệ thống.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+router.post('/verify-auction', verifyAuction);
 
 export default router;

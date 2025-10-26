@@ -5,6 +5,7 @@ import payos from '../config/payos';
 import { getPaymentStatus } from './payment.service';
 import { buildUrl } from '../utils/url';
 import e from 'express';
+import { toMySQLDateTime } from '../utils/datetime';
 
 export async function getAllServices(): Promise<Service[]> {
 	const [rows] = await pool.query(
@@ -202,7 +203,7 @@ export async function checkAndProcessPostPayment(
 			// ✅ Sửa lỗi ở đây: thêm đúng số lượng value (9 cột, 9 dấu ?)
 			const orderCode = Math.floor(Math.random() * 1000000);
 			const [row]: any = await conn.query(
-				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
 				[
 					orderCode,
 					'post',
@@ -212,8 +213,8 @@ export async function checkAndProcessPostPayment(
 					serviceCost,
 					'PAID',
 					'CREDIT',
-					new Date(), // ✅ thay cho NOW() để khớp số lượng
-					'PROCESSING'
+					// NOW() sẽ tự động dùng múi giờ Việt Nam (GMT+7) do connection config
+					'PROCESSING',
 				],
 			);
 
@@ -249,7 +250,7 @@ export async function checkAndProcessPostPayment(
 
 			// ✅ Sửa câu INSERT tương tự ở đây (đủ 9 giá trị)
 			await pool.query(
-				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
 				[
 					orderCode,
 					'post',
@@ -259,8 +260,8 @@ export async function checkAndProcessPostPayment(
 					amountNeeded,
 					'PENDING',
 					'PAYOS',
-					new Date(),
-					'PENDING'
+					// NOW() sẽ tự động dùng múi giờ Việt Nam (GMT+7) do connection config
+					'PENDING',
 				],
 			);
 
@@ -318,8 +319,6 @@ export async function checkAndProcessPostPayment(
 		conn.release();
 	}
 }
-
-
 
 // Kiểm tra và xử lý quota/payment khi tạo post
 // export async function checkAndProcessPostPayment(
@@ -413,7 +412,6 @@ export async function checkAndProcessPostPayment(
 // 		}
 
 // 		const userCredit = parseFloat(userRows[0].total_credit);
-
 
 // 		// Lac sửa lỗi create postpost
 // 		const [productRows]: any = await conn.query(
@@ -601,7 +599,10 @@ export async function processServicePayment(orderCode: string) {
 			orderCode,
 		]);
 
-		await pool.query(`update order set tracking = 'SUCCESS' where code = ?`, [orderCode]);
+		await pool.query(
+			`update order set tracking = 'SUCCESS' where code = ?`,
+			[orderCode],
+		);
 
 		// Cộng tiền vào total_credit
 		await pool.query(
@@ -661,7 +662,10 @@ export async function processServicePayment(orderCode: string) {
 			orderCode,
 		]);
 
-		await pool.query(`update order set tracking = 'FAILED' where code = ?`, [orderCode]);
+		await pool.query(
+			`update order set tracking = 'FAILED' where code = ?`,
+			[orderCode],
+		);
 
 		return {
 			user: await getUserById(userId),
@@ -789,7 +793,7 @@ export async function processPackagePayment(
 					serviceCost,
 					'PAID',
 					'CREDIT',
-					'SUCCESS'
+					'SUCCESS',
 				],
 			);
 
@@ -827,7 +831,7 @@ export async function processPackagePayment(
 					serviceCost,
 					'PENDING',
 					'PAYOS',
-					'PENDING'
+					'PENDING',
 				],
 			);
 
@@ -929,7 +933,7 @@ export async function processTopUpPayment(
 				amount,
 				'PENDING',
 				'PAYOS',
-				'PENDING'
+				'PENDING',
 			],
 		);
 

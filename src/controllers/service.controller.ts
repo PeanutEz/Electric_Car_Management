@@ -12,6 +12,7 @@ import {
 	deleteService,
 	getServices,
 } from '../services/service.service';
+import { getVietnamISOString } from '../utils/datetime';
 
 export async function listServices(req: Request, res: Response) {
 	try {
@@ -73,7 +74,7 @@ export async function getServiceByTypeController(req: Request, res: Response) {
 		res.status(200).json({
 			message: 'Lấy dịch vụ thành công',
 			data: {
-				version: new Date().toISOString(),
+				version: getVietnamISOString(), // ✅ Múi giờ Việt Nam (GMT+7)
 				services: service,
 			},
 		});

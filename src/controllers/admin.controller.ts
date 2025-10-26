@@ -6,8 +6,9 @@ import {
 	deletePackage,
    getOrder,
    getTransactions,
-   updateAuction
+   updateAuction,
 } from '../services/admin.service';
+import { verifyAuctionByAdmin } from '../services/auction.service';
 
 export const listServices = async (req: Request, res: Response) => {
 	try {
@@ -118,6 +119,40 @@ export const modifyAuction = async (req: Request, res: Response) => {
 	} catch (error: any) {
 		res.status(500).json({
 			message: error.message,
+		});
+	}
+};
+
+export const verifyAuction = async (req: Request, res: Response) => {
+	try {
+		const { auctionId, duration } = req.body;
+
+		if (!auctionId || isNaN(auctionId)) {
+			return res.status(400).json({
+				success: false,
+				message: 'Invalid auction ID',
+			});
+		}
+
+		if (!duration || duration <= 0) {
+			return res.status(400).json({
+				success: false,
+				message: 'Duration must be greater than 0 seconds',
+			});
+		}
+
+		const result = await verifyAuctionByAdmin(auctionId, duration);
+
+		if (!result.success) {
+			return res.status(400).json(result);
+		}
+
+		res.status(200).json(result);
+	} catch (error: any) {
+		console.error('Error in verifyAuction controller:', error);
+		res.status(500).json({
+			success: false,
+			message: error.message || 'Internal server error',
 		});
 	}
 };
