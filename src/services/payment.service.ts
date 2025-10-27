@@ -169,7 +169,7 @@ export async function processAuctionFeePayment(
 					'CREDIT',
 					productId,
 					17,
-					'PENDING'
+					'VERIFYING'
 				],
 			);
 
