@@ -495,8 +495,8 @@ export async function processDepositPayment(
 
 			// Insert vào bảng orders với type = 'deposit'
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
+				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
+				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
 				[
 					'deposit',
 					'PAID',
@@ -506,6 +506,7 @@ export async function processDepositPayment(
 					'CREDIT',
 					auction.product_id,
 					18,
+					"AUCTION_PROCESSING"
 				],
 			);
 
@@ -540,8 +541,8 @@ export async function processDepositPayment(
 
 			// Tạo order với status PENDING
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)`,
+				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
+				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
 				[
 					'deposit',
 					'PENDING',
@@ -551,6 +552,7 @@ export async function processDepositPayment(
 					'PAYOS',
 					auction.product_id,
 					18,
+					'PENDING'
 				],
 			);
 

@@ -850,15 +850,15 @@ export async function startAuctionByAdmin(auctionId: number) {
 	}
 
 	// ✅ Update order tracking thành AUCTION_PROCESSING khi admin duyệt
-	await pool.query(
-		`UPDATE orders 
-		SET tracking = 'AUCTION_PROCESSING' 
-		WHERE status = 'PAID' 
-		AND type = 'auction' 
-		AND product_id = ? 
-		AND buyer_id = ?`,
-		[auction.product_id, auction.seller_id],
-	);
+	// await pool.query(
+	// 	`UPDATE orders 
+	// 	SET tracking = 'AUCTION_PROCESSING' 
+	// 	WHERE status = 'PAID' 
+	// 	AND type = 'auction' 
+	// 	AND product_id = ? 
+	// 	AND buyer_id = ?`,
+	// 	[auction.product_id, auction.seller_id],
+	// );
 	const currentTime = getVietnamTime();
 	
 
