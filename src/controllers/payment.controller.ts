@@ -582,6 +582,8 @@ export const auctionDepositController = async (req: Request, res: Response) => {
 					depositAmount: result.depositAmount,
 					auctionMemberId: result.auctionMemberId,
 					paymentMethod: result.paymentMethod,
+					product_id: result.product_id,
+					title: result.title,
 				},
 			});
 		}

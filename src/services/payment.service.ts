@@ -3,6 +3,7 @@ import { Payment } from '../models/payment.model';
 import payos from '../config/payos';
 import pool from '../config/db';
 import { detectPaymentMethod } from '../utils/parser';
+import { title } from 'process';
 
 export async function createPayosPayment(payload: Payment) {
 	try {
@@ -434,6 +435,11 @@ export async function processDepositPayment(
 			[auctionId],
 		);
 
+		const [productRows]: any = await connection.query(
+			'SELECT title FROM products WHERE id = ?',
+			[auctionRows[0]?.product_id],
+		);
+
 		if (!auctionRows || auctionRows.length === 0) {
 			throw new Error('Auction không tồn tại');
 		}
@@ -520,9 +526,10 @@ export async function processDepositPayment(
 				depositAmount: depositAmount,
 				message: 'Đặt cọc tham gia đấu giá thành công bằng credit',
 				auctionMemberId: memberResult.insertId,
+				product_id: auction.product_id,
+				title: productRows[0]?.title,
 				auction: {
 					id: auction.id,
-					product_id: auction.product_id,
 					deposit: depositAmount,
 				},
 			};
