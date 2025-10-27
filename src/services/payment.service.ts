@@ -444,6 +444,10 @@ export async function processDepositPayment(
 			throw new Error('Auction không tồn tại');
 		}
 
+		if(auctionRows[0].status !== 'live' || auctionRows[0].status === 'ended') {
+			throw new Error('Phiên đấu giá chưa bắt đầu hoặc đã kết thúc');
+		}
+
 		const auction = auctionRows[0];
 
 		// Kiểm tra xem buyer có phải là seller không
