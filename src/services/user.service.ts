@@ -365,9 +365,9 @@ export async function getPostByUserId(
 			SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
 			SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved,
 			SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS rejected,
-			SUM(CASE WHEN status_verify = 'verified' THEN 1 ELSE 0 END) AS verified,
-			SUM(CASE WHEN status_verify = 'verifying' THEN 1 ELSE 0 END) AS verifying,
-			SUM(CASE WHEN status_verify = 'unverified' THEN 1 ELSE 0 END) AS unverified
+			SUM(CASE WHEN status = 'auctioning' THEN 1 ELSE 0 END) AS auctioning,
+			SUM(CASE WHEN status = 'auctioned' THEN 1 ELSE 0 END) AS auctioned,
+			SUM(CASE WHEN status = 'sold' THEN 1 ELSE 0 END) AS sold
 		FROM products
 		WHERE created_by = ?
 	`,
@@ -383,12 +383,6 @@ export async function getPostByUserId(
 		param.push(status);
 	}
 
-	// Nếu có status_verify
-	if (status_verify) {
-		queryCount += ' AND status_verify = ?';
-		param.push(status_verify);
-	}
-
 	// Luôn có created_by
 	queryCount += ' AND created_by = ?';
 	param.push(userId);
@@ -400,9 +394,9 @@ export async function getPostByUserId(
 		pending: Number(counts[0].pending) || 0,
 		approved: Number(counts[0].approved) || 0,
 		rejected: Number(counts[0].rejected) || 0,
-		verified: Number(counts[0].verified) || 0,
-		verifying: Number(counts[0].verifying) || 0,
-		unverified: Number(counts[0].unverified) || 0,
+		auctioning: Number(counts[0].auctioning) || 0,
+		auctioned: Number(counts[0].auctioned) || 0,
+		sold: Number(counts[0].sold) || 0,
 	};
 
 	// ✅ 2️⃣ Lấy danh sách bài đăng
@@ -493,7 +487,7 @@ export async function getPostByUserId(
 		id: post.id,
 		allow_resubmit:
 			!(post.reject_count === 2 && post.is_finally_rejected === 1) &&
-			!['approved', 'processing', 'auctioning'].includes(post.status) &&
+			!['approved', 'processing', 'auctioning', 'auctioned', 'sold'].includes(post.status) &&
 			post.status === 'rejected',
 		title: post.title,
 		description: post.description,

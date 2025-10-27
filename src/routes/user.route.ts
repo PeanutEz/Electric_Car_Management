@@ -560,7 +560,7 @@ router.put('/update-phone', authenticateToken, updateUserPhone);
  *         name: status
  *         schema:
  *           type: string
- *           enum: [pending, approved, rejected]
+ *           enum: [pending, approved, rejected, auctioning, auctioned, sold]
  *         required: false
  *         description: Lọc bài đăng theo trạng thái
  *     responses:
