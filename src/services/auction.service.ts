@@ -708,7 +708,7 @@ export async function getAuctionLeaderboard(auctionId: number) {
 
 /**
  * Admin verify auction và set duration
- * Update status từ 'draft' → 'verify'
+ * Update status từ 'draft' → 'verified'
  * @param auctionId - ID của auction
  * @param duration - Thời gian đấu giá (giây)
  * @returns Success message và auction data
@@ -722,7 +722,7 @@ export async function verifyAuctionByAdmin(
 	try {
 		await connection.beginTransaction();
 
-		// 1. Kiểm tra auction tồn tại và có status = 'verifying'
+		// 1. Kiểm tra auction tồn tại và có status = 'verified'
 		const [auctionRows]: any = await connection.query(
 			`SELECT a.*, p.status as product_status, p.id as product_id
 			 FROM auctions a
@@ -770,6 +770,12 @@ export async function verifyAuctionByAdmin(
 		await connection.query('update orders set tracking = ? where product_id = ? and type = "auction"',
 			['SUCCESS', auction.product_id]
 		);
+		await connection.query(
+			`UPDATE auctions 
+			 SET duration = ?, status = 'verified' 
+			 WHERE id = ?`,
+			[duration, auctionId],
+		);
 
 		await connection.commit();
 
@@ -785,7 +791,7 @@ export async function verifyAuctionByAdmin(
 		const durationDisplay = formatTimeDisplay(duration);
 
 		console.log(
-			`✅ Admin verified auction ${auctionId} - Duration: ${durationDisplay}, Status: VERIFY`,
+			`✅ Admin verified auction ${auctionId} - Duration: ${durationDisplay}, Status: VERIFIED`,
 		);
 
 		return {
@@ -822,8 +828,8 @@ export async function startAuctionByAdmin(auctionId: number) {
 	}
 	const auction = rows[0];
 
-	// ✅ Kiểm tra status phải là 'verify'
-	if (auction.status !== 'verify') {
+	// ✅ Kiểm tra status phải là 'verified'
+	if (auction.status !== 'verified') {
 		return {
 			success: false,
 			message: `Cannot start auction with status '${auction.status}'. Auction must be verified first.`,
