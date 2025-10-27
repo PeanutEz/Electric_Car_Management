@@ -447,16 +447,45 @@ export async function closeAuction(
 			[auctionId],
 		);
 
-		await pool.query(
-			`UPDATE orders SET tracking = 'AUCTION_SUCCESS' where status = 'PAID' and type = 'auction' and product_id = ? and buyer_id = ?`,
-			[rows[0].product_id, rows[0].created_by],
-		);
+		// await pool.query(
+		// 	`UPDATE orders SET tracking = 'AUCTION_SUCCESS' where status = 'PAID' and type = 'auction' and product_id = ? and buyer_id = ?`,
+		// 	[rows[0].product_id, rows[0].created_by],
+		// );
 
 		// Update product status to 'auctioned' (regardless of winner)
 		await conn.query(
 			`UPDATE products SET status = 'auctioned' WHERE id = ?`,
 			[product_id],
 		);
+
+		const [findWinner]: any = await conn.query(
+			`select winner_id from auctions where id = ?`,
+			[auctionId],
+		);
+		await conn.query(`UPDATE orders SET tracking = 'AUCTION_SUCCESS' 
+			WHERE status = 'PAID' AND type = 'deposit' AND product_id = ? AND buyer_id = ?`, [rows[0].product_id, findWinner[0].winner_id]);
+
+		const [findLosers]: any = await conn.query(
+			`select user_id from auction_members where auction_id = ? AND user_id != ?`,
+			[auctionId, findWinner[0].winner_id],
+		);
+		const [deposit]: any = await conn.query(`select deposit from auctions where id = ?`, [auctionId]);
+		findLosers.forEach(async (loser: any) => {
+			//Refund deposit to losers
+			await conn.query(`update users set total_credit = total_credit + ? where id = ?`, [deposit[0].deposit, loser.user_id]);
+			//insert transaction record for refund
+			const [selectOrder_id]: any = await conn.query(`select id from orders where status = 'PAID' and type = 'deposit' and product_id = ? and buyer_id = ?`, [rows[0].product_id, loser.user_id]);
+			await conn.query(`insert into transaction_detail (order_id, user_id, unit, type, credit) values (?, ?, ?, ?, ?)`, [
+				selectOrder_id[0].id,
+				loser.user_id,
+				'CREDIT',
+				'Increase',
+				deposit[0].deposit,
+			]);
+			// update tracking to REFUND
+			await conn.query(`UPDATE orders SET tracking = 'REFUND' 
+			WHERE id = ?`, [selectOrder_id[0].id]);
+		});
 
 		// ✅ Update auction status to 'ended'
 		await conn.query(`UPDATE auctions SET status = 'ended', end_at = ? WHERE id = ?`, [
