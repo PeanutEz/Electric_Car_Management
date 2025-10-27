@@ -475,7 +475,7 @@ export async function closeAuction(
 			await conn.query(`update users set total_credit = total_credit + ? where id = ?`, [deposit[0].deposit, loser.user_id]);
 			//insert transaction record for refund
 			const [selectOrder_id]: any = await conn.query(`select id from orders where status = 'PAID' and type = 'deposit' and product_id = ? and buyer_id = ?`, [rows[0].product_id, loser.user_id]);
-			await conn.query(`insert into transaction_detail (order_id, user_id, unit, type, credit) values (?, ?, ?, ?, ?)`, [
+			await conn.query(`insert into transaction_detail (order_id, user_id, unit, type, credits) values (?, ?, ?, ?, ?)`, [
 				selectOrder_id[0].id,
 				loser.user_id,
 				'CREDIT',
