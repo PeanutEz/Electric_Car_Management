@@ -854,7 +854,7 @@ export async function startAuctionByAdmin(auctionId: number) {
 
 
 	// ✅ Update auction status thành 'live' khi bắt đầu
-	await pool.query(`UPDATE auctions SET status = 'live', start_time = ? WHERE id = ?`, [
+	await pool.query(`UPDATE auctions SET status = 'live', start_at = ? WHERE id = ?`, [
 		currentTime,
 		auctionId,
 	]);
