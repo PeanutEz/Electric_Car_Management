@@ -431,7 +431,7 @@ export async function processDepositPayment(
 
 		// Lấy thông tin auction
 		const [auctionRows]: any = await connection.query(
-			'SELECT id, product_id, seller_id, deposit, starting_price, target_price, winner_id FROM auctions WHERE id = ?',
+			'SELECT id,status, product_id, seller_id, deposit, starting_price, target_price, winner_id FROM auctions WHERE id = ?',
 			[auctionId],
 		);
 

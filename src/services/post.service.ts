@@ -442,58 +442,59 @@ export async function getPostsById(id: number): Promise<Post[]> {
 	const images = (imageRows as any[]).map((row) => row.url);
 
 	// Tạo prompt riêng cho vehicle và battery
-	let geminiPromptPrice: string;
+	// let geminiPromptPrice: string;
 
-	if (rows[0].category_type === 'vehicle') {
-		geminiPromptPrice =
-			await generateText(`Hãy ước lượng khoảng giá thị trường của một sản phẩm cũ dựa trên các thông tin sau:
-- Tên sản phẩm: ${rows[0].model}
-- Thương hiệu: ${rows[0].brand}
-- Loại sản phẩm: Xe điện
-- Năm sản xuất: ${rows[0].year}
-- Màu sắc: ${rows[0].color}
-- Số chỗ ngồi: ${rows[0].seats}
-- Quãng đường đã đi: ${rows[0].mileage_km} km
-- Công suất: ${rows[0].power} kW
-- Khu vực giao dịch: ${rows[0].address}
+	// 	if (rows[0].category_type === 'vehicle') {
+	// 		geminiPromptPrice =
+	// 			await generateText(`Hãy ước lượng khoảng giá thị trường của một sản phẩm cũ dựa trên các thông tin sau:
+	// - Tên sản phẩm: ${rows[0].model}
+	// - Thương hiệu: ${rows[0].brand}
+	// - Loại sản phẩm: Xe điện
+	// - Năm sản xuất: ${rows[0].year}
+	// - Màu sắc: ${rows[0].color}
+	// - Số chỗ ngồi: ${rows[0].seats}
+	// - Quãng đường đã đi: ${rows[0].mileage_km} km
+	// - Công suất: ${rows[0].power} kW
+	// - Khu vực giao dịch: ${rows[0].address}
 
-Hãy trả về kết quả theo đúng định dạng sau:
+	// Hãy trả về kết quả theo đúng định dạng sau:
 
-<min_price>, <max_price>
+	// <min_price>, <max_price>
 
-Yêu cầu:
-- Đơn vị là VND (không ghi chữ "VND").
-- Chỉ trả về hai số, cách nhau bằng dấu phẩy và một khoảng trắng.
-- Không thêm bất kỳ mô tả, ký tự, hay chữ nào khác.
+	// Yêu cầu:
+	// - Đơn vị là VND (không ghi chữ "VND").
+	// - Chỉ trả về hai số, cách nhau bằng dấu phẩy và một khoảng trắng.
+	// - Không thêm bất kỳ mô tả, ký tự, hay chữ nào khác.
 
-Ví dụ:
-350000000, 450000000`);
-	} else {
-		geminiPromptPrice =
-			await generateText(`Hãy ước lượng khoảng giá thị trường của một sản phẩm cũ dựa trên các thông tin sau:
-- Tên sản phẩm: ${rows[0].model}
-- Thương hiệu: ${rows[0].brand}
-- Loại sản phẩm: Pin điện
-- Năm sản xuất: ${rows[0].year}
-- Dung lượng pin: ${rows[0].capacity} Ah
-- Điện áp: ${rows[0].voltage} V
-- Tình trạng sức khỏe pin: ${rows[0].health}
-- Khu vực giao dịch: ${rows[0].address}
+	// Ví dụ:
+	// 350000000, 450000000`);
+	// 	} else {
+	// 		geminiPromptPrice =
+	// 			await generateText(`Hãy ước lượng khoảng giá thị trường của một sản phẩm cũ dựa trên các thông tin sau:
+	// - Tên sản phẩm: ${rows[0].model}
+	// - Thương hiệu: ${rows[0].brand}
+	// - Loại sản phẩm: Pin điện
+	// - Năm sản xuất: ${rows[0].year}
+	// - Dung lượng pin: ${rows[0].capacity} Ah
+	// - Điện áp: ${rows[0].voltage} V
+	// - Tình trạng sức khỏe pin: ${rows[0].health}
+	// - Khu vực giao dịch: ${rows[0].address}
 
-Hãy trả về kết quả theo đúng định dạng sau:
+	// Hãy trả về kết quả theo đúng định dạng sau:
 
-<min_price>, <max_price>
+	// <min_price>, <max_price>
 
-Yêu cầu:
-- Đơn vị là VND (không ghi chữ "VND").
-- Chỉ trả về hai số, cách nhau bằng dấu phẩy và một khoảng trắng.
-- Không thêm bất kỳ mô tả, ký tự, hay chữ nào khác.
+	// Yêu cầu:
+	// - Đơn vị là VND (không ghi chữ "VND").
+	// - Chỉ trả về hai số, cách nhau bằng dấu phẩy và một khoảng trắng.
+	// - Không thêm bất kỳ mô tả, ký tự, hay chữ nào khác.
 
-Ví dụ:
-350000000, 450000000`);
-	}
+	// Ví dụ:
+	// 350000000, 450000000`);
+	// 	}
 	const r = (rows as any)[0];
 
+	const geminiPromptPrice = '1000000, 5000000'; // Placeholder giá trị
 	return (rows as any).map((r: any) => ({
 		id: r.id,
 		title: r.title,
