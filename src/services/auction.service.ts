@@ -459,7 +459,7 @@ export async function closeAuction(
 		);
 
 		// ✅ Update auction status to 'ended'
-		await conn.query(`UPDATE auctions SET status = 'ended', end_time = ? WHERE id = ?`, [
+		await conn.query(`UPDATE auctions SET status = 'ended', end_at = ? WHERE id = ?`, [
 			getVietnamTime(),
 			auctionId,
 		]);
@@ -722,7 +722,7 @@ export async function verifyAuctionByAdmin(
 	try {
 		await connection.beginTransaction();
 
-		// 1. Kiểm tra auction tồn tại và có status = 'draft'
+		// 1. Kiểm tra auction tồn tại và có status = 'verifying'
 		const [auctionRows]: any = await connection.query(
 			`SELECT a.*, p.status as product_status, p.id as product_id
 			 FROM auctions a
@@ -760,11 +760,15 @@ export async function verifyAuctionByAdmin(
 		}
 
 		// 4. Update duration và status thành 'verify'
-		await connection.query(
-			`UPDATE auctions 
-			 SET duration = ?, status = 'verify' 
-			 WHERE id = ?`,
-			[duration, auctionId],
+		// await connection.query(
+		// 	`UPDATE auctions 
+		// 	 SET duration = ?, status = 'verify' 
+		// 	 WHERE id = ?`,
+		// 	[duration, auctionId],
+		// );
+
+		await connection.query('update orders set tracking = ? where product_id = ? and type = "auction"',
+			['SUCCESS', auction.product_id]
 		);
 
 		await connection.commit();
