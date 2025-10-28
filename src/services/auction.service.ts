@@ -3,6 +3,8 @@ import { Auction } from '../models/auction.model';
 import { getIO } from '../config/socket';
 import { create } from 'domain';
 import { getVietnamTime } from '../utils/datetime';
+import * as notificationService from './notification.service';
+import { sendNotificationToUser } from '../config/socket';
 
 // Store active auction timers
 const auctionTimers = new Map<number, NodeJS.Timeout>();
@@ -462,36 +464,112 @@ export async function closeAuction(
 			`select winner_id from auctions where id = ?`,
 			[auctionId],
 		);
-		await conn.query(`UPDATE orders SET tracking = 'AUCTION_SUCCESS' 
-			WHERE status = 'PAID' AND type = 'deposit' AND product_id = ? AND buyer_id = ?`, [rows[0].product_id, findWinner[0].winner_id]);
+		await conn.query(
+			`UPDATE orders SET tracking = 'AUCTION_SUCCESS' 
+			WHERE status = 'PAID' AND type = 'deposit' AND product_id = ? AND buyer_id = ?`,
+			[rows[0].product_id, findWinner[0].winner_id],
+		);
 
 		const [findLosers]: any = await conn.query(
 			`select user_id from auction_members where auction_id = ? AND user_id != ?`,
 			[auctionId, findWinner[0].winner_id],
 		);
-		const [deposit]: any = await conn.query(`select deposit from auctions where id = ?`, [auctionId]);
+		const [deposit]: any = await conn.query(
+			`select deposit from auctions where id = ?`,
+			[auctionId],
+		);
+		const [productInfo]: any = await conn.query(
+			`select title from products where id = ?`,
+			[rows[0].product_id],
+		);
+		const productTitle = productInfo[0]?.title || 'sản phẩm';
+
 		findLosers.forEach(async (loser: any) => {
 			//Refund deposit to losers
-			await conn.query(`update users set total_credit = total_credit + ? where id = ?`, [deposit[0].deposit, loser.user_id]);
+			await conn.query(
+				`update users set total_credit = total_credit + ? where id = ?`,
+				[deposit[0].deposit, loser.user_id],
+			);
 			//insert transaction record for refund
-			const [selectOrder_id]: any = await conn.query(`select id from orders where status = 'PAID' and type = 'deposit' and product_id = ? and buyer_id = ?`, [rows[0].product_id, loser.user_id]);
-			await conn.query(`insert into transaction_detail (order_id, user_id, unit, type, credits) values (?, ?, ?, ?, ?)`, [
-				selectOrder_id[0].id,
-				loser.user_id,
-				'CREDIT',
-				'Increase',
-				deposit[0].deposit,
-			]);
+			const [selectOrder_id]: any = await conn.query(
+				`select id from orders where status = 'PAID' and type = 'deposit' and product_id = ? and buyer_id = ?`,
+				[rows[0].product_id, loser.user_id],
+			);
+			await conn.query(
+				`insert into transaction_detail (order_id, user_id, unit, type, credits) values (?, ?, ?, ?, ?)`,
+				[
+					selectOrder_id[0].id,
+					loser.user_id,
+					'CREDIT',
+					'Increase',
+					deposit[0].deposit,
+				],
+			);
 			// update tracking to REFUND
-			await conn.query(`UPDATE orders SET tracking = 'REFUND' 
-			WHERE id = ?`, [selectOrder_id[0].id]);
+			await conn.query(
+				`UPDATE orders SET tracking = 'REFUND' 
+			WHERE id = ?`,
+				[selectOrder_id[0].id],
+			);
+
+			// 🔔 Gửi notification cho user khi bị refund (thua đấu giá)
+			try {
+				const notification =
+					await notificationService.createNotification({
+						user_id: loser.user_id,
+						post_id: rows[0].product_id,
+						type: 'deposit_fail',
+						title: 'Hoàn tiền đặt cọc',
+						message: `Bạn đã thua đấu giá "${productTitle}". Tiền cọc ${parseFloat(
+							deposit[0].deposit,
+						).toLocaleString(
+							'vi-VN',
+						)} VNĐ đã được hoàn trả vào tài khoản.`,
+					});
+				sendNotificationToUser(loser.user_id, notification);
+			} catch (notifError: any) {
+				console.error(
+					'⚠️ Failed to send refund notification:',
+					notifError.message,
+				);
+			}
 		});
 
+		// 🔔 Gửi notification cho winner (nếu có)
+		if (findWinner[0]?.winner_id) {
+			try {
+				const [winningPriceResult]: any = await conn.query(
+					`select winning_price from auctions where id = ?`,
+					[auctionId],
+				);
+				const winningPrice = winningPriceResult[0]?.winning_price || 0;
+
+				const notification =
+					await notificationService.createNotification({
+						user_id: findWinner[0].winner_id,
+						post_id: rows[0].product_id,
+						type: 'deposit_win',
+						title: 'Chúc mừng! Bạn đã thắng đấu giá',
+						message: `Bạn đã thắng đấu giá "${productTitle}" với giá ${parseFloat(
+							winningPrice,
+						).toLocaleString(
+							'vi-VN',
+						)} VNĐ. Vui lòng liên hệ người bán để hoàn tất giao dịch.`,
+					});
+				sendNotificationToUser(findWinner[0].winner_id, notification);
+			} catch (notifError: any) {
+				console.error(
+					'⚠️ Failed to send winner notification:',
+					notifError.message,
+				);
+			}
+		}
+
 		// ✅ Update auction status to 'ended'
-		await conn.query(`UPDATE auctions SET status = 'ended', end_at = ? WHERE id = ?`, [
-			getVietnamTime(),
-			auctionId,
-		]);
+		await conn.query(
+			`UPDATE auctions SET status = 'ended', end_at = ? WHERE id = ?`,
+			[getVietnamTime(), auctionId],
+		);
 
 		// Clear timer if exists
 		if (auctionTimers.has(auctionId)) {
@@ -790,14 +868,15 @@ export async function verifyAuctionByAdmin(
 
 		// 4. Update duration và status thành 'verify'
 		// await connection.query(
-		// 	`UPDATE auctions 
-		// 	 SET duration = ?, status = 'verify' 
+		// 	`UPDATE auctions
+		// 	 SET duration = ?, status = 'verify'
 		// 	 WHERE id = ?`,
 		// 	[duration, auctionId],
 		// );
 
-		await connection.query('update orders set tracking = ? where product_id = ? and type = "auction"',
-			['SUCCESS', auction.product_id]
+		await connection.query(
+			'update orders set tracking = ? where product_id = ? and type = "auction"',
+			['SUCCESS', auction.product_id],
 		);
 		await connection.query(
 			`UPDATE auctions 
@@ -807,6 +886,32 @@ export async function verifyAuctionByAdmin(
 		);
 
 		await connection.commit();
+
+		// 🔔 Gửi notification cho seller khi admin duyệt auction
+		try {
+			const [productInfo]: any = await pool.query(
+				`SELECT title, created_by FROM products WHERE id = ?`,
+				[auction.product_id],
+			);
+			const sellerId = productInfo[0]?.created_by;
+
+			if (sellerId) {
+				const notification =
+					await notificationService.createNotification({
+						user_id: sellerId,
+						post_id: auction.product_id,
+						type: 'auction_verified',
+						title: 'Đấu giá được duyệt',
+						message: 'Phiên đấu giá của bạn đã được admin phê duyệt và sẵn sàng bắt đầu.',
+					});
+				sendNotificationToUser(sellerId, notification);
+			}
+		} catch (notifError: any) {
+			console.error(
+				'⚠️ Failed to send auction verified notification:',
+				notifError.message,
+			);
+		}
 
 		// 5. Lấy thông tin auction sau khi update
 		const [updatedAuction]: any = await pool.query(
@@ -880,25 +985,21 @@ export async function startAuctionByAdmin(auctionId: number) {
 
 	// ✅ Update order tracking thành AUCTION_PROCESSING khi admin duyệt
 	// await pool.query(
-	// 	`UPDATE orders 
-	// 	SET tracking = 'AUCTION_PROCESSING' 
-	// 	WHERE status = 'PAID' 
-	// 	AND type = 'auction' 
-	// 	AND product_id = ? 
+	// 	`UPDATE orders
+	// 	SET tracking = 'AUCTION_PROCESSING'
+	// 	WHERE status = 'PAID'
+	// 	AND type = 'auction'
+	// 	AND product_id = ?
 	// 	AND buyer_id = ?`,
 	// 	[auction.product_id, auction.seller_id],
 	// );
 	const currentTime = getVietnamTime();
-	
-
 
 	// ✅ Update auction status thành 'live' khi bắt đầu
-	await pool.query(`UPDATE auctions SET status = 'live', start_at = ? WHERE id = ?`, [
-		currentTime,
-		auctionId,
-	]);
-
-	
+	await pool.query(
+		`UPDATE auctions SET status = 'live', start_at = ? WHERE id = ?`,
+		[currentTime, auctionId],
+	);
 
 	console.log(
 		`✅ Admin approved auction ${auctionId} - Status: LIVE, Order tracking: AUCTION_PROCESSING, Current time: ${currentTime}`,

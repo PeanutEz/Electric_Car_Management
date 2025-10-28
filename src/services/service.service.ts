@@ -5,7 +5,9 @@ import payos from '../config/payos';
 import { getPaymentStatus } from './payment.service';
 import { buildUrl } from '../utils/url';
 import e from 'express';
-import { getVietnamTime,toMySQLDateTime } from '../utils/datetime';
+import { getVietnamTime, toMySQLDateTime } from '../utils/datetime';
+import * as notificationService from './notification.service';
+import { sendNotificationToUser } from '../config/socket';
 
 export async function getAllServices(): Promise<Service[]> {
 	const [rows] = await pool.query(
@@ -222,7 +224,7 @@ export async function checkAndProcessPostPayment(
 				'SELECT * FROM orders WHERE product_id = ?',
 				[productId],
 			);
-			
+
 			const insertedOrderId = row.insertId;
 
 			await pool.query(
@@ -621,6 +623,25 @@ export async function processServicePayment(orderCode: string) {
 				'SUCCESS',
 				orderCode,
 			]);
+
+			// 🔔 Gửi notification cho user khi nạp tiền thành công
+			try {
+				const notification =
+					await notificationService.createNotification({
+						user_id: userId,
+						type: 'topup_success',
+						title: 'Nạp tiền thành công',
+						message: `Bạn đã nạp thành công ${orderPrice.toLocaleString(
+							'vi-VN',
+						)} VNĐ vào tài khoản.`,
+					});
+				sendNotificationToUser(userId, notification);
+			} catch (notifError: any) {
+				console.error(
+					'⚠️ Failed to send topup notification:',
+					notifError.message,
+				);
+			}
 		} else if (orderType === null || orderType === 'post') {
 			message = 'Thanh toán thành công.';
 			await pool.query('update orders set tracking = ? where code = ?', [
@@ -633,6 +654,31 @@ export async function processServicePayment(orderCode: string) {
 				'SUCCESS',
 				orderCode,
 			]);
+
+			// 🔔 Gửi notification cho user khi mua package thành công
+			try {
+				const [serviceInfo]: any = await pool.query(
+					'SELECT name FROM services WHERE id = ?',
+					[checkUser[0].service_id],
+				);
+				const packageName = serviceInfo[0]?.name || 'gói dịch vụ';
+
+				const notification =
+					await notificationService.createNotification({
+						user_id: userId,
+						type: 'package_success',
+						title: 'Mua gói thành công',
+						message: `Bạn đã mua thành công ${packageName} với giá ${orderPrice.toLocaleString(
+							'vi-VN',
+						)} VNĐ.`,
+					});
+				sendNotificationToUser(userId, notification);
+			} catch (notifError: any) {
+				console.error(
+					'⚠️ Failed to send package notification:',
+					notifError.message,
+				);
+			}
 		} else if (orderType === 'auction') {
 			message = 'Thanh toán dịch vụ đấu giá thành công.';
 			await pool.query('update orders set tracking = ? where code = ?', [
@@ -801,6 +847,25 @@ export async function processPackagePayment(
 			);
 
 			await conn.commit();
+
+			// 🔔 Gửi notification cho user khi mua package bằng credit thành công
+			try {
+				const notification =
+					await notificationService.createNotification({
+						user_id: userId,
+						type: 'package_success',
+						title: 'Mua gói thành công',
+						message: `Bạn đã mua thành công ${serviceName} với giá ${serviceCost.toLocaleString(
+							'vi-VN',
+						)} VNĐ. Bạn nhận được ${numberOfPost} lượt đăng bài.`,
+					});
+				sendNotificationToUser(userId, notification);
+			} catch (notifError: any) {
+				console.error(
+					'⚠️ Failed to send package notification:',
+					notifError.message,
+				);
+			}
 
 			return {
 				success: true,

@@ -2,8 +2,10 @@ import pool from '../config/db';
 import {
 	Notification,
 	CreateNotificationDTO,
+	NotificationType,
 } from '../models/notification.model';
 import { RowDataPacket } from 'mysql2';
+import { getVietnamTime } from '../utils/datetime';
 
 /**
  * Tạo notification mới cho user
@@ -11,30 +13,45 @@ import { RowDataPacket } from 'mysql2';
 export async function createNotification(
 	n: CreateNotificationDTO,
 ): Promise<Notification> {
-	const notification: CreateNotificationDTO = {
-		user_id: n.user_id,
-		post_id: n.post_id,
-		message: n.message,
-	};
-
 	const query = `
-		INSERT INTO notifications (user_id, post_id, message, is_read, created_at)
-		VALUES (?, ?, ?, 0, NOW())
+		INSERT INTO notifications (user_id, post_id, type, title, message, is_read, created_at)
+		VALUES (?, ?, ?, ?, ?, 0, ?)
 	`;
-
 	const [result]: any = await pool.query(query, [
-		notification.user_id,
-		notification.post_id || null,
-		notification.message,
+		n.user_id,
+		n.post_id || null,
+		n.type || 'system',
+		n.title || '',
+		n.message,
+		getVietnamTime(),
 	]);
 
 	// Lấy notification vừa tạo
 	const [rows] = await pool.query<RowDataPacket[]>(
-		'SELECT * FROM notifications WHERE id = ?',
+		`SELECT 
+			n.id,
+			n.type,
+			n.title,
+			n.message,
+			n.created_at as createdAt,
+			n.is_read as isRead,
+			p.title as postTitle
+		FROM notifications n
+		LEFT JOIN products p ON n.post_id = p.id
+		WHERE n.id = ?`,
 		[result.insertId],
 	);
 
-	return rows[0] as Notification;
+	const row = rows[0];
+	return {
+		id: row.id,
+		type: row.type,
+		title: row.title,
+		message: row.message,
+		createdAt: row.createdAt,
+		isRead: row.isRead === 1,
+		...(row.postTitle && { postTitle: row.postTitle }),
+	} as Notification;
 }
 
 /**
@@ -42,35 +59,50 @@ export async function createNotification(
  */
 export async function getUserNotifications(
 	userId: number,
-	limit: number = 20,
-	offset: number = 0,
+	page: number,
+	limit: number,
+	isRead?: boolean,
 ) {
-	const query = `
-		SELECT * FROM notifications
-		WHERE user_id = ?
-		ORDER BY created_at DESC
-		LIMIT ? OFFSET ?
-	`;
+	const offset = (page - 1) * limit;
 
-	const [rows] = await pool.query<RowDataPacket[]>(query, [
-		userId,
-		limit,
-		offset,
-	]);
+	// Join với bảng products để lấy postTitle
+	const [rows] = await pool.query<RowDataPacket[]>(
+		`SELECT 
+			n.id,
+			n.type,
+			n.title,
+			n.message,
+			n.created_at as createdAt,
+			n.is_read as isRead,
+			p.title as postTitle
+		FROM notifications n
+		LEFT JOIN products p ON n.post_id = p.id
+		WHERE n.user_id = ?
+		${isRead === undefined ? '' : isRead ? 'AND n.is_read = 1' : 'AND n.is_read = 0'}
+		ORDER BY n.created_at DESC
+		LIMIT ? OFFSET ?`,
+		[userId, limit, offset],
+	);
+
+	const [length] = await pool.query<RowDataPacket[]>(
+		'SELECT COUNT(*) as total FROM notifications WHERE user_id = ?',
+		[userId],
+	);
+
 	return {
 		notifications: rows.map((row) => ({
-			notification: {
-				id: row.id,
-				user_id: row.user_id,
-				post_id: row.post_id,
-				message: row.message,
-				is_read: row.is_read,
-				created_at: row.created_at,
-			},
+			id: row.id,
+			type: row.type || 'system',
+			title: row.title || '',
+			message: row.message,
+			createdAt: row.createdAt,
+			isRead: row.isRead === 1,
+			...(row.postTitle && { postTitle: row.postTitle }),
 		})),
 		static: {
 			allCount: rows.length, // số item trả về theo limit/offset
-			unrendCount: await getUnreadCount(userId), // NOTE: key là "unrendCount" theo yêu cầu của bạn
+			unreadCount: await getUnreadCount(userId),
+			totalCount: length[0].total, // tổng số item của user này
 		},
 	};
 }

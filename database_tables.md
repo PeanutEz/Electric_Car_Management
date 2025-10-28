@@ -121,6 +121,16 @@ batteries
 | 2  | 28      | 1          | 26000.00  | 2025-10-23 15:35:00 |
 | 3  | 26      | 2          | 1200.00   | 2025-10-23 16:10:00 |
 
+## 📦 Table: `notifications`
+| id | user_id | message                        | created_at          | is_read | post_id | type | title |
+| -- | ------- | ------------------------------ | ------------------- | ------- | ------- | ---- | ----- |
+| 1  | 12      | Bài đăng của bạn đã được add   | 2025-10-28 04:27:45 | 0       | 1       | NULL | NULL  |
+| 2  | 12      | Bài đăng của bạn đã bị từ chối | 2025-10-28 04:30:01 | 0       | 1       | NULL | NULL  |
+| 3  | 12      | Bài đăng của bạn đã được add   | 2025-10-28 04:34:00 | 0       | 1       | NULL | NULL  |
+| 4  | 12      | Bài đăng của bạn đã được add   | 2025-10-28 04:35:16 | 1       | 1       | NULL | NULL  |
+| 5  | 12      | Bài đăng của bạn đã được add   | 2025-10-28 17:19:22 | 0       | 2       | NULL | NULL  |
+
+
 **Description:**
 - `bid_price` - Giá bid cao nhất mà user này đã đặt trong auction (được cập nhật mỗi khi user bid)
 - `updated_at` - Thời điểm bid gần nhất (tự động update khi user đặt bid mới)

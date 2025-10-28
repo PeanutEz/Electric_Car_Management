@@ -662,22 +662,27 @@ export async function updatePostByAdmin(
 	try {
 		let notificationTitle = '';
 		let notificationMessage = '';
-		let notificationType:
-			| 'bài post này được phê duyệt'
-			| 'bài post này bị từ chối' = 'bài post này được phê duyệt';
+		let notificationType: 'post_approved' | 'post_rejected' =
+			'post_approved';
 
 		if (status === 'approved') {
+			notificationTitle = 'Bài đăng được duyệt';
 			notificationMessage = `Bài đăng của bạn đã được admin phê duyệt và hiển thị công khai.`;
-			notificationType = 'bài post này được phê duyệt';
+			notificationType = 'post_approved';
 		} else if (status === 'rejected') {
-			notificationMessage = `Bài đăng của bạn đã bị từ chối.`;
-			notificationType = 'bài post này bị từ chối';
+			notificationTitle = 'Bài đăng bị từ chối';
+			notificationMessage = `Bài đăng của bạn đã bị từ chối. Lý do: ${
+				reason || 'Không có lý do'
+			}`;
+			notificationType = 'post_rejected';
 		}
 
 		// Lưu notification vào database
 		const notification = await notificationService.createNotification({
 			user_id: post.created_by,
 			post_id: id,
+			type: notificationType,
+			title: notificationTitle,
 			message: notificationMessage,
 		});
 
@@ -685,7 +690,7 @@ export async function updatePostByAdmin(
 		sendNotificationToUser(post.created_by, notification);
 
 		console.log(
-			`📨 Notification sent to user ${post.user_id} for post ${id}`,
+			`📨 Notification sent to user ${post.created_by} for post ${id}`,
 		);
 	} catch (notifError: any) {
 		console.error('⚠️ Failed to send notification:', notifError.message);

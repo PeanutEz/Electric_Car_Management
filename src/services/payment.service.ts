@@ -4,6 +4,8 @@ import payos from '../config/payos';
 import pool from '../config/db';
 import { detectPaymentMethod } from '../utils/parser';
 import { title } from 'process';
+import * as notificationService from './notification.service';
+import { sendNotificationToUser } from '../config/socket';
 
 export async function createPayosPayment(payload: Payment) {
 	try {
@@ -77,8 +79,6 @@ export async function getPaymentStatus(paymentId: string) {
 export async function handlePayOSWebhook(webhookData: any) {
 	try {
 		const data = webhookData.data;
-
-	
 
 		await pool.query(
 			'INSERT INTO payos_webhooks_parsed (order_code) values (?)',
@@ -170,7 +170,7 @@ export async function processAuctionFeePayment(
 					'CREDIT',
 					productId,
 					17,
-					'VERIFYING'
+					'VERIFYING',
 				],
 			);
 
@@ -239,7 +239,7 @@ export async function processAuctionFeePayment(
 					'PAYOS',
 					productId,
 					17,
-					'PENDING'
+					'PENDING',
 				],
 			);
 
@@ -444,7 +444,10 @@ export async function processDepositPayment(
 			throw new Error('Auction không tồn tại');
 		}
 
-		if(auctionRows[0].status !== 'live' || auctionRows[0].status === 'ended') {
+		if (
+			auctionRows[0].status !== 'live' ||
+			auctionRows[0].status === 'ended'
+		) {
 			throw new Error('Phiên đấu giá chưa bắt đầu hoặc đã kết thúc');
 		}
 
@@ -509,7 +512,7 @@ export async function processDepositPayment(
 					'CREDIT',
 					auction.product_id,
 					18,
-					"AUCTION_PROCESSING"
+					'AUCTION_PROCESSING',
 				],
 			);
 
@@ -521,6 +524,26 @@ export async function processDepositPayment(
 			);
 
 			await connection.commit();
+
+			// 🔔 Gửi notification cho user khi đặt cọc thành công
+			try {
+				const notification =
+					await notificationService.createNotification({
+						user_id: buyerId,
+						post_id: auction.product_id,
+						type: 'deposit_success',
+						title: 'Đặt cọc thành công',
+						message: `Bạn đã đặt cọc thành công ${depositAmount.toLocaleString(
+							'vi-VN',
+						)} VNĐ để tham gia đấu giá "${productRows[0]?.title}".`,
+					});
+				sendNotificationToUser(buyerId, notification);
+			} catch (notifError: any) {
+				console.error(
+					'⚠️ Failed to send deposit notification:',
+					notifError.message,
+				);
+			}
 
 			return {
 				success: true,
@@ -555,7 +578,7 @@ export async function processDepositPayment(
 					'PAYOS',
 					auction.product_id,
 					18,
-					'PENDING'
+					'PENDING',
 				],
 			);
 
