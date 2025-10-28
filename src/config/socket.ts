@@ -177,7 +177,7 @@ export function initializeSocket(server: HttpServer): SocketServer {
 						limit,
 						offset,
 					);
-				callback({ success: true, notifications });
+				callback({ success: true, notifications });  
 			} catch (error: any) {
 				callback({ success: false, error: error.message });
 			}

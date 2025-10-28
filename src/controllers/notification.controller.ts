@@ -14,10 +14,10 @@ export async function listUserNotifications(req: Request, res: Response) {
 	const id = (jwt.decode(token) as any).id;
    const userId = id;
 	try {
-		const notifications = await getUserNotifications(Number(userId), 20, 0);
+		const noti = await getUserNotifications(Number(userId), 20, 0);
 		res.status(200).json({
 			message: 'Lấy danh sách thông báo thành công',
-			data: notifications,
+			data: noti,
 		});
 	} catch (error: any) {
 		res.status(500).json({

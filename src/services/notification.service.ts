@@ -9,7 +9,7 @@ import { RowDataPacket } from 'mysql2';
  * Tạo notification mới cho user
  */
 export async function createNotification(
-	n: CreateNotificationDTO
+	n: CreateNotificationDTO,
 ): Promise<Notification> {
 	const notification: CreateNotificationDTO = {
 		user_id: n.user_id,
@@ -44,7 +44,7 @@ export async function getUserNotifications(
 	userId: number,
 	limit: number = 20,
 	offset: number = 0,
-): Promise<Notification[]> {
+) {
 	const query = `
 		SELECT * FROM notifications
 		WHERE user_id = ?
@@ -57,7 +57,22 @@ export async function getUserNotifications(
 		limit,
 		offset,
 	]);
-	return rows as Notification[];
+	return {
+		notifications: rows.map((row) => ({
+			notification: {
+				id: row.id,
+				user_id: row.user_id,
+				post_id: row.post_id,
+				message: row.message,
+				is_read: row.is_read,
+				created_at: row.created_at,
+			},
+		})),
+		static: {
+			allCount: rows.length, // số item trả về theo limit/offset
+			unrendCount: await getUnreadCount(userId), // NOTE: key là "unrendCount" theo yêu cầu của bạn
+		},
+	};
 }
 
 /**

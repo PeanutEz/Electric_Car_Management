@@ -473,7 +473,6 @@ export async function processDepositPayment(
 		}
 
 		const depositAmount = parseFloat(auction.deposit);
-		console.log(depositAmount);
 		// Lấy số dư credit của buyer
 		const [userRows]: any = await connection.query(
 			'SELECT total_credit FROM users WHERE id = ?',

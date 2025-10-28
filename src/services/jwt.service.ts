@@ -108,9 +108,6 @@ export class JWTService {
 		}
 
 		const user = rows[0];
-		console.log('DB refresh_token:', user.refresh_token);
-        console.log('DB expired_refresh_token:', user.expired_refresh_token);
-        console.log('Client refresh_token:', refreshToken);
 		// const nowSec = Math.floor(Date.now() / 1000);
 		// const expiredAtSec = Number(user.expired_refresh_token) || 0;
 

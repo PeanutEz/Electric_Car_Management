@@ -1,4 +1,3 @@
-import { count } from 'console';
 import pool from '../config/db';
 import { Category } from '../models/product.model';
 

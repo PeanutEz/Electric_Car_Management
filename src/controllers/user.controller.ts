@@ -25,7 +25,6 @@ export async function userDetail(req: Request, res: Response) {
 		}
 		const token = authHeader.split(' ')[1];
 		const id = (jwt.decode(token) as any).id;
-		console.log(id);
 		const user = await getUserById(id);
 
 		if (!user) {
@@ -70,9 +69,7 @@ export async function userDetail(req: Request, res: Response) {
 export async function listUsers(req: Request, res: Response) {
 	try {
 		const users = await getAllUsers();
-		console.log(users);
 		const nowVN = new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
-		console.log("Giờ Việt Nam:", nowVN);
 		res.status(200).json({
 			message: 'Lấy danh sách người dùng thành công',
 			data: users,
@@ -295,7 +292,6 @@ export async function updateUserPhone(req: Request, res: Response) {
 		}
 		const token = authHeader.split(' ')[1];
 		const id = (jwt.decode(token) as any).id;
-		console.log('id user from token:', id);
 		if (!id) {
 			return res.status(403).json({
 				message:

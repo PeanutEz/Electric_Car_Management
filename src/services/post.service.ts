@@ -670,9 +670,7 @@ export async function updatePostByAdmin(
 			notificationMessage = `Bài đăng của bạn đã được admin phê duyệt và hiển thị công khai.`;
 			notificationType = 'bài post này được phê duyệt';
 		} else if (status === 'rejected') {
-			notificationMessage = `Bài đăng của bạn đã bị từ chối. Lý do: ${
-				reason || 'Không có lý do cụ thể'
-			}`;
+			notificationMessage = `Bài đăng của bạn đã bị từ chối.`;
 			notificationType = 'bài post này bị từ chối';
 		}
 
@@ -749,9 +747,6 @@ export async function createNewPost(
 			[category_id],
 		);
 		const category_type = rows[0]?.category_type;
-
-		console.log('service ' + category_id + ' type: ' + category_type);
-		console.log(userId);
 
 		if (rows.length === 0) {
 			throw new Error('Invalid category ID');

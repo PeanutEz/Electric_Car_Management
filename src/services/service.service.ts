@@ -218,14 +218,11 @@ export async function checkAndProcessPostPayment(
 				],
 			);
 
-			console.log(productId);
-
 			const [test]: any = await conn.query(
 				'SELECT * FROM orders WHERE product_id = ?',
 				[productId],
 			);
-			console.log(test);
-
+			
 			const insertedOrderId = row.insertId;
 
 			await pool.query(
@@ -282,8 +279,6 @@ export async function checkAndProcessPostPayment(
 						next: '/',
 					}),
 				});
-
-				console.log('PayOS response:', paymentLinkRes);
 
 				return {
 					canPost: false,

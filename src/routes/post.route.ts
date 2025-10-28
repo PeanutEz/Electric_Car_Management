@@ -11,10 +11,8 @@ import {
 } from '../controllers/post.controller';
 import {
 	authenticateToken,
-	authorizeRoles,
 } from '../middleware/AuthMiddleware';
 import multer from 'multer';
-import { updateUserPost } from '../services/post.service';
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 const router = Router();

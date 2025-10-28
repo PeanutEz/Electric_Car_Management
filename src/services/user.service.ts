@@ -3,9 +3,7 @@ import bcrypt from 'bcryptjs';
 import { User } from '../models/user.model';
 import { JWTService } from './jwt.service';
 import { createDefaultAvatar } from '../utils/avatar';
-import { get } from 'http';
-import { access } from 'fs';
-import { getVietnamTime, toMySQLDateTime } from '../utils/datetime';
+import { getVietnamTime } from '../utils/datetime';
 
 export async function getUserById(id: number): Promise<User | null> {
 	const [rows]: any = await pool.query(
