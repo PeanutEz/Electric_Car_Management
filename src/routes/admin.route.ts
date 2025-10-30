@@ -1,5 +1,5 @@
 import Router from 'express';
-import { addService,editService, listServices, removeService,listOrders, getOrderTransactions, modifyAuction, verifyAuction } from '../controllers/admin.controller';
+import { numOfPost, addService, editService, listServices, removeService,listOrders, getOrderTransactions, modifyAuction, verifyAuction } from '../controllers/admin.controller';
 
 const router = Router();
 
@@ -228,5 +228,61 @@ router.put('/update-auction', modifyAuction);
  *                   example: "Internal server error"
  */
 router.post('/verify-auction', verifyAuction);
+
+
+/**
+ * @swagger
+ * /api/admin/get-num-of-posts:
+ *   get:
+ *     summary: Lấy thống kê số lượng bài đăng theo loại sản phẩm và trạng thái
+ *     description: |
+ *       Trả về tổng số bài viết, số bài thuộc từng loại sản phẩm (`vehicle`, `battery`)
+ *       và số bài viết theo từng trạng thái (`pending`, `approved`, `rejected`).
+ *     tags:
+ *       - Admin
+ *     responses:
+ *       200:
+ *         description: Lấy thống kê bài viết thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Lấy số lượng post thành công
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total_post:
+ *                       type: integer
+ *                       example: 120
+ *                     vehicle_post:
+ *                       type: integer
+ *                       example: 80
+ *                     battery_post:
+ *                       type: integer
+ *                       example: 40
+ *                     pending_post:
+ *                       type: integer
+ *                       example: 15
+ *                     approved_post:
+ *                       type: integer
+ *                       example: 95
+ *                     rejected_post:
+ *                       type: integer
+ *                       example: 10
+ *       500:
+ *         description: Lỗi server
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal server error
+ */
+router.get('/get-num-of-posts', numOfPost);
 
 export default router;

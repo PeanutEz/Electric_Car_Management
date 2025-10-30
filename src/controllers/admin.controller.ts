@@ -7,8 +7,23 @@ import {
    getOrder,
    getTransactions,
    updateAuction,
+   getNumOfPostForAdmin
 } from '../services/admin.service';
 import { verifyAuctionByAdmin } from '../services/auction.service';
+
+export const numOfPost = async (req: Request, res: Response) => {
+	try {
+		const posts = await getNumOfPostForAdmin();
+		res.status(200).json({
+			message: "Lấy số lượng post thành công",
+			data: posts,
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
+		});
+	}
+}
 
 export const listServices = async (req: Request, res: Response) => {
 	try {
