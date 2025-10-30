@@ -67,7 +67,7 @@ export async function getOrderDetail(orderId: number) {
 
 export async function getAllOrderByUserId(
 	userId: number,
-	tracking?: string, // ✅ Đổi từ status sang tracking
+	tracking?: string,
 	type?: string,
 	orderId?: number,
 	page: number = 1,
@@ -75,11 +75,10 @@ export async function getAllOrderByUserId(
 ) {
 	try {
 		const filters: string[] = [`o.buyer_id = ${userId}`];
-		if (tracking) filters.push(`o.tracking = '${tracking}'`); // ✅ Filter theo tracking thay vì status
+		if (tracking) filters.push(`o.tracking = '${tracking}'`);
 		if (orderId) filters.push(`o.id = ${orderId}`);
 		const where = filters.join(' AND ');
 
-		// ✅ Pagination
 		const offset = (page - 1) * page_size;
 
 		let baseSql = '';
@@ -348,7 +347,6 @@ export async function getAllOrderByUserId(
 						...base,
 						viewingAppointment: {
 							address: r.address,
-							// ✅ Thêm 2 giờ vào giờ Việt Nam hiện tại
 							time: addHoursToVietnamTime(2).toISOString(),
 						},
 						post: {
@@ -431,9 +429,9 @@ export async function getAllOrderByUserId(
 			total_pages: Math.ceil(total / page_size),
 			data: formatted,
 			stats: {
-				total: stats.total || 0,
-				total_pending: stats.total_pending || 0,
-				total_paid: stats.total_paid || 0,
+				total: Number(stats.total) || 0,
+				total_pending: Number(stats.total_pending) || 0,
+				total_paid: Number(stats.total_paid) || 0,
 				total_spent: parseFloat(stats.total_spent) || 0,
 			},
 		};

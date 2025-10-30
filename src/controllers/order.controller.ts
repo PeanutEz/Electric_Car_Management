@@ -158,10 +158,10 @@ export async function getAllOrderByUserIdController(
 				orders: orders.data,
 				static: orders.stats,
 				pagination: {
+					total_item: orders.total,
 					page: parsedPage,
-					page_size: parsedPageSize,
-					total: orders.total,
-					total_pages: orders.total_pages,
+					limit: parsedPageSize,
+					page_size: orders.total_pages,
 				},
 			},
 		});
