@@ -1,6 +1,26 @@
 import pool from '../config/db';
 import { addHoursToVietnamTime } from '../utils/datetime';
 
+export async function getRevenue() {
+	const [rows]: any = await pool.query(`
+		SELECT 
+            SUM(CASE WHEN status = 'PAID' AND payment_method = 'CREDIT' THEN price ELSE 0 END) AS revenue,
+            SUM(CASE WHEN status = 'PAID' AND payment_method = 'CREDIT' AND type = 'post' THEN 1 ELSE 0 END) AS order_posts,
+            SUM(CASE WHEN status = 'PAID' AND payment_method = 'CREDIT' AND type = 'package' THEN 1 ELSE 0 END) AS order_packages,
+            SUM(CASE WHEN status = 'PAID' AND payment_method = 'CREDIT' AND type = 'auction' THEN 1 ELSE 0 END) AS order_auctions
+        FROM orders
+		`);
+
+	const result = rows[0];	
+
+	return {
+		revenue: Number(result.revenue),
+		order_post: Number(result.order_posts),
+		order_packages: Number(result.order_packages),
+		order_auctions: Number(result.order_auctions),
+	};	
+}
+
 export async function getOrdersByUserIdAndCode(
 	userId: number,
 	orderCode: string,

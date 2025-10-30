@@ -1,5 +1,5 @@
 import Router from 'express';
-import { getOrdersByUserIdAndCodeController, getOrderTransactionDetail, getAllOrderByUserIdController,getOrderDetailController, getAllOrdersController } from '../controllers/order.controller';
+import { getRevenueController, getOrdersByUserIdAndCodeController, getOrderTransactionDetail, getAllOrderByUserIdController,getOrderDetailController, getAllOrdersController } from '../controllers/order.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 const router = Router();
 
@@ -9,6 +9,56 @@ const router = Router();
  *   name: Transaction
  *   description: API quản lý giao dịch
  */
+
+
+
+/**
+ * @swagger
+ * /api/order/get-revenue:
+ *   get:
+ *     summary: Lấy tổng doanh thu và số lượng đơn hàng theo loại
+ *     tags: [Transaction]
+ *     responses:
+ *       200:
+ *         description: Lấy revenue thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Lấy revenue thành công!
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     revenue:
+ *                       type: object
+ *                       properties:
+ *                         revenue:
+ *                           type: number
+ *                           example: 1500000
+ *                         order_post:
+ *                           type: integer
+ *                           example: 25
+ *                         order_packages:
+ *                           type: integer
+ *                           example: 10
+ *                         order_auctions:
+ *                           type: integer
+ *                           example: 3
+ *       500:
+ *         description: Lỗi server
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Internal Server Error
+ */
+router.get('/get-revenue', getRevenueController);
 
 
 /**

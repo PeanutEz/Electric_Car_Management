@@ -5,8 +5,25 @@ import {
 	getAllOrderByUserId,
 	getOrderDetail,
 	getAllOrders,
+	getRevenue
 } from '../services/order.service';
 import jwt from 'jsonwebtoken';
+
+export async function getRevenueController(req: Request,res: Response,){
+	try {
+		const revenue = await getRevenue();
+
+        res.status(200).json({
+			message: "Lấy revenue thành công!",
+			revenue
+		})
+
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
+		});
+	}
+}
 
 export async function getOrdersByUserIdAndCodeController(
 	req: Request,
