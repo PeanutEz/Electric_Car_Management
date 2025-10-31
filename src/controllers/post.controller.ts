@@ -171,7 +171,7 @@ export async function postDetail(req: Request, res: Response) {
 				.status(400)
 				.json({ message: 'ID bài viết không hợp lệ' });
 		}
-		const post = await getPostsById(id);
+		const post: any = await getPostsById(id);
 		if (!post) {
 			return res.status(404).json({ message: 'Không tìm thấy bài viết' });
 		}
