@@ -7,7 +7,7 @@ import { getVietnamTime } from "../utils/datetime";
 
 export async function getUserById(id: number): Promise<User | null> {
   const [rows]: any = await pool.query(
-    "select u.id,u.status,u.full_name,u.email, u.gender, u.address, u.avatar, u.phone,u.rating,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?",
+    "select u.id,u.status,u.full_name,u.email, u.gender, u.address, u.avatar, u.phone,u.rating,u.total_credit,u.description,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?",
     [id]
   );
 
@@ -60,6 +60,7 @@ export async function getUserById(id: number): Promise<User | null> {
     total_sold_posts: totalSoldPosts[0][0].total,
     total_transactions: totalTransactions[0][0].total,
     verificationStatus: is_verified,
+    description: user.description,
     recentTransaction: {
       description:
         recentTransactions[0].length > 0
@@ -278,7 +279,7 @@ export async function refreshToken(refreshToken: string) {
   }
 }
 
-export async function updateUser(userId: number, userData: Partial<User>) {
+export async function updateUser(userId: number, userData: Partial<User>, description?: string) {
   const { full_name, phone, email, gender, address, avatar } = userData;
   const reg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   const errors: { [key: string]: string } = {};
@@ -301,8 +302,8 @@ export async function updateUser(userId: number, userData: Partial<User>) {
   }
 
   const [updateUser] = await pool.query(
-    "UPDATE users SET full_name = ?, phone = ?, email = ?, avatar = ?, gender = ?, address = ? WHERE id = ?",
-    [full_name, phone, email, avatar, gender, address, userId]
+    "UPDATE users SET full_name = ?, phone = ?, email = ?, avatar = ?, gender = ?, address = ?, description = ? WHERE id = ?",
+    [full_name, phone, email, avatar, gender, address, description, userId]
   );
 
   if (updateUser === undefined) {

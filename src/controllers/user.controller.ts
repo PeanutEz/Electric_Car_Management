@@ -51,6 +51,7 @@ export async function userDetail(req: Request, res: Response) {
 					totalSoldPosts: user.total_sold_posts,
 					totalTransactions: user.total_transactions,
 					verificationStatus: user.verificationStatus,
+					description: user.description,
 					role: user.role,
 					recentTransactions: {
 						description:
@@ -236,6 +237,7 @@ export async function updateUserInfo(req: Request, res: Response) {
 	try {
 		// lấy userId trong header Authorization: token decode
 		const authHeader = req.headers.authorization;
+		const description = req.body.description;
 		if (!authHeader) {
 			return res
 				.status(401)
@@ -260,7 +262,7 @@ export async function updateUserInfo(req: Request, res: Response) {
 			}
 		}
 
-		const user = await updateUser(id, userData);
+		const user = await updateUser(id, userData, description);
 		res.status(200).json({
 			message: 'Cập nhật thông tin người dùng thành công',
 			data: {

@@ -12,6 +12,7 @@ export interface User {
 	is_new?: number;
 	role_id?: number;
 	role?: string;
+	description?: string;
 	avatar?: string;
 	verificationStatus?: boolean;
 	total_posts?: number;
