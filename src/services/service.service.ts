@@ -249,7 +249,7 @@ export async function checkAndProcessPostPayment(
 
 			// ✅ Sửa câu INSERT tương tự ở đây (đủ 9 giá trị)
 			await pool.query(
-				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
 				[
 					orderCode,
 					'post',
@@ -259,7 +259,7 @@ export async function checkAndProcessPostPayment(
 					amountNeeded,
 					'PENDING',
 					'PAYOS',
-					// NOW() sẽ tự động dùng múi giờ Việt Nam (GMT+7) do connection config
+					getVietnamTime(),
 					'PENDING',
 				],
 			);
@@ -825,7 +825,7 @@ export async function processPackagePayment(
 			// Tạo order để tracking (PAID ngay)
 			const orderCode = Math.floor(Math.random() * 1000000);
 			const [orderResult]: any = await conn.query(
-				'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+				'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
 				[
 					orderCode,
 					'package',
@@ -834,6 +834,7 @@ export async function processPackagePayment(
 					serviceCost,
 					'PAID',
 					'CREDIT',
+					getVietnamTime(),
 					'SUCCESS',
 				],
 			);
@@ -882,7 +883,7 @@ export async function processPackagePayment(
 			// Tạo order với status PENDING
 			const orderCode = Math.floor(Math.random() * 1000000);
 			await pool.query(
-				'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+				'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
 				[
 					orderCode,
 					'package',
@@ -891,6 +892,7 @@ export async function processPackagePayment(
 					serviceCost,
 					'PENDING',
 					'PAYOS',
+					getVietnamTime(),
 					'PENDING',
 				],
 			);
@@ -984,7 +986,7 @@ export async function processTopUpPayment(
 		// 3. Create order with PENDING status
 		const orderCode = Math.floor(Math.random() * 1000000);
 		const [orderResult]: any = await pool.query(
-			'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+			'INSERT INTO orders (code, type, service_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
 			[
 				orderCode,
 				'topup', // type = 'topup' để phân biệt với package/post
@@ -993,6 +995,7 @@ export async function processTopUpPayment(
 				amount,
 				'PENDING',
 				'PAYOS',
+				getVietnamTime(),
 				'PENDING',
 			],
 		);

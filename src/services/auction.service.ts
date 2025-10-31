@@ -354,9 +354,9 @@ export async function placeBid(
 		// ✅ Update auction_members với bid_price mới nhất của user
 		await connection.query(
 			`UPDATE auction_members 
-       SET bid_price = ?, updated_at = NOW() 
+       SET bid_price = ?, updated_at = ? 
        WHERE user_id = ? AND auction_id = ?`,
-			[bidAmount, userId, auctionId],
+			[bidAmount, getVietnamTime(), userId, auctionId],
 		);
 
 		// Log bid in console
@@ -902,7 +902,8 @@ export async function verifyAuctionByAdmin(
 						post_id: auction.product_id,
 						type: 'auction_verified',
 						title: 'Đấu giá được duyệt',
-						message: 'Phiên đấu giá của bạn đã được admin phê duyệt và sẵn sàng bắt đầu.',
+						message:
+							'Phiên đấu giá của bạn đã được admin phê duyệt và sẵn sàng bắt đầu.',
 					});
 				sendNotificationToUser(sellerId, notification);
 			}

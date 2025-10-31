@@ -610,10 +610,10 @@ export async function updatePostByAdmin(
 				SET status = 'rejected',
 					reject_count = reject_count + 1,
 					rejected_reason = ?,
-					updated_at = NOW()
+					updated_at = ?
 				WHERE id = ?;
 			`;
-			params = [reason || 'Không có lý do', id];
+			params = [reason || 'Không có lý do', getVietnamTime(), id];
 
 			await pool.query(
 				`update orders set tracking = 'PROCESSING' where product_id = ?`,
@@ -626,10 +626,10 @@ export async function updatePostByAdmin(
 					reject_count = 2,
 					is_finally_rejected = 1,
 					rejected_reason = ?,
-					updated_at = NOW()
+					updated_at = ?
 				WHERE id = ?;
 			`;
-			params = [reason || 'Không có lý do', id];
+			params = [reason || 'Không có lý do', getVietnamTime(), id];
 
 			await pool.query(
 				`update orders set tracking = 'FAILED' where product_id = ?`,
@@ -642,7 +642,7 @@ export async function updatePostByAdmin(
 		query = `
 			UPDATE products
 			SET status = 'approved',
-				updated_at = NOW()
+				updated_at = ?
 			WHERE id = ?;
 		`;
 
@@ -650,7 +650,7 @@ export async function updatePostByAdmin(
 			`update orders set tracking = 'SUCCESS' where product_id = ?`,
 			[id],
 		);
-		params = [id];
+		params = [getVietnamTime(), id];
 	} else {
 		throw new Error('Trạng thái không hợp lệ');
 	}
@@ -757,7 +757,7 @@ export async function createNewPost(
 		}
 
 		const [result] = await conn.query(
-			'INSERT INTO products (product_category_id, brand, model, price, year, color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority, previousOwners) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)',
+			'INSERT INTO products (product_category_id, brand, model, price, year, color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority, previousOwners) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
 			[
 				category_id,
 				brand,
@@ -772,7 +772,7 @@ export async function createNewPost(
 				image,
 				'pending',
 				userId,
-				// NOW() sẽ tự động dùng múi giờ Việt Nam (GMT+7) do connection config
+				getVietnamTime(),
 				endDate,
 				1,
 				previousOwners,
@@ -919,7 +919,7 @@ export async function updateUserPost(
 				 v.mileage_km = ?, 
 				 v.power = ?, 
 				 p.status = 'pending',
-				 p.updated_at = NOW()
+				 p.updated_at = ?
 			 WHERE p.id = ?`,
 			[
 				brand,
@@ -935,6 +935,7 @@ export async function updateUserPost(
 				seats,
 				mileage,
 				power,
+				getVietnamTime(),
 				id,
 			],
 		);
@@ -971,7 +972,7 @@ export async function updateUserPost(
 				 b.health = ?, 
 				 b.voltage = ?, 
 				 p.status = 'pending',
-				 p.updated_at = NOW()
+				 p.updated_at = ?
 			 WHERE p.id = ?`,
 			[
 				brand,
@@ -986,6 +987,7 @@ export async function updateUserPost(
 				capacity,
 				health,
 				voltage,
+				getVietnamTime(),
 				id,
 			],
 		);

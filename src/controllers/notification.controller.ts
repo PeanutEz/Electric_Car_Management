@@ -20,11 +20,13 @@ export async function listUserNotifications(req: Request, res: Response) {
 		const noti = await getUserNotifications(Number(userId), Number(page), Number(limit), isRead);
 		res.status(200).json({
 			message: 'Lấy danh sách thông báo thành công',
-			data: noti,
-			pagination: {
-				page: Number(page),
-				limit: Number(limit),
-				page_size: Math.ceil(noti.static.totalCount / Number(limit)),
+			data: {
+				notifications: noti.notifications,
+				pagination: {
+					page: Number(page),
+					limit: Number(limit),
+					page_size: Math.ceil(noti.static.totalCount / Number(limit)),
+				},
 			},
 		});
 	} catch (error: any) {

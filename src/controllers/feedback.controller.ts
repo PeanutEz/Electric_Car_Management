@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
  * @swagger
  * /api/feedbacks:
  *   post:
- *     summary: Tạo feedback cho seller (người mua đánh giá người bán)
+ *     summary: Tạo feedback cho seller sau khi hoàn thành hợp đồng (winner feedback seller)
  *     tags: [Feedbacks]
  *     security:
  *       - bearerAuth: []
@@ -17,12 +17,12 @@ const jwt = require('jsonwebtoken');
  *           schema:
  *             type: object
  *             required:
- *               - order_id
+ *               - contract_id
  *               - rating
  *             properties:
- *               order_id:
+ *               contract_id:
  *                 type: integer
- *                 example: 1
+ *                 example: 22
  *               rating:
  *                 type: integer
  *                 minimum: 1
@@ -30,7 +30,7 @@ const jwt = require('jsonwebtoken');
  *                 example: 5
  *               comment:
  *                 type: string
- *                 example: "Người bán rất tốt, xe đẹp như mô tả"
+ *                 example: "Người bán rất tốt, xe đẹp như mô tả, giao dịch nhanh chóng"
  *     responses:
  *       201:
  *         description: Feedback created successfully
@@ -45,17 +45,17 @@ export async function createFeedback(req: Request, res: Response) {
 		const decoded: any = jwt.decode(token);
 		const buyerId = decoded.id;
 
-		const { order_id, rating, comment } = req.body;
+		const { contract_id, rating, comment } = req.body;
 
-		if (!order_id || !rating) {
+		if (!contract_id || !rating) {
 			return res.status(400).json({
-				message: 'order_id and rating are required',
+				message: 'contract_id and rating are required',
 			});
 		}
 
 		const feedback = await feedbackService.createFeedback(
 			buyerId,
-			order_id,
+			contract_id,
 			rating,
 			comment,
 		);
@@ -76,7 +76,7 @@ export async function createFeedback(req: Request, res: Response) {
  * @swagger
  * /api/feedbacks/seller/{sellerId}:
  *   get:
- *     summary: Lấy tất cả feedbacks của một seller
+ *     summary: Lấy tất cả feedbacks của một seller (xem đánh giá người bán)
  *     tags: [Feedbacks]
  *     parameters:
  *       - in: path
@@ -96,7 +96,7 @@ export async function createFeedback(req: Request, res: Response) {
  *           default: 0
  *     responses:
  *       200:
- *         description: List of feedbacks with statistics
+ *         description: List of feedbacks with statistics (avg rating, distribution)
  *       400:
  *         description: Invalid seller ID
  */
@@ -132,15 +132,15 @@ export async function getSellerFeedbacks(req: Request, res: Response) {
 
 /**
  * @swagger
- * /api/feedbacks/order/{orderId}:
+ * /api/feedbacks/contract/{contractId}:
  *   get:
- *     summary: Lấy feedback của buyer cho một order cụ thể
+ *     summary: Lấy feedback của buyer cho một contract cụ thể
  *     tags: [Feedbacks]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: orderId
+ *         name: contractId
  *         required: true
  *         schema:
  *           type: integer
@@ -150,22 +150,22 @@ export async function getSellerFeedbacks(req: Request, res: Response) {
  *       401:
  *         description: Unauthorized
  */
-export async function getFeedbackByOrder(req: Request, res: Response) {
+export async function getFeedbackByContract(req: Request, res: Response) {
 	try {
 		const token = req.headers.authorization?.split(' ')[1];
 		const decoded: any = jwt.decode(token);
 		const buyerId = decoded.id;
 
-		const orderId = parseInt(req.params.orderId);
+		const contractId = parseInt(req.params.contractId);
 
-		if (isNaN(orderId)) {
+		if (isNaN(contractId)) {
 			return res.status(400).json({
-				message: 'Invalid order ID',
+				message: 'Invalid contract ID',
 			});
 		}
 
-		const feedback = await feedbackService.getFeedbackByOrder(
-			orderId,
+		const feedback = await feedbackService.getFeedbackByContract(
+			contractId,
 			buyerId,
 		);
 
@@ -177,6 +177,102 @@ export async function getFeedbackByOrder(req: Request, res: Response) {
 		console.error('Error getting feedback:', error);
 		return res.status(400).json({
 			message: error.message || 'Failed to get feedback',
+		});
+	}
+}
+
+/**
+ * @swagger
+ * /api/feedbacks/can-feedback/{contractId}:
+ *   get:
+ *     summary: Kiểm tra buyer có thể feedback cho contract này không
+ *     tags: [Feedbacks]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: contractId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Can feedback status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 canFeedback:
+ *                   type: boolean
+ *                 reason:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized
+ */
+export async function checkCanFeedback(req: Request, res: Response) {
+	try {
+		const token = req.headers.authorization?.split(' ')[1];
+		const decoded: any = jwt.decode(token);
+		const buyerId = decoded.id;
+
+		const contractId = parseInt(req.params.contractId);
+
+		if (isNaN(contractId)) {
+			return res.status(400).json({
+				message: 'Invalid contract ID',
+			});
+		}
+
+		const result = await feedbackService.checkCanFeedback(
+			contractId,
+			buyerId,
+		);
+
+		return res.status(200).json({
+			message: 'Check completed',
+			data: result,
+		});
+	} catch (error: any) {
+		console.error('Error checking can feedback:', error);
+		return res.status(400).json({
+			message: error.message || 'Failed to check',
+		});
+	}
+}
+
+/**
+ * @swagger
+ * /api/feedbacks/my-contracts:
+ *   get:
+ *     summary: Lấy danh sách contracts mà buyer có thể feedback
+ *     tags: [Feedbacks]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of contracts with feedback status
+ *       401:
+ *         description: Unauthorized
+ */
+export async function getContractsCanFeedback(req: Request, res: Response) {
+	try {
+		const token = req.headers.authorization?.split(' ')[1];
+		const decoded: any = jwt.decode(token);
+		const buyerId = decoded.id;
+
+		const contracts = await feedbackService.getContractsCanFeedback(
+			buyerId,
+		);
+
+		return res.status(200).json({
+			message: 'Contracts retrieved successfully',
+			data: contracts,
+		});
+	} catch (error: any) {
+		console.error('Error getting contracts:', error);
+		return res.status(400).json({
+			message: error.message || 'Failed to get contracts',
 		});
 	}
 }

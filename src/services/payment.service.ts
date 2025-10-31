@@ -6,6 +6,7 @@ import { detectPaymentMethod } from '../utils/parser';
 import { title } from 'process';
 import * as notificationService from './notification.service';
 import { sendNotificationToUser } from '../config/socket';
+import { getVietnamTime } from '../utils/datetime';
 
 export async function createPayosPayment(payload: Payment) {
 	try {
@@ -160,7 +161,7 @@ export async function processAuctionFeePayment(
 			// Insert vào bảng orders với type = 'auction_fee'
 			const [orderResult]: any = await connection.query(
 				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				[
 					'auction',
 					'PAID',
@@ -169,6 +170,7 @@ export async function processAuctionFeePayment(
 					orderCode,
 					'CREDIT',
 					productId,
+					getVietnamTime(),
 					17,
 					'VERIFYING',
 				],
@@ -229,7 +231,7 @@ export async function processAuctionFeePayment(
 			// Tạo order với status PENDING
 			const [orderResult]: any = await connection.query(
 				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
-				VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				[
 					'auction',
 					'PENDING',
@@ -238,6 +240,7 @@ export async function processAuctionFeePayment(
 					orderCode.toString(),
 					'PAYOS',
 					productId,
+					getVietnamTime(),
 					17,
 					'PENDING',
 				],
@@ -502,7 +505,7 @@ export async function processDepositPayment(
 			// Insert vào bảng orders với type = 'deposit'
 			const [orderResult]: any = await connection.query(
 				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				[
 					'deposit',
 					'PAID',
@@ -511,6 +514,7 @@ export async function processDepositPayment(
 					orderCode,
 					'CREDIT',
 					auction.product_id,
+					getVietnamTime(),
 					18,
 					'AUCTION_PROCESSING',
 				],
@@ -568,7 +572,7 @@ export async function processDepositPayment(
 			// Tạo order với status PENDING
 			const [orderResult]: any = await connection.query(
 				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				[
 					'deposit',
 					'PENDING',
@@ -577,6 +581,7 @@ export async function processDepositPayment(
 					orderCode.toString(),
 					'PAYOS',
 					auction.product_id,
+					getVietnamTime(),
 					18,
 					'PENDING',
 				],
@@ -666,9 +671,9 @@ export async function confirmAuctionDepositPayment(
 
 		// Insert vào bảng auction_members
 		const [memberResult]: any = await connection.query(
-			`INSERT INTO auction_members (user_id, auction_id) 
-			 VALUES (?, ?, NOW())`,
-			[auctionData.buyer_id, auctionData.auction_id],
+			`INSERT INTO auction_members (user_id, auction_id, created_at) 
+			 VALUES (?, ?, ?)`,
+			[auctionData.buyer_id, auctionData.auction_id, getVietnamTime()],
 		);
 
 		await connection.commit();

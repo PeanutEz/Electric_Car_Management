@@ -16,6 +16,8 @@ import PackageRouter from './package.route';
 import ContractRouter from './contract.route';
 import FavoriteRouter from './favorite.route';
 import FeedbackRouter from './feedback.route';
+import SellerRouter from './seller.route';
+import RelatedRouter from './related.route';
 
 const routes = Router();
 
@@ -36,5 +38,7 @@ routes.use('/api/package', PackageRouter);
 routes.use('/api/contract', ContractRouter);
 routes.use('/api/favorites', FavoriteRouter);
 routes.use('/api/feedbacks', FeedbackRouter);
+routes.use('/api/sellers', SellerRouter);
+routes.use('/api/related', RelatedRouter);
 
 export default routes;

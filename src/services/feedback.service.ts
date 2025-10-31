@@ -1,46 +1,49 @@
 import pool from '../config/db';
+import { getVietnamTime } from '../utils/datetime';
 
 /**
- * Tạo feedback từ người mua cho người bán
- * @param buyerId - ID người mua
- * @param orderId - ID đơn hàng
+ * Tạo feedback từ buyer (winner) cho seller sau khi hợp đồng hoàn thành
+ * @param buyerId - ID người mua (winner từ auction hoặc buyer từ contract)
+ * @param contractId - ID hợp đồng
  * @param rating - Đánh giá từ 1-5 sao
  * @param comment - Nhận xét (optional)
  */
 export async function createFeedback(
 	buyerId: number,
-	orderId: number,
+	contractId: number,
 	rating: number,
 	comment?: string,
 ) {
-	// 1. Kiểm tra order có tồn tại và thuộc về buyer này không
-	const [orders]: any = await pool.query(
-		`SELECT o.id, o.seller_id, o.buyer_id, o.status, o.post_id, o.type
-     FROM orders o
-     WHERE o.id = ? AND o.buyer_id = ?`,
-		[orderId, buyerId],
+	// 1. Kiểm tra contract có tồn tại và thuộc về buyer này không
+	const [contracts]: any = await pool.query(
+		`SELECT c.id, c.seller_id, c.buyer_id, c.status, c.product_id, c.vehicle_price
+     FROM contracts c
+     WHERE c.id = ? AND c.buyer_id = ?`,
+		[contractId, buyerId],
 	);
 
-	if (orders.length === 0) {
-		throw new Error('Order not found or you are not the buyer');
+	if (contracts.length === 0) {
+		throw new Error('Contract not found or you are not the buyer');
 	}
 
-	const order = orders[0];
-	const sellerId = order.seller_id;
+	const contract = contracts[0];
+	const sellerId = contract.seller_id;
 
-	// 2. Kiểm tra order đã hoàn thành chưa (status = 'PAID' hoặc 'COMPLETED')
-	if (order.status !== 'PAID') {
-		throw new Error('Can only feedback on completed/paid orders');
+	// 2. Kiểm tra contract đã hoàn thành chưa (status = 'completed' hoặc 'signed')
+	if (contract.status !== 'completed' && contract.status !== 'signed') {
+		throw new Error('Can only feedback on completed or signed contracts');
 	}
 
 	// 3. Kiểm tra đã feedback chưa (không cho feedback 2 lần)
 	const [existingFeedback]: any = await pool.query(
-		'SELECT id FROM feedbacks WHERE order_id = ?',
-		[orderId],
+		'SELECT id FROM feedbacks WHERE contract_id = ?',
+		[contractId],
 	);
 
 	if (existingFeedback.length > 0) {
-		throw new Error('You have already submitted feedback for this order');
+		throw new Error(
+			'You have already submitted feedback for this contract',
+		);
 	}
 
 	// 4. Validate rating (1-5)
@@ -50,17 +53,24 @@ export async function createFeedback(
 
 	// 5. Insert feedback vào database
 	const [result]: any = await pool.query(
-		`INSERT INTO feedbacks (order_id, seller_id, buyer_id, rating, comment, created_at)
-     VALUES (?, ?, ?, ?, ?, NOW())`,
-		[orderId, sellerId, buyerId, rating, comment || null],
+		`INSERT INTO feedbacks (contract_id, seller_id, buyer_id, rating, comment, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+		[
+			contractId,
+			sellerId,
+			buyerId,
+			rating,
+			comment || null,
+			getVietnamTime(),
+		],
 	);
 
-	// 6. Cập nhật reputation của seller (optional - có thể tính toán lại)
-	await updateSellerReputation(sellerId);
+	// 6. Cập nhật rating của seller
+	await updateSellerRating(sellerId);
 
 	return {
 		id: result.insertId,
-		order_id: orderId,
+		contract_id: contractId,
 		seller_id: sellerId,
 		buyer_id: buyerId,
 		rating,
@@ -69,9 +79,10 @@ export async function createFeedback(
 }
 
 /**
- * Cập nhật reputation của seller dựa trên average rating
+ * Cập nhật rating của seller dựa trên average rating
+ * Rating = (avg_rating / 5) * 100 (scale 0-100)
  */
-async function updateSellerReputation(sellerId: number) {
+async function updateSellerRating(sellerId: number) {
 	const [stats]: any = await pool.query(
 		`SELECT AVG(rating) as avg_rating, COUNT(*) as total_feedbacks
      FROM feedbacks
@@ -82,18 +93,18 @@ async function updateSellerReputation(sellerId: number) {
 	if (stats.length > 0 && stats[0].avg_rating) {
 		const avgRating = parseFloat(stats[0].avg_rating);
 
-		// Cập nhật reputation (scale từ 0-100)
-		const reputation = (avgRating / 5) * 100;
+		// Cập nhật rating (scale từ 0-100)
+		const rating = (avgRating / 5) * 100;
 
-		await pool.query('UPDATE users SET reputation = ? WHERE id = ?', [
-			reputation.toFixed(2),
+		await pool.query('UPDATE users SET rating = ? WHERE id = ?', [
+			rating.toFixed(2),
 			sellerId,
 		]);
 	}
 }
 
 /**
- * Lấy tất cả feedbacks của một seller
+ * Lấy tất cả feedbacks của một seller với thông tin chi tiết
  */
 export async function getSellerFeedbacks(
 	sellerId: number,
@@ -106,16 +117,19 @@ export async function getSellerFeedbacks(
        f.rating,
        f.comment,
        f.created_at,
-       f.order_id,
+       f.contract_id,
        u.id as buyer_id,
        u.full_name as buyer_name,
        p.id as product_id,
        p.title as product_title,
-       o.price as order_price
+       p.brand,
+       p.model,
+       c.vehicle_price,
+       c.contract_code
      FROM feedbacks f
      INNER JOIN users u ON f.buyer_id = u.id
-     LEFT JOIN orders o ON f.order_id = o.id
-     LEFT JOIN products p ON o.post_id = p.id
+     INNER JOIN contracts c ON f.contract_id = c.id
+     INNER JOIN products p ON c.product_id = p.id
      WHERE f.seller_id = ?
      ORDER BY f.created_at DESC
      LIMIT ? OFFSET ?`,
@@ -143,18 +157,21 @@ export async function getSellerFeedbacks(
 			rating: f.rating,
 			comment: f.comment,
 			created_at: f.created_at,
-			order_id: f.order_id,
+			contract: {
+				id: f.contract_id,
+				contract_code: f.contract_code,
+				vehicle_price: f.vehicle_price,
+			},
 			buyer: {
 				id: f.buyer_id,
 				name: f.buyer_name,
 			},
-			product: f.product_id
-				? {
-						id: f.product_id,
-						title: f.product_title,
-						price: f.order_price,
-				  }
-				: null,
+			product: {
+				id: f.product_id,
+				title: f.product_title,
+				brand: f.brand,
+				model: f.model,
+			},
 		})),
 		statistics: {
 			avg_rating: stats[0].avg_rating
@@ -173,9 +190,12 @@ export async function getSellerFeedbacks(
 }
 
 /**
- * Lấy feedback của buyer cho một order cụ thể
+ * Lấy feedback của buyer cho một contract cụ thể
  */
-export async function getFeedbackByOrder(orderId: number, buyerId: number) {
+export async function getFeedbackByContract(
+	contractId: number,
+	buyerId: number,
+) {
 	const [feedbacks]: any = await pool.query(
 		`SELECT 
        f.id,
@@ -183,12 +203,118 @@ export async function getFeedbackByOrder(orderId: number, buyerId: number) {
        f.comment,
        f.created_at,
        f.seller_id,
-       u.full_name as seller_name
+       u.full_name as seller_name,
+       p.id as product_id,
+       p.title as product_title,
+       c.vehicle_price,
+       c.contract_code
      FROM feedbacks f
      INNER JOIN users u ON f.seller_id = u.id
-     WHERE f.order_id = ? AND f.buyer_id = ?`,
-		[orderId, buyerId],
+     INNER JOIN contracts c ON f.contract_id = c.id
+     INNER JOIN products p ON c.product_id = p.id
+     WHERE f.contract_id = ? AND f.buyer_id = ?`,
+		[contractId, buyerId],
 	);
 
 	return feedbacks.length > 0 ? feedbacks[0] : null;
+}
+
+/**
+ * Kiểm tra buyer có thể feedback cho contract này không
+ * @returns { canFeedback: boolean, reason?: string }
+ */
+export async function checkCanFeedback(contractId: number, buyerId: number) {
+	// 1. Kiểm tra contract có tồn tại không
+	const [contracts]: any = await pool.query(
+		`SELECT c.id, c.seller_id, c.buyer_id, c.status
+     FROM contracts c
+     WHERE c.id = ?`,
+		[contractId],
+	);
+
+	if (contracts.length === 0) {
+		return { canFeedback: false, reason: 'Contract not found' };
+	}
+
+	const contract = contracts[0];
+
+	// 2. Kiểm tra có phải buyer không
+	if (contract.buyer_id !== buyerId) {
+		return { canFeedback: false, reason: 'You are not the buyer' };
+	}
+
+	// 3. Kiểm tra contract đã completed/signed chưa
+	if (contract.status !== 'completed' && contract.status !== 'signed') {
+		return {
+			canFeedback: false,
+			reason: 'Contract must be completed or signed',
+		};
+	}
+
+	// 4. Kiểm tra đã feedback chưa
+	const [existingFeedback]: any = await pool.query(
+		'SELECT id FROM feedbacks WHERE contract_id = ?',
+		[contractId],
+	);
+
+	if (existingFeedback.length > 0) {
+		return {
+			canFeedback: false,
+			reason: 'Already submitted feedback',
+		};
+	}
+
+	return { canFeedback: true };
+}
+
+/**
+ * Lấy danh sách contracts mà buyer có thể feedback
+ */
+export async function getContractsCanFeedback(buyerId: number) {
+	const [contracts]: any = await pool.query(
+		`SELECT 
+       c.id as contract_id,
+       c.contract_code,
+       c.seller_id,
+       u.full_name as seller_name,
+       c.vehicle_price,
+       c.status,
+       c.created_at,
+       p.id as product_id,
+       p.title as product_title,
+       p.brand,
+       p.model,
+       CASE 
+         WHEN f.id IS NOT NULL THEN 1
+         ELSE 0
+       END as has_feedback
+     FROM contracts c
+     INNER JOIN users u ON c.seller_id = u.id
+     INNER JOIN products p ON c.product_id = p.id
+     LEFT JOIN feedbacks f ON c.id = f.contract_id
+     WHERE c.buyer_id = ? 
+       AND (c.status = 'completed' OR c.status = 'signed')
+     ORDER BY c.created_at DESC`,
+		[buyerId],
+	);
+
+	return contracts.map((c: any) => ({
+		contract_id: c.contract_id,
+		contract_code: c.contract_code,
+		status: c.status,
+		created_at: c.created_at,
+		vehicle_price: c.vehicle_price,
+		seller: {
+			id: c.seller_id,
+			name: c.seller_name,
+		},
+		product: {
+			id: c.product_id,
+			title: c.product_title,
+			brand: c.brand,
+			model: c.model,
+		},
+		has_feedback: c.has_feedback === 1,
+		can_feedback: c.has_feedback === 0,
+	}));
 }

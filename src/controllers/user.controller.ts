@@ -272,6 +272,7 @@ export async function updateUserInfo(req: Request, res: Response) {
 					avatar: user?.avatar,
 					gender: user?.gender,
 					address: user?.address,
+					description: user?.description,
 				},
 			},
 		});
