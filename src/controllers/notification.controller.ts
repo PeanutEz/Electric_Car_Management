@@ -21,7 +21,7 @@ export async function listUserNotifications(req: Request, res: Response) {
 		res.status(200).json({
 			message: 'Lấy danh sách thông báo thành công',
 			data: {
-				notifications: noti.notifications,
+				notifications: noti,
 				pagination: {
 					page: Number(page),
 					limit: Number(limit),
