@@ -14,8 +14,6 @@ import {
 } from '../services/user.service';
 import jwt from 'jsonwebtoken';
 import * as uploadService from '../services/upload.service';
-import { count } from 'console';
-import { all } from 'axios';
 
 export async function userDetail(req: Request, res: Response) {
 	try {
