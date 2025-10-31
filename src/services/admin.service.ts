@@ -144,3 +144,13 @@ export async function updateAuction(
   await pool.query("UPDATE auctions SET ? WHERE id = ?", [updates, auctionId]);
   return { id: auctionId, ...updates };
 }
+
+export async function sendFeedbackToSeller(
+  orderId: number,
+  feedback: string
+) {
+  if (!orderId) throw new Error("Invalid order ID");
+  if (!feedback) throw new Error("Feedback cannot be empty");
+  await pool.query("UPDATE orders SET feedback = ? WHERE id = ?", [feedback, orderId]);
+  return { orderId, feedback };
+}
