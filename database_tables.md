@@ -130,6 +130,13 @@ batteries
 | 4  | 12      | Bài đăng của bạn đã được add   | 2025-10-28 04:35:16 | 1       | 1       | NULL | NULL  |
 | 5  | 12      | Bài đăng của bạn đã được add   | 2025-10-28 17:19:22 | 0       | 2       | NULL | NULL  |
 
+## 📦 Table: `contracts`
+| id | contract_code | seller_id | buyer_id | product_id | deposit_amount | vehicle_price | commission_percent | dispute_city | status  | url                                                            | created_at          | updated_at          |
+| -- | ------------- | --------- | -------- | ---------- | -------------- | ------------- | ------------------ | ------------ | ------- | -------------------------------------------------------------- | ------------------- | ------------------- |
+| 22 | 3885707       | 12        | 3        | 8          | 3000000.00     | 25000000.00   | 5.00               | Ho Chi Minh  | signed  | [https://docuseal.com/file/con](https://docuseal.com/file/con) | 2025-10-24 16:00:20 | 2025-10-24 16:23:33 |
+| 29 | 3904295       | 12        | 25       | 8          | 3000000.00     | 25000000.00   | 5.00               | Ho Chi Minh  | pending | [https://docuseal.com/s/zzHdE](https://docuseal.com/s/zzHdE)   | 2025-10-27 07:41:13 | 2025-10-27 07:41:14 |
+
+
 
 **Description:**
 - `bid_price` - Giá bid cao nhất mà user này đã đặt trong auction (được cập nhật mỗi khi user bid)

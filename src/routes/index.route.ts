@@ -15,6 +15,7 @@ import AuctionRouter from './auction.route';
 import PackageRouter from './package.route';
 import ContractRouter from './contract.route';
 import FavoriteRouter from './favorite.route';
+import FeedbackRouter from './feedback.route';
 
 const routes = Router();
 
@@ -34,5 +35,6 @@ routes.use('/api/auction', AuctionRouter);
 routes.use('/api/package', PackageRouter);
 routes.use('/api/contract', ContractRouter);
 routes.use('/api/favorites', FavoriteRouter);
+routes.use('/api/feedbacks', FeedbackRouter);
 
 export default routes;

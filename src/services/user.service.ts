@@ -7,12 +7,22 @@ import { getVietnamTime } from "../utils/datetime";
 
 export async function getUserById(id: number): Promise<User | null> {
   const [rows]: any = await pool.query(
-    "select u.id,u.status,u.full_name,u.email, u.gender, u.address, u.avatar, u.phone,u.reputation,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?",
+    "select u.id,u.status,u.full_name,u.email, u.gender, u.address, u.avatar, u.phone,u.rating,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?",
     [id]
   );
 
   const totalPosts: any = await pool.query(
     "select count(*) as total from products where created_by = ?",
+    [id]
+  );
+
+  const totalActivePosts: any = await pool.query(
+    "select count(*) as total from products where created_by = ? and status in ('approved','auctioning')",
+    [id]
+  );
+
+  const totalSoldPosts: any = await pool.query(
+    "select count(*) as total from products where created_by = ? and status = 'sold'",
     [id]
   );
 
@@ -43,9 +53,11 @@ export async function getUserById(id: number): Promise<User | null> {
     gender: user.gender,
     address: user.address,
     avatar: user.avatar,
-    reputation: user.reputation,
+    rating: user.rating,
     total_credit: user.total_credit,
     total_posts: totalPosts[0][0].total,
+    total_active_posts: totalActivePosts[0][0].total,
+    total_sold_posts: totalSoldPosts[0][0].total,
     total_transactions: totalTransactions[0][0].total,
     verificationStatus: is_verified,
     recentTransaction: {
@@ -76,7 +88,7 @@ export function getTokenById(user: User): any {
 
 export async function getAllUsers() {
   const [users] = await pool.query(
-    `select id, status, full_name, email, phone, reputation, total_credit, created_at, role_id, refresh_token 
+    `select id, status, full_name, email, phone, rating, total_credit, created_at, role_id, refresh_token 
 		 from users`
   );
 
@@ -95,7 +107,7 @@ export async function getAllUsers() {
 
 export async function loginUser(email: string, password: string) {
   const [rows]: any = await pool.query(
-    "select u.id,u.status,u.full_name,u.avatar,u.email,u.phone,u.reputation,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?",
+    "select u.id,u.status,u.full_name,u.avatar,u.email,u.phone,u.rating,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?",
     [email]
   );
 
@@ -123,7 +135,7 @@ export async function loginUser(email: string, password: string) {
       status: user.status,
       full_name: user.full_name,
       email: user.email,
-      reputation: user.reputation,
+      rating: user.rating,
       total_credit: user.total_credit,
       role: user.role,
       avatar: user.avatar,
@@ -139,7 +151,7 @@ export async function loginUser(email: string, password: string) {
       full_name: user.full_name,
       email: user.email,
       phone: user.phone,
-      reputation: user.reputation,
+      rating: user.rating,
       total_credit: user.total_credit,
       role: user.role,
       avatar: user.avatar,
@@ -232,7 +244,7 @@ export async function registerUser(userData: User) {
     phone: user.phone,
     gender: user.gender,
     address: user.address,
-    reputation: user.reputation,
+    rating: user.rating,
     total_credit: user.total_credit,
     role: roleName[0][0].role,
     access_token: "Bearer " + tokens.accessToken,
@@ -301,7 +313,7 @@ export async function updateUser(userId: number, userData: Partial<User>) {
 
 export async function updatePhoneUser(userId: number, phone: string) {
   const [user]: any = await pool.query(
-    "select u.id,u.status,u.full_name,u.email,u.phone,u.reputation,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?",
+    "select u.id,u.status,u.full_name,u.email,u.phone,u.rating,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?",
     [userId]
   );
   const errors: { [key: string]: string } = {};
@@ -323,7 +335,7 @@ export async function updatePhoneUser(userId: number, phone: string) {
   await pool.query("UPDATE users SET phone = ? WHERE id = ?", [phone, userId]);
 
   const [user1]: any = await pool.query(
-    "select u.id,u.status,u.full_name,u.email,u.phone,u.avatar,u.reputation,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?",
+    "select u.id,u.status,u.full_name,u.email,u.phone,u.avatar,u.rating,u.total_credit,u.password,u.refresh_token,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.id = ?",
     [userId]
   );
 
@@ -338,7 +350,7 @@ export async function updatePhoneUser(userId: number, phone: string) {
     full_name: user1[0].full_name,
     email: user1[0].email,
     phone: phone,
-    reputation: user1[0].reputation,
+    rating: user1[0].rating,
     total_credit: user1[0].total_credit,
     role: user1[0].role,
     avatar: user1[0].avatar,
