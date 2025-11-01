@@ -5,6 +5,7 @@ import pool from '../config/db';
 import { detectPaymentMethod } from '../utils/parser';
 import { title } from 'process';
 import * as notificationService from './notification.service';
+import * as chatService from './chat.service';
 import { sendNotificationToUser, getIO } from '../config/socket';
 import { getVietnamTime, getVietnamISOString } from '../utils/datetime';
 
@@ -559,19 +560,37 @@ export async function processDepositPayment(
 					[buyerId],
 				);
 
-				// Emit to auction room that user has joined
+				const joinData = {
+					userId: buyerId,
+					userName: userRows[0]?.full_name || 'User',
+					auctionId: auctionId,
+					depositAmount: depositAmount,
+					timestamp: getVietnamISOString(),
+					message: `${
+						userRows[0]?.full_name || 'User'
+					} đã tham gia đấu giá`,
+				};
+
+				// Emit to auction room that user has joined (notify others)
 				auctionNamespace
 					.to(`auction_${auctionId}`)
-					.emit('auction:user_joined', {
-						userId: buyerId,
-						userName: userRows[0]?.full_name || 'User',
-						auctionId: auctionId,
-						depositAmount: depositAmount,
-						timestamp: getVietnamISOString(),
-						message: `${
-							userRows[0]?.full_name || 'User'
-						} đã tham gia đấu giá`,
+					.emit('auction:user_joined', joinData);
+
+				// Emit to the user themselves that they successfully joined
+				//const userSocketId = chatService.getUserSocketId(buyerId);
+				//if (userSocketId) {
+					auctionNamespace.to(`auction_${auctionId}`).emit('auction:joined', {
+						...joinData,
+						auction: {
+							id: auction.id,
+							product_id: auction.product_id,
+							starting_price: auction.starting_price,
+							target_price: auction.target_price,
+							deposit: depositAmount,
+						},
+						message: 'Bạn đã tham gia đấu giá thành công',
 					});
+				//}
 
 				console.log(
 					`🔌 Socket emitted: User ${buyerId} joined auction ${auctionId}`,
@@ -723,19 +742,45 @@ export async function confirmAuctionDepositPayment(
 				[auctionData.buyer_id],
 			);
 
-			// Emit to auction room that user has joined
+			// Get auction details
+			const [auctionRows]: any = await connection.query(
+				`SELECT id, product_id, starting_price, target_price, deposit FROM auctions WHERE id = ?`,
+				[auctionData.auction_id],
+			);
+
+			const joinData = {
+				userId: auctionData.buyer_id,
+				userName: userRows[0]?.full_name || 'User',
+				auctionId: auctionData.auction_id,
+				depositAmount: orderRows[0].price,
+				timestamp: getVietnamISOString(),
+				message: `${
+					userRows[0]?.full_name || 'User'
+				} đã tham gia đấu giá`,
+			};
+
+			// Emit to auction room that user has joined (notify others)
 			auctionNamespace
 				.to(`auction_${auctionData.auction_id}`)
-				.emit('auction:user_joined', {
-					userId: auctionData.buyer_id,
-					userName: userRows[0]?.full_name || 'User',
-					auctionId: auctionData.auction_id,
-					depositAmount: orderRows[0].price,
-					timestamp: getVietnamISOString(),
-					message: `${
-						userRows[0]?.full_name || 'User'
-					} đã tham gia đấu giá`,
+				.emit('auction:user_joined', joinData);
+
+			// Emit to the user themselves that they successfully joined
+			const userSocketId = chatService.getUserSocketId(
+				auctionData.buyer_id,
+			);
+			if (userSocketId && auctionRows.length > 0) {
+				auctionNamespace.to(userSocketId).emit('auction:joined', {
+					...joinData,
+					auction: {
+						id: auctionRows[0].id,
+						product_id: auctionRows[0].product_id,
+						starting_price: auctionRows[0].starting_price,
+						target_price: auctionRows[0].target_price,
+						deposit: auctionRows[0].deposit,
+					},
+					message: 'Bạn đã tham gia đấu giá thành công',
 				});
+			}
 
 			console.log(
 				`🔌 Socket emitted: User ${auctionData.buyer_id} joined auction ${auctionData.auction_id} (PayOS)`,
