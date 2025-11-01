@@ -457,17 +457,17 @@ export async function getPostsById(id: number): Promise<Post> {
 	- Công suất: ${rows[0].power} kW
 	- Khu vực giao dịch: ${rows[0].address}
 
-	// Hãy trả về kết quả theo đúng định dạng sau:
+	Hãy trả về kết quả theo đúng định dạng sau:
 
-	// <min_price>, <max_price>
+	<min_price>, <max_price>
 
-	// Yêu cầu:
-	// - Đơn vị là VND (không ghi chữ "VND").
-	// - Chỉ trả về hai số, cách nhau bằng dấu phẩy và một khoảng trắng.
-	// - Không thêm bất kỳ mô tả, ký tự, hay chữ nào khác.
+	Yêu cầu:
+	- Đơn vị là VND (không ghi chữ "VND").
+	- Chỉ trả về hai số, cách nhau bằng dấu phẩy và một khoảng trắng.
+	- Không thêm bất kỳ mô tả, ký tự, hay chữ nào khác.
 
-	// Ví dụ:
-	// 350000000, 450000000`);
+	Ví dụ:
+	350000000, 450000000`);
 	} else {
 		geminiPromptPrice =
 			await generateText(`Hãy ước lượng khoảng giá thị trường của một sản phẩm cũ dựa trên các thông tin sau:
@@ -480,17 +480,17 @@ export async function getPostsById(id: number): Promise<Post> {
 	- Tình trạng sức khỏe pin: ${rows[0].health}
 	- Khu vực giao dịch: ${rows[0].address}
 
-	// Hãy trả về kết quả theo đúng định dạng sau:
+	Hãy trả về kết quả theo đúng định dạng sau:
 
-	// <min_price>, <max_price>
+	/<min_price>, <max_price>
 
-	// Yêu cầu:
-	// - Đơn vị là VND (không ghi chữ "VND").
-	// - Chỉ trả về hai số, cách nhau bằng dấu phẩy và một khoảng trắng.
-	// - Không thêm bất kỳ mô tả, ký tự, hay chữ nào khác.
+	Yêu cầu:
+	- Đơn vị là VND (không ghi chữ "VND").
+	- Chỉ trả về hai số, cách nhau bằng dấu phẩy và một khoảng trắng.
+	- Không thêm bất kỳ mô tả, ký tự, hay chữ nào khác.
 
-	// Ví dụ:
-	// 350000000, 450000000`);
+	Ví dụ:
+	350000000, 450000000`);
 	}
 	const r = (rows as any)[0];
 
