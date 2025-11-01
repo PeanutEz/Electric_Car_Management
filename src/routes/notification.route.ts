@@ -1,5 +1,6 @@
 import Router from 'express';
-import { listUserNotifications } from '../controllers/notification.controller';
+import { listUserNotifications, markNotificationAsRead } from '../controllers/notification.controller';
+import { authenticateToken } from '../middleware/AuthMiddleware';
 
 const router = Router();
 /**
@@ -24,5 +25,24 @@ const router = Router();
  *         description: Lỗi server
  */
 router.get('/notifications', listUserNotifications);
+
+/**
+ * @swagger
+ * /api/notification/mark-as-read:
+ *  get:
+ *    summary: Đánh dấu thông báo đã đọc
+ *   tags: [Notifications]
+ *   responses:
+ *     200:
+ *      description: Đánh dấu thông báo đã đọc thành công
+ *     401:
+ *       description: Không tìm thấy token xác thực
+ *     500:
+ *       description: Lỗi server
+ */
+router.get('/notifications', listUserNotifications);
+
+
+router.put('/mark-as-read', authenticateToken, markNotificationAsRead);
 
 export default router;
