@@ -114,10 +114,21 @@ export async function getAllOrderByUserId(
         `;
 				break;
 
-			// --- CASE PACKAGE, TOPUP, DEPOSIT ---
+			// --- CASE DEPOSIT (updated) ---
+			case 'deposit':
+				baseSql = `
+          FROM orders o
+          INNER JOIN services s ON s.id = o.service_id
+          INNER JOIN users u ON u.id = o.buyer_id
+          LEFT JOIN auctions a ON a.product_id = o.product_id
+          LEFT JOIN products p ON p.id = a.product_id
+          WHERE o.type = 'deposit' and o.status = 'PAID' and o.payment_method = 'CREDIT' AND ${where}
+        `;
+				break;
+
+			// --- CASE PACKAGE, TOPUP ---
 			case 'package':
 			case 'pakage':
-			case 'deposit':
 			case 'topup':
 				baseSql = `
           FROM orders o
@@ -127,6 +138,7 @@ export async function getAllOrderByUserId(
         `;
 				break;
 
+			// --- CASE ALL / DEFAULT ---
 			default:
 				baseSql = `
           FROM orders o
@@ -137,12 +149,13 @@ export async function getAllOrderByUserId(
 				break;
 		}
 
-		// ✅ Tạo 2 SQL: 1 để đếm, 1 để lấy dữ liệu
+		// Count query
 		countSql = `SELECT COUNT(*) AS total ${baseSql}`;
 
 		let sql = '';
 
 		switch ((type || '').toLowerCase()) {
+			// === SELECT FOR AUCTION ===
 			case 'auction':
 				sql = `
       SELECT
@@ -165,6 +178,7 @@ export async function getAllOrderByUserId(
     `;
 				break;
 
+			// === SELECT FOR POST ===
 			case 'post':
 				sql = `
       SELECT
@@ -185,6 +199,31 @@ export async function getAllOrderByUserId(
     `;
 				break;
 
+			// === SELECT FOR DEPOSIT (UPDATED) ===
+			case 'deposit':
+				sql = `
+      SELECT
+        o.id AS order_id, o.type, o.status, o.tracking, o.price, o.service_id, o.product_id, o.buyer_id,
+        o.created_at, o.code AS order_code, o.payment_method, o.updated_at,
+        u.full_name, u.email, u.phone,
+        s.cost AS service_cost, s.name AS service_name, s.description AS service_description,
+        s.type AS service_type, s.feature,
+
+
+        a.id AS auction_id, a.starting_price, a.original_price, a.target_price,
+        a.deposit AS auction_deposit, a.winning_price, a.step, a.note, a.winner_id,
+
+
+        p.title AS product_title, p.brand, p.model, p.price AS product_price
+
+
+      ${baseSql}
+      ORDER BY o.created_at DESC
+      LIMIT ${page_size} OFFSET ${offset};
+    `;
+				break;
+
+			// === DEFAULT SELECT ===
 			default:
 				sql = `
       SELECT
@@ -200,18 +239,18 @@ export async function getAllOrderByUserId(
 				break;
 		}
 
-		// ✅ Chạy song song cả 2 query
+		// Run queries
 		const [[{ total }]]: any = await pool.query(countSql);
 		const [rows]: any = await pool.query(sql);
 
-		// ✅ Format như cũ
+		// Format response
 		const formatted = await Promise.all(
 			rows.map(async (r: any) => {
 				const base = {
 					id: r.order_id,
 					type: r.type,
 					status: r.status,
-					tracking: r.tracking, // ✅ Thêm tracking vào response
+					tracking: r.tracking,
 					price: parseFloat(r.price) || 0,
 					created_at: r.created_at,
 					updated_at: r.updated_at,
@@ -223,118 +262,7 @@ export async function getAllOrderByUserId(
 					},
 				};
 
-				if (r.type === 'post') {
-					const isVehicle = r.category_type === 'vehicle';
-					const isBattery = r.category_type === 'battery';
-
-					const productBase = {
-						id: r.product_id,
-						brand: r.brand,
-						model: r.model,
-						price: parseFloat(r.product_price) || 0,
-						address: r.address,
-						description: r.description,
-						category: {
-							id: r.product_category_id,
-							typeSlug: r.category_slug,
-							name: r.category_name,
-						},
-						year: r.year,
-						image: r.image,
-						images: [],
-					};
-
-					const productExtra = isVehicle
-						? {
-								color: r.color,
-								seats: r.seats,
-								mileage: r.mileage_km
-									? `${r.mileage_km} km`
-									: null,
-								power: r.power,
-								battery_capacity: r.battery_capacity,
-								is_verified: !!r.is_verified,
-						  }
-						: isBattery
-						? {
-								capacity: r.battery_capacity,
-								health: r.battery_health,
-								chemistry: r.battery_chemistry,
-								voltage: r.battery_voltage,
-								dimension: r.battery_dimension,
-						  }
-						: {};
-
-					// status của post dựa theo tracking thay vì product_status
-					let finalStatus = r.status.toLowerCase(); // Mặc định theo order.status
-
-					if (r.status.toLowerCase() === 'pending') {
-						finalStatus = 'pending';
-					} else if (r.status.toLowerCase() === 'paid') {
-						// ✅ Sử dụng tracking để xác định final status
-						const trackingStatus = r.tracking
-							? r.tracking.toLowerCase()
-							: '';
-
-						switch (trackingStatus) {
-							case 'auction_success':
-							case 'completed':
-								finalStatus = 'success';
-								break;
-							case 'processing':
-								finalStatus = 'processing';
-								break;
-							case 'cancelled':
-							case 'failed':
-								finalStatus = 'fail';
-								break;
-							default:
-								// Fallback to product_status nếu tracking không có
-								const normalizedStatus = r.product_status
-									? r.product_status
-											.toString()
-											.trim()
-											.toLowerCase()
-									: '';
-
-								switch (normalizedStatus) {
-									case 'pending':
-										finalStatus = 'processing';
-										break;
-									case 'approved':
-									case 'auctioning':
-									case 'auctioned':
-										finalStatus = 'success';
-										break;
-									case 'rejected':
-										finalStatus = 'fail';
-										break;
-									default:
-										finalStatus = r.status;
-								}
-						}
-					}
-
-					return {
-						...base,
-						status: finalStatus, // 👈 Ghi đè lại status tại đây
-						post: {
-							id: r.product_id,
-							title: r.product_title,
-							priority: 1,
-							created_at: '',
-							updated_at: '',
-							product: { ...productBase, ...productExtra },
-						},
-						service: {
-							id: r.service_id,
-							name: r.service_name,
-							description: r.service_description,
-							price: parseFloat(r.service_cost) || 0,
-						},
-					};
-				}
-
+				// === FORMAT AUCTION (no change) ===
 				if (r.type === 'auction') {
 					let winner = null;
 					const [winnerRows]: any = await pool.query(
@@ -389,9 +317,159 @@ export async function getAllOrderByUserId(
 					};
 				}
 
-				if (
-					['package', 'pakage', 'topup', 'deposit'].includes(r.type)
-				) {
+				// === FORMAT POST (no change) ===
+				if (r.type === 'post') {
+					const isVehicle = r.category_type === 'vehicle';
+					const isBattery = r.category_type === 'battery';
+
+					const productBase = {
+						id: r.product_id,
+						brand: r.brand,
+						model: r.model,
+						price: parseFloat(r.product_price) || 0,
+						address: r.address,
+						description: r.description,
+						category: {
+							id: r.product_category_id,
+							typeSlug: r.category_slug,
+							name: r.category_name,
+						},
+						year: r.year,
+						image: r.image,
+						images: [],
+					};
+
+					const productExtra = isVehicle
+						? {
+								color: r.color,
+								seats: r.seats,
+								mileage: r.mileage_km
+									? `${r.mileage_km} km`
+									: null,
+								power: r.power,
+								battery_capacity: r.battery_capacity,
+								is_verified: !!r.is_verified,
+						  }
+						: isBattery
+						? {
+								capacity: r.battery_capacity,
+								health: r.battery_health,
+								chemistry: r.battery_chemistry,
+								voltage: r.battery_voltage,
+								dimension: r.battery_dimension,
+						  }
+						: {};
+
+					let finalStatus = r.status.toLowerCase();
+
+					if (r.status.toLowerCase() === 'pending') {
+						finalStatus = 'pending';
+					} else if (r.status.toLowerCase() === 'paid') {
+						const trackingStatus = r.tracking
+							? r.tracking.toLowerCase()
+							: '';
+
+						switch (trackingStatus) {
+							case 'auction_success':
+							case 'completed':
+								finalStatus = 'success';
+								break;
+							case 'processing':
+								finalStatus = 'processing';
+								break;
+							case 'cancelled':
+							case 'failed':
+								finalStatus = 'fail';
+								break;
+							default:
+								const normalizedStatus = r.product_status
+									? r.product_status
+											.toString()
+											.trim()
+											.toLowerCase()
+									: '';
+
+								switch (normalizedStatus) {
+									case 'pending':
+										finalStatus = 'processing';
+										break;
+									case 'approved':
+									case 'auctioning':
+									case 'auctioned':
+										finalStatus = 'success';
+										break;
+									case 'rejected':
+										finalStatus = 'fail';
+										break;
+									default:
+										finalStatus = r.status;
+								}
+						}
+					}
+
+					return {
+						...base,
+						status: finalStatus,
+						post: {
+							id: r.product_id,
+							title: r.product_title,
+							priority: 1,
+							created_at: '',
+							updated_at: '',
+							product: { ...productBase, ...productExtra },
+						},
+						service: {
+							id: r.service_id,
+							name: r.service_name,
+							description: r.service_description,
+							price: parseFloat(r.service_cost) || 0,
+						},
+					};
+				}
+
+				// === FORMAT DEPOSIT (updated) ===
+				if (r.type === 'deposit') {
+					return {
+						...base,
+						service: {
+							id: r.service_id,
+							name: r.service_name,
+							type: r.service_type,
+							description: r.service_description,
+							price: parseFloat(r.service_cost) || 0,
+							feature: r.feature,
+						},
+						auction: r.auction_id
+							? {
+									id: r.auction_id,
+									startingBid:
+										parseFloat(r.starting_price) || 0,
+									original_price:
+										parseFloat(r.original_price) || 0,
+									buyNowPrice:
+										parseFloat(r.target_price) || 0,
+									deposit: parseFloat(r.auction_deposit) || 0,
+									bidIncrement: parseFloat(r.step) || 0,
+									winning_price:
+										parseFloat(r.winning_price) || 0,
+									note: r.note,
+									winner_id: r.winner_id,
+							  }
+							: null,
+						product: r.product_id
+							? {
+									id: r.product_id,
+									title: r.product_title,
+									brand: r.brand,
+									model: r.model,
+									price: parseFloat(r.product_price) || 0,
+							  }
+							: null,
+					};
+				}
+
+				// === FORMAT DEFAULT TYPES (unchanged) ===
+				if (['package', 'pakage', 'topup'].includes(r.type)) {
 					return {
 						...base,
 						service: {
@@ -409,6 +487,7 @@ export async function getAllOrderByUserId(
 			}),
 		);
 
+		// Stats
 		const statsSql = `
       SELECT
         COUNT(*) AS total,
@@ -421,7 +500,6 @@ export async function getAllOrderByUserId(
 
 		const [[stats]]: any = await pool.query(statsSql);
 
-		// ✅ Trả về cả dữ liệu và meta pagination
 		return {
 			total,
 			page,

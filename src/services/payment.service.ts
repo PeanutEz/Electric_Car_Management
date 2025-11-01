@@ -579,7 +579,9 @@ export async function processDepositPayment(
 				// Emit to the user themselves that they successfully joined
 				//const userSocketId = chatService.getUserSocketId(buyerId);
 				//if (userSocketId) {
-					auctionNamespace.to(`auction_${auctionId}`).emit('auction:joined', {
+				auctionNamespace
+					.to(`auction_${auctionId}`)
+					.emit('auction:joined', {
 						...joinData,
 						auction: {
 							id: auction.id,
@@ -615,6 +617,11 @@ export async function processDepositPayment(
 				auction: {
 					id: auction.id,
 					deposit: depositAmount,
+					starting_price: auction.starting_price,
+					target_price: auction.target_price,
+					winning_price:
+						auction.winning_price || auction.starting_price,
+					winner_id: auction.winner_id,
 				},
 			};
 		} else {
@@ -731,7 +738,33 @@ export async function confirmAuctionDepositPayment(
 
 		await connection.commit();
 
-		// 🔌 Emit socket event: User joined auction room after successful deposit via PayOS
+		// � Gửi notification cho user khi đặt cọc thành công qua PayOS
+		try {
+			const [productRows]: any = await connection.query(
+				`SELECT title FROM products WHERE id IN (SELECT product_id FROM auctions WHERE id = ?)`,
+				[auctionData.auction_id],
+			);
+
+			const notification = await notificationService.createNotification({
+				user_id: auctionData.buyer_id,
+				post_id: productRows[0]?.id || null,
+				type: 'deposit_success',
+				title: 'Đặt cọc thành công',
+				message: `Bạn đã đặt cọc thành công ${orderRows[0].price.toLocaleString(
+					'vi-VN',
+				)} VNĐ để tham gia đấu giá "${
+					productRows[0]?.title || ''
+				}". Hãy bắt đầu đấu giá ngay!`,
+			});
+			sendNotificationToUser(auctionData.buyer_id, notification);
+		} catch (notifError: any) {
+			console.error(
+				'⚠️ Failed to send deposit notification (PayOS):',
+				notifError.message,
+			);
+		}
+
+		// �🔌 Emit socket event: User joined auction room after successful deposit via PayOS
 		try {
 			const io = getIO();
 			const auctionNamespace = io.of('/auction');
@@ -744,43 +777,66 @@ export async function confirmAuctionDepositPayment(
 
 			// Get auction details
 			const [auctionRows]: any = await connection.query(
-				`SELECT id, product_id, starting_price, target_price, deposit FROM auctions WHERE id = ?`,
+				`SELECT id, product_id, starting_price, target_price, deposit, winning_price, winner_id FROM auctions WHERE id = ?`,
 				[auctionData.auction_id],
 			);
 
-			const joinData = {
+			// Get remaining time
+			const { getAuctionRemainingTime } = await import(
+				'./auction.service'
+			);
+			const remainingTime = await getAuctionRemainingTime(
+				auctionData.auction_id,
+			);
+
+			const depositSuccessData = {
 				userId: auctionData.buyer_id,
 				userName: userRows[0]?.full_name || 'User',
 				auctionId: auctionData.auction_id,
 				depositAmount: orderRows[0].price,
 				timestamp: getVietnamISOString(),
-				message: `${
-					userRows[0]?.full_name || 'User'
-				} đã tham gia đấu giá`,
+				auction: auctionRows[0]
+					? {
+							id: auctionRows[0].id,
+							product_id: auctionRows[0].product_id,
+							starting_price: auctionRows[0].starting_price,
+							target_price: auctionRows[0].target_price,
+							deposit: auctionRows[0].deposit,
+							winning_price:
+								auctionRows[0].winning_price ||
+								auctionRows[0].starting_price,
+							winner_id: auctionRows[0].winner_id,
+					  }
+					: null,
+				remainingTime: remainingTime,
+				message:
+					'Đặt cọc thành công! Bạn có thể tham gia đấu giá ngay.',
 			};
 
-			// Emit to auction room that user has joined (notify others)
-			auctionNamespace
-				.to(`auction_${auctionData.auction_id}`)
-				.emit('auction:user_joined', joinData);
-
-			// Emit to the user themselves that they successfully joined
+			// Emit tới main socket của user để FE nhận ngay (quan trọng!)
 			const userSocketId = chatService.getUserSocketId(
 				auctionData.buyer_id,
 			);
-			if (userSocketId && auctionRows.length > 0) {
-				auctionNamespace.to(userSocketId).emit('auction:joined', {
-					...joinData,
-					auction: {
-						id: auctionRows[0].id,
-						product_id: auctionRows[0].product_id,
-						starting_price: auctionRows[0].starting_price,
-						target_price: auctionRows[0].target_price,
-						deposit: auctionRows[0].deposit,
-					},
-					message: 'Bạn đã tham gia đấu giá thành công',
-				});
+			if (userSocketId) {
+				io.to(userSocketId).emit('deposit:success', depositSuccessData);
+				console.log(
+					`✅ Emitted deposit:success to user ${auctionData.buyer_id} socket ${userSocketId} (PayOS)`,
+				);
 			}
+
+			// Notify others in the auction room (nếu có người đã join trước)
+			auctionNamespace
+				.to(`auction_${auctionData.auction_id}`)
+				.emit('auction:user_joined', {
+					userId: auctionData.buyer_id,
+					userName: userRows[0]?.full_name || 'User',
+					auctionId: auctionData.auction_id,
+					depositAmount: orderRows[0].price,
+					timestamp: getVietnamISOString(),
+					message: `${
+						userRows[0]?.full_name || 'User'
+					} đã tham gia đấu giá`,
+				});
 
 			console.log(
 				`🔌 Socket emitted: User ${auctionData.buyer_id} joined auction ${auctionData.auction_id} (PayOS)`,
