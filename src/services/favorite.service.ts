@@ -15,10 +15,10 @@ export const addToFavorites = async (userId: number, postId: number) => {
 	const connection = await pool.getConnection();
 
 	try {
-		// Check if post (product) exists and is approved
+		// Check if post (product) exists and is approved, auctioning
 		const [posts]: any = await connection.query(
-			'SELECT id FROM products WHERE id = ? AND status = ?',
-			[postId, 'approved'],
+			'SELECT id FROM products WHERE id = ? AND status IN (?, ?)',
+			[postId, 'approved', 'auctioning'],
 		);
 
 		if (posts.length === 0) {

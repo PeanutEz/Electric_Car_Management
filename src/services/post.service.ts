@@ -154,18 +154,13 @@ export async function getPostApproved(
 
 	const postIds = (rows as any[]).map((r: any) => r.id);
 
-	// const [favoriteRows]: any = await pool.query(
-	// 	`SELECT post_id FROM favorites WHERE user_id = ? AND post_id IN (?)`,
-	// 	[userId, postIds], // <-- truyền MẢNG vào IN (?)
-	// );
-
-	let favoritePostIds: number[] = [];
+	let isFavorite: number[] = [];
 	if (postIds.length) {
 		const [favRows]: any = await pool.query(
 			`SELECT post_id FROM favorites WHERE user_id = ? AND post_id IN (?)`,
 			[userId, postIds], // truyền MẢNG vào IN (?)
 		);
-		favoritePostIds = favRows.map((fr: any) => fr.post_id);
+		isFavorite = favRows.map((fr: any) => fr.post_id);
 	}
 
 	return (rows as any).map((r: any) => ({
@@ -176,7 +171,7 @@ export async function getPostApproved(
 		description: r.description,
 		priority: r.priority,
 		status: r.status,
-		isFavorite: favoritePostIds.includes(r.id) || false,
+		isFavorite: isFavorite.includes(r.id) || false,
 		product:
 			r.slug === 'vehicle'
 				? {
@@ -521,6 +516,169 @@ export async function getPostsById(id: number): Promise<Post> {
 		updated_at: r.updated_at,
 		end_date: r.end_date,
 		status: r.status,
+		product:
+			r.category_type === 'vehicle'
+				? {
+						id: r.id,
+						brand: r.brand,
+						model: r.model,
+						price: parseFloat(r.price),
+						description: r.description,
+						status: r.status,
+						year: r.year,
+						created_by: r.created_by,
+						warranty: r.warranty,
+						address: r.address,
+						color: r.color,
+						seats: r.seats,
+						mileage: r.mileage_km,
+						power: r.power,
+						health: r.vehicle_health,
+						previousOwners: r.previousOwners,
+						category: {
+							id: r.category_id,
+							name: r.category_name,
+							typeSlug: r.category_type,
+						},
+						image: r.image,
+						images: images,
+				  }
+				: {
+						id: r.id,
+						brand: r.brand,
+						model: r.model,
+						price: parseFloat(r.price),
+						description: r.description,
+						status: r.status,
+						year: r.year,
+						color: r.color,
+						created_by: r.created_by,
+						warranty: r.warranty,
+						address: r.address,
+						capacity: r.capacity,
+						voltage: r.voltage,
+						health: r.batery_health,
+						previousOwners: r.previousOwners,
+						category: {
+							id: r.category_id,
+							name: r.category_name,
+							typeSlug: r.category_type,
+						},
+						image: r.image,
+						images: images,
+				  },
+		seller: {
+			id: seller[0]?.id,
+			full_name: seller[0]?.full_name,
+			email: seller[0]?.email,
+			phone: seller[0]?.phone,
+		},
+		ai: {
+			min_price: parseInt(geminiPromptPrice.split(',')[0].trim()),
+			max_price: parseInt(geminiPromptPrice.split(',')[1].trim()),
+		},
+	}));
+}
+
+export async function getPostsById2(id: number, userId: number | null): Promise<Post> {
+	// Lấy thông tin sản phẩm
+	const [rows]: any = await pool.query(
+		'SELECT p.id, p.status, p.brand, p.model, p.price, p.address,p.created_by,p.created_at,p.updated_at, p.description, p.year,p.warranty,p.previousOwners, p.address,' +
+			'p.image,p.color, pc.name AS category_name, pc.id AS category_id, ' +
+			'pc.slug AS category_type, v.mileage_km, v.seats,v.power,v.health as vehicle_health, bat.capacity, bat.voltage, bat.health as batery_health, ' +
+			'p.end_date, p.title, p.pushed_at, p.priority ' +
+			'FROM products p ' +
+			'LEFT JOIN product_categories pc ON p.product_category_id = pc.id ' +
+			'LEFT JOIN vehicles v ON v.product_id = p.id ' +
+			'LEFT JOIN batteries bat ON bat.product_id = p.id ' +
+			'WHERE p.id = ?',
+		[id],
+	);
+
+	const [seller]: any[] = await pool.query(
+		'SELECT id, full_name, email, phone FROM users where id = ?',
+		[rows[0].created_by],
+	);
+
+	// Lấy danh sách ảnh từ bảng product_imgs
+	const [imageRows] = await pool.query(
+		'SELECT url FROM product_imgs WHERE product_id = ?',
+		[id],
+	);
+
+	const images = (imageRows as any[]).map((row) => row.url);
+
+	// Tạo prompt riêng cho vehicle và battery
+	let geminiPromptPrice: string;
+
+	if (rows[0].category_type === 'vehicle') {
+		geminiPromptPrice =
+			await generateText(`Hãy ước lượng khoảng giá thị trường của một sản phẩm cũ dựa trên các thông tin sau:
+	- Tên sản phẩm: ${rows[0].model}
+	- Thương hiệu: ${rows[0].brand}
+	- Loại sản phẩm: Xe điện
+	- Năm sản xuất: ${rows[0].year}
+	- Màu sắc: ${rows[0].color}
+	- Số chỗ ngồi: ${rows[0].seats}
+	- Quãng đường đã đi: ${rows[0].mileage_km} km
+	- Công suất: ${rows[0].power} kW
+	- Khu vực giao dịch: ${rows[0].address}
+
+	Hãy trả về kết quả theo đúng định dạng sau:
+
+	<min_price>, <max_price>
+
+	Yêu cầu:
+	- Đơn vị là VND (không ghi chữ "VND").
+	- Chỉ trả về hai số, cách nhau bằng dấu phẩy và một khoảng trắng.
+	- Không thêm bất kỳ mô tả, ký tự, hay chữ nào khác.
+
+	Ví dụ:
+	350000000, 450000000`);
+	} else {
+		geminiPromptPrice =
+			await generateText(`Hãy ước lượng khoảng giá thị trường của một sản phẩm cũ dựa trên các thông tin sau:
+	- Tên sản phẩm: ${rows[0].model}
+	- Thương hiệu: ${rows[0].brand}
+	- Loại sản phẩm: Pin điện
+	- Năm sản xuất: ${rows[0].year}
+	- Dung lượng pin: ${rows[0].capacity} Ah
+	- Điện áp: ${rows[0].voltage} V
+	- Tình trạng sức khỏe pin: ${rows[0].health}
+	- Khu vực giao dịch: ${rows[0].address}
+
+	Hãy trả về kết quả theo đúng định dạng sau:
+
+	/<min_price>, <max_price>
+
+	Yêu cầu:
+	- Đơn vị là VND (không ghi chữ "VND").
+	- Chỉ trả về hai số, cách nhau bằng dấu phẩy và một khoảng trắng.
+	- Không thêm bất kỳ mô tả, ký tự, hay chữ nào khác.
+
+	Ví dụ:
+	350000000, 450000000`);
+	}
+	const r = (rows as any)[0];
+
+	let isFavorite = false;
+	if (userId) {
+		const [favRows]: any = await pool.query(
+			'SELECT * FROM favorites WHERE user_id = ? AND post_id = ?',
+			[userId, id],
+		);
+		isFavorite = favRows.length > 0;
+	}
+
+	return (rows as any).map((r: any) => ({
+		id: r.id,
+		title: r.title,
+		priority: r.priority,
+		created_at: r.created_at,
+		updated_at: r.updated_at,
+		end_date: r.end_date,
+		status: r.status,
+		isFavorite: isFavorite,
 		product:
 			r.category_type === 'vehicle'
 				? {

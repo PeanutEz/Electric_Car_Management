@@ -12,6 +12,7 @@ import {
 	searchPosts,
 	updateUserPost,
 	getPostApproved,
+	getPostsById2,
 } from '../services/post.service';
 import { checkAndProcessPostPayment } from '../services/service.service';
 //import { emitToAll } from '../config/socket';
@@ -176,12 +177,19 @@ export async function searchForPosts(req: Request, res: Response) {
 export async function postDetail(req: Request, res: Response) {
 	try {
 		const id = parseInt(req.params.id, 10);
+		const authHeader = req.headers.authorization;
+		let userId = null;
+		if (authHeader && authHeader.startsWith('Bearer ')) {
+			const token = authHeader.split(' ')[1];
+			const id = (jwt.decode(token) as any).id;
+			userId = id;
+		}
 		if (isNaN(id)) {
 			return res
 				.status(400)
 				.json({ message: 'ID bài viết không hợp lệ' });
 		}
-		const post: any = await getPostsById(id);
+		const post: any = await getPostsById2(id, userId);
 		if (!post) {
 			return res.status(404).json({ message: 'Không tìm thấy bài viết' });
 		}
