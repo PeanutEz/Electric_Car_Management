@@ -1,6 +1,6 @@
 import Router from 'express';
 import { getAuctionsForAdminController, startAuctionByAdminController,getAuctionByProductIdController, getOwnAuctionController, getParticipatedAuctionController  } from '../controllers/auction.controller';
-import { listAuctions } from '../controllers/auc.controller';
+import { getAuctionStats, listAuctions } from '../controllers/auc.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 const router = Router();
 /**
@@ -54,6 +54,26 @@ const router = Router();
  *         description: Lỗi server
  */
 router.get('/get-all', listAuctions);
+
+/**
+ * @swagger
+ * /api/auction/stats:
+ *   get:
+ *     tags: [Auctions]
+ *     summary: Lấy thống kê số lượng phiên đấu giá & thành viên tham gia
+ *     description: API dùng cho admin để xem tổng số phiên đấu giá và số lượng user tham gia
+ *     responses:
+ *       200:
+ *         description: Trả về thống kê thành công
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: Get auction stats successfully!
+ *               data:
+ *                 totalAuctions: 12
+ *                 totalMember: 45
+ */
+router.get('/stats', getAuctionStats);
 
 /**
  * @swagger

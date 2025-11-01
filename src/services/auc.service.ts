@@ -9,3 +9,13 @@ export async function getAllAuctions() {
 		totalAuctions: Number(totalAuctions[0].total_auctions),
 	};
 }
+
+export async function getNumOfAuctionForAdmin() {
+	const [totalAuctions]: any = await pool.query(`select count(*) as auction_count from auctions`);
+	const [totalMember]: any = await pool.query(`select count(DISTINCT user_id) as member_count from auction_members`);
+
+	return {
+		totalAuctions: Number(totalAuctions[0].auction_count),
+		totalMember: Number(totalMember[0].member_count)
+	}
+}

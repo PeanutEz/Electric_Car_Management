@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import {
-	getAllAuctions,
+	getAllAuctions, getNumOfAuctionForAdmin
 } from '../services/auc.service';
 
 export async function listAuctions(req: Request, res: Response) {
@@ -13,4 +13,19 @@ export async function listAuctions(req: Request, res: Response) {
    } catch (error: any) {
       res.status(500).json({ message: error.message });
    }
+}
+
+export async function getAuctionStats(req: Request, res: Response) {
+	try {
+		const result = await getNumOfAuctionForAdmin();
+		return res.status(200).json({
+			message: 'Get auction stats successfully!',
+			data: result
+		});
+	} catch (error) {
+		console.error(error);
+		return res.status(500).json({
+			message: 'Internal server error'
+		});
+	}
 }

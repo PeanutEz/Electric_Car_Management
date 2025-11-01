@@ -5,8 +5,8 @@ import pool from '../config/db';
 import { detectPaymentMethod } from '../utils/parser';
 import { title } from 'process';
 import * as notificationService from './notification.service';
-import { sendNotificationToUser } from '../config/socket';
-import { getVietnamTime } from '../utils/datetime';
+import { sendNotificationToUser, getIO } from '../config/socket';
+import { getVietnamTime, getVietnamISOString } from '../utils/datetime';
 
 export async function createPayosPayment(payload: Payment) {
 	try {
@@ -548,6 +548,41 @@ export async function processDepositPayment(
 				);
 			}
 
+			// 🔌 Emit socket event: User joined auction room after successful deposit
+			try {
+				const io = getIO();
+				const auctionNamespace = io.of('/auction');
+
+				// Get user info for the event
+				const [userRows]: any = await connection.query(
+					`SELECT full_name, email FROM users WHERE id = ?`,
+					[buyerId],
+				);
+
+				// Emit to auction room that user has joined
+				auctionNamespace
+					.to(`auction_${auctionId}`)
+					.emit('auction:user_joined', {
+						userId: buyerId,
+						userName: userRows[0]?.full_name || 'User',
+						auctionId: auctionId,
+						depositAmount: depositAmount,
+						timestamp: getVietnamISOString(),
+						message: `${
+							userRows[0]?.full_name || 'User'
+						} đã tham gia đấu giá`,
+					});
+
+				console.log(
+					`🔌 Socket emitted: User ${buyerId} joined auction ${auctionId}`,
+				);
+			} catch (socketError: any) {
+				console.error(
+					'⚠️ Failed to emit socket event for auction join:',
+					socketError.message,
+				);
+			}
+
 			return {
 				success: true,
 				paymentMethod: 'CREDIT',
@@ -676,6 +711,41 @@ export async function confirmAuctionDepositPayment(
 		);
 
 		await connection.commit();
+
+		// 🔌 Emit socket event: User joined auction room after successful deposit via PayOS
+		try {
+			const io = getIO();
+			const auctionNamespace = io.of('/auction');
+
+			// Get user and auction info for the event
+			const [userRows]: any = await connection.query(
+				`SELECT full_name, email FROM users WHERE id = ?`,
+				[auctionData.buyer_id],
+			);
+
+			// Emit to auction room that user has joined
+			auctionNamespace
+				.to(`auction_${auctionData.auction_id}`)
+				.emit('auction:user_joined', {
+					userId: auctionData.buyer_id,
+					userName: userRows[0]?.full_name || 'User',
+					auctionId: auctionData.auction_id,
+					depositAmount: orderRows[0].price,
+					timestamp: getVietnamISOString(),
+					message: `${
+						userRows[0]?.full_name || 'User'
+					} đã tham gia đấu giá`,
+				});
+
+			console.log(
+				`🔌 Socket emitted: User ${auctionData.buyer_id} joined auction ${auctionData.auction_id} (PayOS)`,
+			);
+		} catch (socketError: any) {
+			console.error(
+				'⚠️ Failed to emit socket event for auction join (PayOS):',
+				socketError.message,
+			);
+		}
 
 		return {
 			success: true,
