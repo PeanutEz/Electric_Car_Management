@@ -1,5 +1,5 @@
 import Router from 'express';
-import { listUserNotifications, markNotificationAsRead } from '../controllers/notification.controller';
+import { listUserNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '../controllers/notification.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 
 const router = Router();
@@ -44,5 +44,6 @@ router.get('/notifications', listUserNotifications);
 
 
 router.put('/mark-as-read', authenticateToken, markNotificationAsRead);
+router.put('/mark-all-as-read', authenticateToken, markAllNotificationsAsRead);
 
 export default router;

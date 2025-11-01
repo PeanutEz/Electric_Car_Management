@@ -49,7 +49,16 @@ export async function getPostApprovedController(req: Request, res: Response) {
 			});
 		}
 
+		const authHeader = req.headers.authorization;
+		let userId = null;
+		if (authHeader && authHeader.startsWith('Bearer ')) {
+			const token = authHeader.split(' ')[1];
+			const id = (jwt.decode(token) as any).id;
+			userId = id;
+		}
+
 		const posts = await getPostApproved(
+			userId,
 			page,
 			limit,
 			year,
@@ -71,6 +80,7 @@ export async function getPostApprovedController(req: Request, res: Response) {
 		);
 
 		const totalPosts = await getPostApproved(
+			userId,
 			1,
 			10000,
 			year,

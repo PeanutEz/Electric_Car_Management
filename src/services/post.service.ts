@@ -8,6 +8,7 @@ import { sendNotificationToUser } from '../config/socket';
 import { getVietnamTime, addHoursToVietnamTime } from '../utils/datetime';
 
 export async function getPostApproved(
+	userId: number | null,
 	page: number,
 	limit: number,
 	year?: number,
@@ -150,6 +151,23 @@ export async function getPostApproved(
 	}
 
 	const [rows] = await pool.query(query, [limit, offset]);
+
+	const postIds = (rows as any[]).map((r: any) => r.id);
+
+	// const [favoriteRows]: any = await pool.query(
+	// 	`SELECT post_id FROM favorites WHERE user_id = ? AND post_id IN (?)`,
+	// 	[userId, postIds], // <-- truyền MẢNG vào IN (?)
+	// );
+
+	let favoritePostIds: number[] = [];
+	if (postIds.length) {
+		const [favRows]: any = await pool.query(
+			`SELECT post_id FROM favorites WHERE user_id = ? AND post_id IN (?)`,
+			[userId, postIds], // truyền MẢNG vào IN (?)
+		);
+		favoritePostIds = favRows.map((fr: any) => fr.post_id);
+	}
+
 	return (rows as any).map((r: any) => ({
 		id: r.id,
 		title: r.title,
@@ -158,6 +176,7 @@ export async function getPostApproved(
 		description: r.description,
 		priority: r.priority,
 		status: r.status,
+		isFavorite: favoritePostIds.includes(r.id) || false,
 		product:
 			r.slug === 'vehicle'
 				? {

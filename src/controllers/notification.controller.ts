@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getUserNotifications, markAsRead } from '../services/notification.service';
+import { getUserNotifications, markAsRead, markAllAsRead } from '../services/notification.service';
 import { decode } from 'punycode';
 import jwt from 'jsonwebtoken';
 
@@ -53,6 +53,29 @@ export async function markNotificationAsRead(req: Request, res: Response) {
 		await markAsRead(Number(notificationId), Number(userId));
 		res.status(200).json({
 			message: 'Đánh dấu thông báo đã đọc thành công',
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
+		});
+	}
+}
+
+export async function markAllNotificationsAsRead(req: Request, res: Response) {
+	const authHeader = req.headers.authorization;
+	if (!authHeader || !authHeader.startsWith('Bearer ')) {
+		return res
+			.status(401)
+			.json({ message: 'Không tìm thấy token xác thực' });
+	}
+	const token = authHeader.split(' ')[1];
+	const id = (jwt.decode(token) as any).id;
+	const userId = id;
+
+	try {
+		await markAllAsRead(Number(userId));
+		res.status(200).json({
+			message: 'Đánh dấu tất cả thông báo đã đọc thành công',
 		});
 	} catch (error: any) {
 		res.status(500).json({
