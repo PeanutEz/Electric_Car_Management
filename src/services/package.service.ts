@@ -36,8 +36,6 @@ export async function createPackage(
 		// ✅ Xác định service_ref dựa trên product_type và số lượng
 		const serviceRefs: number[] = [];
 
-		// Logic: Vehicle + post → 1, Vehicle + push → 3
-		//        Battery + post → 2, Battery + push → 4
 		if (product_type === 'vehicle') {
 			if (number_of_post > 0) {
 				serviceRefs.push(1); // Service "Đăng post cho vehicle có phí"
@@ -54,7 +52,12 @@ export async function createPackage(
 			}
 		}
 
-		// ✅ Nếu không có service_ref nào (number_of_post = 0 và number_of_push = 0)
+
+		console.log(product_type);
+		console.log(number_of_post);
+		console.log(number_of_push);
+
+	
 		if (serviceRefs.length === 0) {
 			throw new Error(
 				'Package phải có ít nhất 1 trong 2: number_of_post > 0 hoặc number_of_push > 0',

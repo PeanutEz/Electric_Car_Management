@@ -20,7 +20,7 @@ export async function listPackages(req: Request, res: Response) {
 export async function addPackage(req: Request, res: Response) {
    try {
       const { name, description, cost, number_of_post, number_of_push, product_type, feature } = req.body;
-      const result = await createPackage(name, description, cost, number_of_post, number_of_push, product_type, feature);
+      const result = await createPackage(name, cost, number_of_post, number_of_push, product_type, description, feature);
       res.status(201).json(result);
    } catch (error: any) {
       res.status(500).json({ message: error.message });

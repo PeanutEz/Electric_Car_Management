@@ -15,7 +15,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/packages:
+ * /api/package/get-all:
  *   get:
  *     summary: Lấy danh sách tất cả các gói dịch vụ
  *     tags: [Packages]
@@ -69,11 +69,11 @@ const router = Router();
  *       500:
  *         description: Lỗi server
  */
-router.get('/packages', listPackages);
+router.get('/get-all', listPackages);
 
 /**
  * @swagger
- * /api/packages:
+ * /api/package/create:
  *   post:
  *     summary: Tạo gói dịch vụ mới
  *     tags: [Packages]
@@ -159,11 +159,11 @@ router.get('/packages', listPackages);
  *       500:
  *         description: Lỗi server
  */
-router.post('/packages', addPackage);
+router.post('/create', addPackage);
 
 /**
  * @swagger
- * /api/packages/{id}:
+ * /api/package/{id}:
  *   put:
  *     summary: Cập nhật gói dịch vụ theo ID
  *     tags: [Packages]
@@ -233,11 +233,11 @@ router.post('/packages', addPackage);
  *       500:
  *         description: Lỗi server
  */
-router.put('/packages/:id', editPackage);
+router.put('/:id', editPackage);
 
 /**
  * @swagger
- * /api/packages/{id}:
+ * /api/package/{id}:
  *   delete:
  *     summary: Xóa gói dịch vụ theo ID
  *     tags: [Packages]
@@ -273,6 +273,6 @@ router.put('/packages/:id', editPackage);
  *       500:
  *         description: Lỗi server
  */
-router.delete('/packages/:id', removePackage);
+router.delete('/:id', removePackage);
 
 export default router;

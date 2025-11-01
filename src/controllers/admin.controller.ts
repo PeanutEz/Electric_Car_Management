@@ -7,9 +7,31 @@ import {
    getOrder,
    getTransactions,
    updateAuction,
-   getNumOfPostForAdmin
+   getNumOfPostForAdmin,
+   getDashboardData
 } from '../services/admin.service';
 import { verifyAuctionByAdmin } from '../services/auction.service';
+
+
+export async function getDashboard(req: Request, res: Response) {
+  try {
+    const data = await getDashboardData();
+
+    return res.json({
+      status: 'success',
+      timestamp: new Date().toISOString(),
+      data,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Internal Server Error',
+    });
+  }
+}
+
+
 
 export const numOfPost = async (req: Request, res: Response) => {
 	try {

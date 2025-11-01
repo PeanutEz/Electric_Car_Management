@@ -14,6 +14,164 @@ import { Transaction } from "../models/transaction.model";
 // 7  Gói cơ bản(3 lần đăng tin cho xe)   package               100000            3                 0                   0                  1
 // 8  gói nâng cao (3 push 3 post cho xe)   package           300000            3                 3                   0                  1,3
 
+
+export async function getDashboardData() {
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const lastMonth = currentMonth - 1;
+
+  // ====== SUMMARY DATA ======
+
+  // Total Revenue (all PAID orders)
+  const [[{ totalRevenue }]]: any = await pool.query(
+    `SELECT COALESCE(SUM(price), 0) AS totalRevenue 
+     FROM orders 
+     WHERE status = 'PAID'`
+  );
+
+  // Revenue: current vs last month
+  const [revenueCompare]: any = await pool.query(
+    `SELECT 
+        YEAR(created_at) AS year,
+        MONTH(created_at) AS month,
+        SUM(price) AS revenue
+     FROM orders
+     WHERE status = 'PAID'
+     AND MONTH(created_at) IN (?, ?)
+     GROUP BY YEAR(created_at), MONTH(created_at)`,
+    [currentMonth, lastMonth]
+  );
+
+  const revenueThisMonth =
+    revenueCompare.find((r: any) => r.month === currentMonth)?.revenue || 0;
+  const revenueLastMonth =
+    revenueCompare.find((r: any) => r.month === lastMonth)?.revenue || 0;
+
+  const revenueChange =
+    revenueLastMonth === 0 ? 100 : ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100;
+
+
+  // Active users
+  const [[{ activeUsers }]]: any = await pool.query(
+    `SELECT COUNT(*) AS activeUsers FROM users WHERE status = 'active'`
+  );
+
+  // Users: current vs last month
+  const [usersCompare]: any = await pool.query(
+    `SELECT 
+        YEAR(created_at) AS year,
+        MONTH(created_at) AS month,
+        COUNT(*) AS users
+     FROM users
+     WHERE MONTH(created_at) IN (?, ?)
+     GROUP BY YEAR(created_at), MONTH(created_at)`,
+    [currentMonth, lastMonth]
+  );
+
+  const usersThisMonth =
+    usersCompare.find((u: any) => u.month === currentMonth)?.users || 0;
+  const usersLastMonth =
+    usersCompare.find((u: any) => u.month === lastMonth)?.users || 0;
+
+  const usersChange =
+    usersLastMonth === 0 ? 100 : ((usersThisMonth - usersLastMonth) / usersLastMonth) * 100;
+
+
+  // Total Transactions
+  const [[{ totalTransactions }]]: any = await pool.query(
+    `SELECT COUNT(*) AS totalTransactions FROM orders`
+  );
+
+  const [transactionsCompare]: any = await pool.query(
+    `SELECT 
+        YEAR(created_at) AS year,
+        MONTH(created_at) AS month,
+        COUNT(*) AS transactions
+     FROM orders
+     WHERE MONTH(created_at) IN (?, ?)
+     GROUP BY YEAR(created_at), MONTH(created_at)`,
+    [currentMonth, lastMonth]
+  );
+
+  const transactionsThisMonth =
+    transactionsCompare.find((t: any) => t.month === currentMonth)?.transactions || 0;
+  const transactionsLastMonth =
+    transactionsCompare.find((t: any) => t.month === lastMonth)?.transactions || 0;
+
+  const transactionsChange =
+    transactionsLastMonth === 0 ? 100 : ((transactionsThisMonth - transactionsLastMonth) / transactionsLastMonth) * 100;
+
+
+  // Total Posts (products)
+  const [[{ totalPost }]]: any = await pool.query(
+    `SELECT COUNT(*) AS totalPost FROM products`
+  );
+
+  const [postsCompare]: any = await pool.query(
+    `SELECT 
+        YEAR(created_at) AS year,
+        MONTH(created_at) AS month,
+        COUNT(*) AS posts
+     FROM products
+     WHERE MONTH(created_at) IN (?, ?)
+     GROUP BY YEAR(created_at), MONTH(created_at)`,
+    [currentMonth, lastMonth]
+  );
+
+  const postsThisMonth =
+    postsCompare.find((p: any) => p.month === currentMonth)?.posts || 0;
+  const postsLastMonth =
+    postsCompare.find((p: any) => p.month === lastMonth)?.posts || 0;
+
+  const postChange =
+    postsLastMonth === 0 ? 100 : ((postsThisMonth - postsLastMonth) / postsLastMonth) * 100;
+
+
+  // ====== REVENUE BY MONTH (last 6 months) ======
+  const [revenueByMonth]: any = await pool.query(
+    `SELECT 
+        DATE_FORMAT(created_at, '%b') AS month,
+        SUM(price) AS revenue,
+        COUNT(*) AS transactions
+     FROM orders
+     WHERE status = 'PAID'
+     GROUP BY 
+        YEAR(created_at),
+        MONTH(created_at),
+        DATE_FORMAT(created_at, '%b')
+     ORDER BY 
+        YEAR(created_at) DESC,
+        MONTH(created_at) DESC
+     LIMIT 6`
+  );
+
+
+  // ===== CATEGORY DISTRIBUTION =====
+  const [categoryDistribution]: any = await pool.query(
+    `SELECT 
+        pc.name AS name,
+        COUNT(p.id) AS posts
+     FROM product_categories pc
+     LEFT JOIN products p ON p.product_category_id = pc.id
+     GROUP BY pc.id, pc.name`
+  );
+
+  return {
+    summary: {
+      totalRevenue: Number(totalRevenue),
+      revenueChange,
+      activeUsers,
+      usersChange,
+      totalTransactions,
+      transactionsChange,
+      totalPost,
+      postChange,
+    },
+    revenueByMonth: revenueByMonth.reverse(), // newest → oldest
+    categoryDistribution,
+  };
+}
+
 export async function getAllServices(): Promise<Service[]> {
   const [rows] = await pool.query("SELECT * FROM services");
   return rows as Service[];

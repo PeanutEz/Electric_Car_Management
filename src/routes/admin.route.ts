@@ -1,5 +1,5 @@
 import Router from 'express';
-import { numOfPost, addService, editService, listServices, removeService,listOrders, getOrderTransactions, modifyAuction, verifyAuction } from '../controllers/admin.controller';
+import { numOfPost, addService, editService, listServices, removeService,listOrders, getOrderTransactions, modifyAuction, verifyAuction, getDashboard } from '../controllers/admin.controller';
 
 const router = Router();
 
@@ -10,6 +10,40 @@ const router = Router();
  *   description: API quản lý admin
  */
 
+/**
+ * @swagger
+ * /api/admin/dashboard:
+ *   get:
+ *     summary: Lấy dữ liệu dashboard tổng quan
+ *     tags: [Admin]
+ *     responses:
+ *       200:
+ *         description: Trả về dữ liệu dashboard
+ *         content:
+ *           application/json:
+ *             example:
+ *               status: success
+ *               timestamp: "2025-11-01T09:30:00.000Z"
+ *               data:
+ *                 summary:
+ *                   totalRevenue: 2847500
+ *                   revenueChange: 12
+ *                   activeUsers: 3421
+ *                   usersChange: 8.2
+ *                   totalTransactions: 1847
+ *                   transactionsChange: -3.1
+ *                   totalPost: 98
+ *                   postChange: 2.1
+ *                 revenueByMonth:
+ *                   - { month: "Jan", revenue: 180000, transactions: 120 }
+ *                   - { month: "Feb", revenue: 220000, transactions: 145 }
+ *                 categoryDistribution:
+ *                   - { name: "EV Vehicles", posts: 120 }
+ *                   - { name: "Batteries", posts: 95 }
+ *       500:
+ *         description: Lỗi server
+ */
+router.get('/dashboard', getDashboard);
 
 /**
  * @swagger
