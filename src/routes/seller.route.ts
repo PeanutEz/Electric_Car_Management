@@ -1,7 +1,8 @@
-import express from 'express';
-import * as sellerController from '../controllers/seller.controller';
+import express, { Router } from 'express';
+import {getSellerProfileController} from '../controllers/seller.controller';
+import { authenticateToken } from '../middleware/AuthMiddleware';
 
-const SellerRouter = express.Router();
+const router = express.Router();
 
 /**
  * @swagger
@@ -71,6 +72,6 @@ const SellerRouter = express.Router();
  *       404:
  *         description: Seller not found
  */
-SellerRouter.get('/', sellerController.getSellerProfile);
+router.get('/', authenticateToken, getSellerProfileController);
 
-export default SellerRouter;
+export default router;

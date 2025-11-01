@@ -78,7 +78,13 @@ export async function getUserNotifications(
 		FROM notifications n
 		LEFT JOIN products p ON n.post_id = p.id
 		WHERE n.user_id = ?
-		${isRead === undefined ? '' : isRead ? 'AND n.is_read = 1' : 'AND n.is_read = 0'}
+		${
+			isRead === undefined
+				? ''
+				: isRead
+				? 'AND n.is_read = 1'
+				: 'AND n.is_read = 0'
+		}
 		ORDER BY n.created_at DESC
 		LIMIT ? OFFSET ?`,
 		[userId, limit, offset],
@@ -90,10 +96,10 @@ export async function getUserNotifications(
 	);
 
 	return {
-		notifications: rows.map((row) => ({
+		rows: rows.map((row) => ({
 			id: row.id,
-			type: row.type || 'system',
-			title: row.title || '',
+			type: row.type,
+			title: row.title,
 			message: row.message,
 			createdAt: row.createdAt,
 			isRead: row.isRead === 1,
