@@ -448,7 +448,6 @@ export async function processDepositPayment(
 		}
 
 		if (
-			auctionRows[0].status !== 'live' ||
 			auctionRows[0].status === 'ended'
 		) {
 			throw new Error('Phiên đấu giá chưa bắt đầu hoặc đã kết thúc');
