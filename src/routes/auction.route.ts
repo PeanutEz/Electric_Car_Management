@@ -1,5 +1,12 @@
 import Router from 'express';
-import { getAuctionsForAdminController, startAuctionByAdminController,getAuctionByProductIdController, getOwnAuctionController, getParticipatedAuctionController  } from '../controllers/auction.controller';
+import {
+	getAuctionsForAdminController,
+	startAuctionByAdminController,
+	getAuctionByProductIdController,
+	getOwnAuctionController,
+	getParticipatedAuctionController,
+	buyNowController,
+} from '../controllers/auction.controller';
 import { getAuctionStats, listAuctions } from '../controllers/auc.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 const router = Router();
@@ -199,8 +206,7 @@ router.post('/start', startAuctionByAdminController);
  *       404:
  *         description: No auctions found
  */
-router.get("/own",authenticateToken, getOwnAuctionController);
-
+router.get('/own', authenticateToken, getOwnAuctionController);
 
 /**
  * @swagger
@@ -214,7 +220,69 @@ router.get("/own",authenticateToken, getOwnAuctionController);
  *       404:
  *         description: No participated auctions found
  */
-router.get("/participated",authenticateToken, getParticipatedAuctionController);
+router.get(
+	'/participated',
+	authenticateToken,
+	getParticipatedAuctionController,
+);
 
+/**
+ * @swagger
+ * /api/auction/buy-now:
+ *   post:
+ *     summary: 🛒 Mua ngay với giá target_price (Buy Now)
+ *     description: User trả ngay giá target_price để kết thúc auction ngay lập tức và trở thành người thắng
+ *     tags: [Auctions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - auctionId
+ *             properties:
+ *               auctionId:
+ *                 type: integer
+ *                 example: 5
+ *                 description: ID của phiên đấu giá muốn mua ngay
+ *     responses:
+ *       200:
+ *         description: Mua ngay thành công - Auction đã đóng
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Buy now successful! Auction closed.
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     winner_id:
+ *                       type: integer
+ *                     winning_price:
+ *                       type: number
+ *       400:
+ *         description: Lỗi - Auction không active hoặc chưa trả deposit
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: You must pay deposit to join this auction before buying
+ *       401:
+ *         description: Chưa đăng nhập
+ *       500:
+ *         description: Lỗi server
+ */
+router.post('/buy-now', authenticateToken, buyNowController);
 
 export default router;

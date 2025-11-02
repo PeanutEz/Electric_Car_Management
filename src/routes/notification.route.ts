@@ -26,23 +26,6 @@ const router = Router();
  */
 router.get('/notifications', listUserNotifications);
 
-/**
- * @swagger
- * /api/notification/mark-as-read:
- *  get:
- *    summary: Đánh dấu thông báo đã đọc
- *   tags: [Notifications]
- *   responses:
- *     200:
- *      description: Đánh dấu thông báo đã đọc thành công
- *     401:
- *       description: Không tìm thấy token xác thực
- *     500:
- *       description: Lỗi server
- */
-router.get('/notifications', listUserNotifications);
-
-
 router.put('/mark-as-read', authenticateToken, markNotificationAsRead);
 router.put('/mark-all-as-read', authenticateToken, markAllNotificationsAsRead);
 router.delete('/delete', authenticateToken, deleteUserNotification);

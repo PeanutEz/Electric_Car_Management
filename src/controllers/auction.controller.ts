@@ -6,6 +6,7 @@ import {
 	getAuctionByProductId,
 	getOwnAuction,
 	getParticipatedAuction,
+	buyNowAuction,
 } from '../services/auction.service';
 import jwt from 'jsonwebtoken';
 
@@ -125,7 +126,7 @@ export async function getParticipatedAuctionController(
 		const limit =
 			parseInt((req.query.limit || req.query.pageSize) as string) || 10;
 
-		const { auctions, total,summary } = await getParticipatedAuction(
+		const { auctions, total, summary } = await getParticipatedAuction(
 			user_id,
 			page,
 			limit,
@@ -141,9 +142,9 @@ export async function getParticipatedAuctionController(
 					pageSize: Math.ceil(total / limit),
 				},
 				static: {
-					...summary
-				}
-			}
+					...summary,
+				},
+			},
 		});
 	} catch (error) {
 		console.error(error);
@@ -209,5 +210,47 @@ export async function startAuctionByAdminController(
 		}
 	} catch (error: any) {
 		res.status(500).json({ message: error.message });
+	}
+}
+
+/**
+ * 🛒 Buy Now Controller - User mua ngay với giá target_price
+ * POST /api/auction/buy-now
+ * Body: { auctionId: number }
+ */
+export async function buyNowController(req: Request, res: Response) {
+	try {
+		// Get userId from JWT token
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res.status(401).json({ message: 'Unauthorized' });
+		}
+
+		const token = authHeader.split(' ')[1];
+		const user = jwt.decode(token) as any;
+		const userId = user.id;
+
+		const { auctionId } = req.body;
+
+		if (!auctionId) {
+			return res.status(400).json({ message: 'auctionId is required' });
+		}
+
+		const result = await buyNowAuction(Number(auctionId), userId);
+
+		if (result.success) {
+			return res.status(200).json({
+				message: result.message,
+				data: result.auction,
+			});
+		} else {
+			return res.status(400).json({ message: result.message });
+		}
+	} catch (error: any) {
+		console.error('Error in buyNowController:', error);
+		return res.status(500).json({
+			message: 'Server error',
+			error: error.message,
+		});
 	}
 }

@@ -708,19 +708,37 @@ function formatTimeDisplay(seconds: number): string {
 
 /**
  * Get remaining time for an auction in seconds
+ * Calculates based on start_at time for accuracy
  */
 export async function getAuctionRemainingTime(
 	auctionId: number,
 ): Promise<number> {
 	const [rows]: any = await pool.query(
-		`SELECT duration FROM auctions WHERE id = ?`,
+		`SELECT start_at, duration, status FROM auctions WHERE id = ?`,
 		[auctionId],
 	);
 
 	if (rows.length === 0) return 0;
 
-	// Nếu không có created_at, chỉ trả về duration (không tính thời gian đã trôi qua)
-	return rows[0].duration;
+	const { start_at, duration, status } = rows[0];
+
+	// Nếu chưa bắt đầu (draft/verified), trả về full duration
+	if (!start_at || status === 'draft' || status === 'verified') {
+		return duration;
+	}
+
+	// Nếu đã ended, trả về 0
+	if (status === 'ended') {
+		return 0;
+	}
+
+	// Tính thời gian thực tế còn lại cho auction đang live
+	const startTime = new Date(start_at).getTime();
+	const currentTime = Date.now();
+	const elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+	const remainingTime = Math.max(0, duration - elapsedSeconds);
+
+	return remainingTime;
 }
 
 /**
@@ -1037,4 +1055,112 @@ export async function startAuctionByAdmin(auctionId: number) {
 		message: 'Auction started, will auto close after duration',
 		data: result[0],
 	};
+}
+
+/**
+ * Buy Now - User trả ngay giá target_price để kết thúc auction ngay lập tức
+ * @param auctionId - ID của auction
+ * @param userId - ID của user muốn mua ngay
+ * @returns Success message và auction data
+ */
+export async function buyNowAuction(
+	auctionId: number,
+	userId: number,
+): Promise<{ success: boolean; message: string; auction?: any }> {
+	const connection = await pool.getConnection();
+
+	try {
+		await connection.beginTransaction();
+
+		// 1. Get auction details with lock
+		const [auctionRows]: any = await connection.query(
+			`SELECT a.*, p.status as product_status
+       FROM auctions a
+       JOIN products p ON a.product_id = p.id
+       WHERE a.id = ?
+       FOR UPDATE`,
+			[auctionId],
+		);
+
+		if (auctionRows.length === 0) {
+			await connection.rollback();
+			return {
+				success: false,
+				message: 'Auction not found',
+			};
+		}
+
+		const auction = auctionRows[0];
+
+		// 2. Check if product is still in auctioning status
+		if (auction.product_status !== 'auctioning') {
+			await connection.rollback();
+			return {
+				success: false,
+				message: 'Auction is not active',
+			};
+		}
+
+		// 3. Check if auction is live
+		if (auction.status !== 'live') {
+			await connection.rollback();
+			return {
+				success: false,
+				message: `Auction is not live (current status: ${auction.status})`,
+			};
+		}
+
+		// 4. Check if user has joined the auction (paid deposit)
+		const hasJoined = await hasUserJoinedAuction(userId, auctionId);
+		if (!hasJoined) {
+			await connection.rollback();
+			return {
+				success: false,
+				message:
+					'You must pay deposit to join this auction before buying',
+			};
+		}
+
+		// 5. Update auction with target_price as winning price
+		await connection.query(
+			`UPDATE auctions
+       SET winner_id = ?, winning_price = ?
+       WHERE id = ?`,
+			[userId, auction.target_price, auctionId],
+		);
+
+		// 6. Update auction_members với target_price
+		await connection.query(
+			`UPDATE auction_members 
+       SET bid_price = ?, updated_at = ? 
+       WHERE user_id = ? AND auction_id = ?`,
+			[auction.target_price, getVietnamTime(), userId, auctionId],
+		);
+
+		console.log(
+			`🎉 BUY NOW! Auction ${auctionId} - User ${userId} bought at target price ${auction.target_price.toLocaleString(
+				'vi-VN',
+			)} VND`,
+		);
+
+		// 7. Close auction immediately
+		await closeAuction(auctionId, connection);
+		await connection.commit();
+
+		return {
+			success: true,
+			message: 'Buy now successful! Auction closed.',
+			auction: {
+				...auction,
+				winner_id: userId,
+				winning_price: auction.target_price,
+			},
+		};
+	} catch (error) {
+		await connection.rollback();
+		console.error('Error buying now:', error);
+		throw error;
+	} finally {
+		connection.release();
+	}
 }
