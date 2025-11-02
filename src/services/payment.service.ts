@@ -134,7 +134,7 @@ export async function processAuctionFeePayment(
 
 		const productPrice = parseFloat(product.price);
 		const auctionFee = productPrice * 0.005; // 0.5% giá product
-		const duration = 120; // default 120 seconds
+		const duration = 1200; // default 1200 seconds
 
 		// Lấy số dư credit của seller
 		const [userRows]: any = await connection.query(
