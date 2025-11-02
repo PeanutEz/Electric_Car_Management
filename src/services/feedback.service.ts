@@ -80,24 +80,22 @@ export async function createFeedback(
 
 /**
  * Cập nhật rating của seller dựa trên average rating
- * Rating = (avg_rating / 5) * 100 (scale 0-100)
+ * Rating = avg_rating (scale 0-5)
  */
 async function updateSellerRating(sellerId: number) {
 	const [stats]: any = await pool.query(
 		`SELECT AVG(rating) as avg_rating, COUNT(*) as total_feedbacks
-     FROM feedbacks
-     WHERE seller_id = ?`,
+	 FROM feedbacks
+	 WHERE seller_id = ?`,
 		[sellerId],
 	);
 
 	if (stats.length > 0 && stats[0].avg_rating) {
 		const avgRating = parseFloat(stats[0].avg_rating);
 
-		// Cập nhật rating (scale từ 0-100)
-		const rating = (avgRating / 5) * 100;
-
+		// Cập nhật rating (scale từ 0-5)
 		await pool.query('UPDATE users SET rating = ? WHERE id = ?', [
-			rating.toFixed(2),
+			avgRating.toFixed(2),
 			sellerId,
 		]);
 	}
