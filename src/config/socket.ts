@@ -352,6 +352,7 @@ export function setupAuctionSocket() {
 				const remainingTime =
 					await auctionService.getAuctionRemainingTime(auctionId);
 
+				console.log('remaining time auction:join', remainingTime);
 				// Send current auction state to the user
 				socket.emit('auction:joined', {
 					auctionId,
