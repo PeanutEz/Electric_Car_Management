@@ -628,6 +628,28 @@ export async function startAuctionTimer(
 	const countdownInterval = setInterval(async () => {
 		remainingSeconds--;
 
+		// 🔔 Emit remainingTime to FE mỗi 10 giây
+		if (remainingSeconds % 10 === 0 && remainingSeconds > 0) {
+			try {
+				const io = getIO();
+				const auctionNamespace = io.of('/auction');
+				auctionNamespace
+					.to(`auction_${auctionId}`)
+					.emit('auction:time_update', {
+						auctionId,
+						remainingTime: remainingSeconds,
+					});
+				console.log(
+					`📡 [Auction ${auctionId}] Broadcast remainingTime: ${remainingSeconds}s`,
+				);
+			} catch (error) {
+				console.error(
+					`❌ Error broadcasting time update for auction ${auctionId}:`,
+					error,
+				);
+			}
+		}
+
 		// Display countdown every 10 seconds, or when < 60 seconds show every second
 		if (remainingSeconds % 10 === 0 || remainingSeconds < 60) {
 			const timeDisplay = formatTimeDisplay(remainingSeconds);
