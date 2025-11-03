@@ -50,7 +50,7 @@ export async function getSellerProfile(
 	const [postStats]: any = await pool.query(
 		`SELECT 
 			COUNT(*) as total_posts,
-			SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as total_active_posts,
+			SUM(CASE WHEN status in ('approved', 'auctioning') THEN 1 ELSE 0 END) as total_active_posts,
 			SUM(CASE WHEN status = 'sold' THEN 1 ELSE 0 END) as total_sold_posts
 		FROM products
 		WHERE created_by = ?`,
@@ -60,6 +60,13 @@ export async function getSellerProfile(
 	// 3. Lấy average rating từ bảng feedbacks
 	const [feedbackStats]: any = await pool.query(
 		`SELECT AVG(rating) as avg_rating
+		FROM feedbacks
+		WHERE seller_id = ?`,
+		[sellerId],
+	);
+
+	const [totalFeedbacks]: any = await pool.query(
+		`SELECT COUNT(*) as total_feedbacks
 		FROM feedbacks
 		WHERE seller_id = ?`,
 		[sellerId],
@@ -96,6 +103,7 @@ export async function getSellerProfile(
 		totalActivePosts: postStats[0].total_active_posts || 0,
 		totalSoldPosts: postStats[0].total_sold_posts || 0,
 		totalTransactions: transactionStats[0].total_transactions || 0,
+		totalFeedbacks: totalFeedbacks[0].total_feedbacks || 0,
 	};
 
 	// Case 1: type = 'feedback' → trả seller + feedbacks (paginated)
