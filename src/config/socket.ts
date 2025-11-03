@@ -365,6 +365,7 @@ export function setupAuctionSocket() {
 				socket.to(`auction_${auctionId}`).emit('auction:user_joined', {
 					userId,
 					message: `User ${userId} joined the auction`,
+					remainingTime,
 				});
 
 				console.log(

@@ -72,6 +72,6 @@ const router = express.Router();
  *       404:
  *         description: Seller not found
  */
-router.get('/', authenticateToken, getSellerProfileController);
+router.get('/:seller_id', getSellerProfileController);
 
 export default router;

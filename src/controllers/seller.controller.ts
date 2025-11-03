@@ -4,15 +4,9 @@ import jwt from 'jsonwebtoken';
 
 export async function getSellerProfileController(req: Request, res: Response) {
 	try {
-		const authHeader = req.headers.authorization;
-		if (!authHeader) {
-			return res.status(401).json({ message: 'Unauthorized' });
-		}
-		const token = authHeader.split(' ')[1];
-		const user = jwt.decode(token) as any;
-		const seller_id = user.id;
-
+		
 		// Get query params
+		const seller_id = parseInt(req.params.seller_id as string);
 		const type = req.query.type as string | undefined; // 'feedback' | 'post' | undefined
 		const page = parseInt(req.query.page as string) || 1;
 		const limit = parseInt(req.query.limit as string) || 10;
