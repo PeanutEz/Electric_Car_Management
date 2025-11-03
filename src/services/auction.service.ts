@@ -5,6 +5,7 @@ import { create } from 'domain';
 import { getVietnamTime } from '../utils/datetime';
 import * as notificationService from './notification.service';
 import { sendNotificationToUser } from '../config/socket';
+import { get } from 'http';
 
 // Store active auction timers
 const auctionTimers = new Map<number, NodeJS.Timeout>();
@@ -580,11 +581,6 @@ export async function closeAuction(
 			auctionTimers.delete(auctionId);
 		}
 
-		// 🆕 Clear remaining time from Map
-		if (auctionRemainingTime.has(auctionId)) {
-			auctionRemainingTime.delete(auctionId);
-		}
-
 		if (!connection) {
 			await conn.commit();
 		}
@@ -632,15 +628,9 @@ export async function startAuctionTimer(
 
 	let remainingSeconds = duration;
 
-	// 🆕 Store initial remaining time in Map
-	auctionRemainingTime.set(auctionId, remainingSeconds);
-
 	// Countdown display interval (every second)
 	const countdownInterval = setInterval(async () => {
 		remainingSeconds--;
-
-		// 🆕 Update Map với giá trị mới
-		auctionRemainingTime.set(auctionId, remainingSeconds);
 
 		// 🔔 Emit remainingTime to FE mỗi 10 giây
 		if (remainingSeconds % 10 === 0 && remainingSeconds > 0) {
@@ -685,14 +675,12 @@ export async function startAuctionTimer(
 		// Clear interval when time is up
 		if (remainingSeconds <= 0) {
 			clearInterval(countdownInterval);
-			auctionRemainingTime.delete(auctionId); // 🆕 Xóa khỏi Map
 		}
 	}, 1000);
 
 	// Set expiration timer
 	const timer = setTimeout(async () => {
 		clearInterval(countdownInterval);
-		auctionRemainingTime.delete(auctionId); // 🆕 Xóa khỏi Map
 		console.log(`\n🔔 Auction ${auctionId} TIME'S UP! Closing auction...`);
 
 		// Get final auction state
@@ -746,21 +734,11 @@ function formatTimeDisplay(seconds: number): string {
 
 /**
  * Get remaining time for an auction in seconds
- * Prioritizes real-time tracking from Map, falls back to DB calculation
+ * Calculates based on start_at time for accuracy
  */
 export async function getAuctionRemainingTime(
 	auctionId: number,
 ): Promise<number> {
-	// 🆕 Ưu tiên lấy từ Map (real-time tracking)
-	if (auctionRemainingTime.has(auctionId)) {
-		const remaining = auctionRemainingTime.get(auctionId)!;
-		console.log(
-			`📊 [Auction ${auctionId}] Real-time remainingTime from Map: ${remaining}s`,
-		);
-		return remaining;
-	}
-
-	// Fallback: Tính từ database (nếu chưa có trong Map)
 	const [rows]: any = await pool.query(
 		`SELECT start_at, duration, status FROM auctions WHERE id = ?`,
 		[auctionId],
@@ -772,27 +750,20 @@ export async function getAuctionRemainingTime(
 
 	// Nếu chưa bắt đầu (draft/verified), trả về full duration
 	if (!start_at || status === 'draft' || status === 'verified') {
-		console.log(
-			`📊 [Auction ${auctionId}] Not started yet, returning full duration: ${duration}s`,
-		);
 		return duration;
 	}
 
 	// Nếu đã ended, trả về 0
 	if (status === 'ended') {
-		console.log(`📊 [Auction ${auctionId}] Already ended, returning 0s`);
 		return 0;
 	}
 
-	// Tính thời gian thực tế còn lại cho auction đang live
+	//Tính thời gian thực tế còn lại cho auction đang live
 	const startTime = new Date(start_at).getTime();
-	const currentTime = Date.now();
+	const currentTime = getVietnamTime().getTime();
 	const elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
 	const remainingTime = Math.max(0, duration - elapsedSeconds);
 
-	console.log(
-		`📊 [Auction ${auctionId}] Calculated from DB: start_at=${start_at}, elapsed=${elapsedSeconds}s, remaining=${remainingTime}s`,
-	);
 	return remainingTime;
 }
 
