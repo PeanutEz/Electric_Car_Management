@@ -10,10 +10,19 @@
 ---
 
 ## 📦 Table: `orders`
-| id | type | status | price | service_id | post_id | seller_id | created_at | code | payment_method | buyer_id |
-| 1 | post | PAID | 30000.00 | 1 | NULL | 741765 | 2025-10-01 14:22:11 | 741765 | PAYOS | null|
-| 4 | push | pending | 3000.00 | 5 | NULL | 774448 | 2025-10-06 06:42:11 | 774448 | PAYOS | null|
-| 5 | post | pending | 3000.00 | 5 | NULL | 152502 | 2025-10-06 07:35:10 | 152502 | PAYOS | null|
+| id | type | status | price | service_id | post_id | seller_id | created_at | code | payment_method | buyer_id | tracking |
+| 1 | post | PAID | 30000.00 | 1 | NULL | 741765 | 2025-10-01 14:22:11 | 741765 | PAYOS | null| NULL |
+| 4 | push | pending | 3000.00 | 5 | NULL | 774448 | 2025-10-06 06:42:11 | 774448 | PAYOS | null| NULL |
+| 5 | post | pending | 3000.00 | 5 | NULL | 152502 | 2025-10-06 07:35:10 | 152502 | PAYOS | null| NULL |
+
+**Tracking values for Auction orders:**
+- `AUCTION_PROCESSING` - Đấu giá đang diễn ra
+- `AUCTION_SUCCESS` - Có người thắng, đợi giao dịch
+- `AUCTION_FAIL` - Không có ai đặt giá, post quay về approved
+- `DEALING` - Admin đã tạo hợp đồng, đang chờ ký
+- `DEALING_SUCCESS` - Giao dịch thành công, đã ký hợp đồng
+- `DEALING_FAIL` - Giao dịch thất bại (+ lý do trong report table)
+- `REFUND` - Hoàn tiền deposit cho người thua
 
 ---
 ## 📦 Table: `services`
@@ -136,15 +145,10 @@ batteries
 | 22 | 3885707       | 12        | 3        | 8          | 3000000.00     | 25000000.00   | 5.00               | Ho Chi Minh  | signed  | [https://docuseal.com/file/con](https://docuseal.com/file/con) | 2025-10-24 16:00:20 | 2025-10-24 16:23:33 |
 | 29 | 3904295       | 12        | 25       | 8          | 3000000.00     | 25000000.00   | 5.00               | Ho Chi Minh  | pending | [https://docuseal.com/s/zzHdE](https://docuseal.com/s/zzHdE)   | 2025-10-27 07:41:13 | 2025-10-27 07:41:14 |
 
-
-
-**Description:**
-- `bid_price` - Giá bid cao nhất mà user này đã đặt trong auction (được cập nhật mỗi khi user bid)
-- `updated_at` - Thời điểm bid gần nhất (tự động update khi user đặt bid mới)
-- Real-time tracking: Mỗi khi user đặt giá, `bid_price` và `updated_at` sẽ được update ngay lập tức
-
-**How it works:**
-1. User join auction → Insert record với `bid_price = 0` hoặc `NULL`
-2. User place bid → Update `bid_price = <new_amount>`, `updated_at = NOW()`
-3. User bid again → Update `bid_price = <higher_amount>`, `updated_at = NOW()`
-4. Query leaderboard → Sort by `bid_price DESC` để xem ranking
+## 📦 Table: `report`
+| Cột          | Giá trị mẫu                                                    | Ý nghĩa                            |
+| ------------ | -------------------------------------------------------------- | ---------------------------------- |
+| `product_id` | 105                                                            | ID của sản phẩm bị báo lỗi         |
+| `user_id`    | 8                                                              | ID của người có lỗi (ví dụ seller) |
+| `reason`     | `'Người bán không đến ký hợp đồng sau khi đấu giá thành công'` | Lý do lỗi                          |
+| `created_at` | `NOW()`                                                        | Tự động ghi thời gian tạo báo cáo  |

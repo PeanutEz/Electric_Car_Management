@@ -463,15 +463,88 @@ export async function closeAuction(
 			[product_id],
 		);
 
+		// Get product title first (needed for notifications)
+		const [productInfo]: any = await conn.query(
+			`select title from products where id = ?`,
+			[rows[0].product_id],
+		);
+		const productTitle = productInfo[0]?.title || 'sản phẩm';
+
 		const [findWinner]: any = await conn.query(
 			`select winner_id from auctions where id = ?`,
 			[auctionId],
 		);
-		await conn.query(
-			`UPDATE orders SET tracking = 'AUCTION_SUCCESS' 
-			WHERE status = 'PAID' AND type = 'deposit' AND product_id = ? AND buyer_id = ?`,
-			[rows[0].product_id, findWinner[0].winner_id],
-		);
+
+		// 🔔 Notification cho seller: AUCTION_SUCCESS hoặc AUCTION_FAIL
+		const hasBidder = findWinner[0]?.winner_id;
+
+		if (hasBidder) {
+			// AUCTION_SUCCESS: Có người thắng
+			await conn.query(
+				`UPDATE orders SET tracking = 'AUCTION_SUCCESS' 
+				WHERE status = 'PAID' AND type = 'deposit' AND product_id = ? AND buyer_id = ?`,
+				[rows[0].product_id, findWinner[0].winner_id],
+			);
+
+			// Gửi notification cho seller
+			try {
+				const [winningPriceResult]: any = await conn.query(
+					`select winning_price from auctions where id = ?`,
+					[auctionId],
+				);
+				const winningPrice = winningPriceResult[0]?.winning_price || 0;
+
+				const notification =
+					await notificationService.createNotification({
+						user_id: rows[0].created_by, // seller_id
+						post_id: rows[0].product_id,
+						type: 'auction_success',
+						title: 'Đấu giá thành công!',
+						message: `Sản phẩm "${productTitle}" của bạn đã được đấu giá thành công với giá ${parseFloat(
+							winningPrice,
+						).toLocaleString(
+							'vi-VN',
+						)} VNĐ. Admin sẽ tạo hợp đồng để bạn ký kết với người mua.`,
+					});
+				sendNotificationToUser(rows[0].created_by, notification);
+				console.log(
+					`📧 AUCTION_SUCCESS notification sent to seller ${rows[0].created_by}`,
+				);
+			} catch (notifError: any) {
+				console.error(
+					'⚠️ Failed to send auction success notification to seller:',
+					notifError.message,
+				);
+			}
+		} else {
+			// AUCTION_FAIL: Không có ai bid
+			await conn.query(
+				`UPDATE orders SET tracking = 'AUCTION_FAIL' 
+				WHERE status = 'PAID' AND type = 'auction_fee' AND product_id = ?`,
+				[rows[0].product_id],
+			);
+
+			// Gửi notification cho seller
+			try {
+				const notification =
+					await notificationService.createNotification({
+						user_id: rows[0].created_by, // seller_id
+						post_id: rows[0].product_id,
+						type: 'auction_fail',
+						title: 'Đấu giá chưa thành công',
+						message: `Rất tiếc! Sản phẩm "${productTitle}" của bạn chưa có ai đặt giá. Vui lòng đến trung tâm để nhận lại xe và đăng bài mới.`,
+					});
+				sendNotificationToUser(rows[0].created_by, notification);
+				console.log(
+					`📧 AUCTION_FAIL notification sent to seller ${rows[0].created_by}`,
+				);
+			} catch (notifError: any) {
+				console.error(
+					'⚠️ Failed to send auction fail notification to seller:',
+					notifError.message,
+				);
+			}
+		}
 
 		const [findLosers]: any = await conn.query(
 			`select user_id from auction_members where auction_id = ? AND user_id != ?`,
@@ -481,11 +554,6 @@ export async function closeAuction(
 			`select deposit from auctions where id = ?`,
 			[auctionId],
 		);
-		const [productInfo]: any = await conn.query(
-			`select title from products where id = ?`,
-			[rows[0].product_id],
-		);
-		const productTitle = productInfo[0]?.title || 'sản phẩm';
 
 		findLosers.forEach(async (loser: any) => {
 			//Refund deposit to losers
@@ -579,7 +647,7 @@ export async function closeAuction(
 			clearTimeout(auctionTimers.get(auctionId)!);
 			auctionTimers.delete(auctionId);
 		}
-		
+
 		// 🆕 Clear remaining time from Map
 		if (auctionRemainingTime.has(auctionId)) {
 			auctionRemainingTime.delete(auctionId);
@@ -631,14 +699,14 @@ export async function startAuctionTimer(
 	);
 
 	let remainingSeconds = duration;
-	
+
 	// 🆕 Store initial remaining time in Map
 	auctionRemainingTime.set(auctionId, remainingSeconds);
 
 	// Countdown display interval (every second)
 	const countdownInterval = setInterval(async () => {
 		remainingSeconds--;
-		
+
 		// 🆕 Update Map với giá trị mới
 		auctionRemainingTime.set(auctionId, remainingSeconds);
 
@@ -754,7 +822,9 @@ export async function getAuctionRemainingTime(
 	// 🆕 Ưu tiên lấy từ Map (real-time tracking)
 	if (auctionRemainingTime.has(auctionId)) {
 		const remaining = auctionRemainingTime.get(auctionId)!;
-		console.log(`📊 [Auction ${auctionId}] Real-time remainingTime from Map: ${remaining}s`);
+		console.log(
+			`📊 [Auction ${auctionId}] Real-time remainingTime from Map: ${remaining}s`,
+		);
 		return remaining;
 	}
 
@@ -770,7 +840,9 @@ export async function getAuctionRemainingTime(
 
 	// Nếu chưa bắt đầu (draft/verified), trả về full duration
 	if (!start_at || status === 'draft' || status === 'verified') {
-		console.log(`📊 [Auction ${auctionId}] Not started yet, returning full duration: ${duration}s`);
+		console.log(
+			`📊 [Auction ${auctionId}] Not started yet, returning full duration: ${duration}s`,
+		);
 		return duration;
 	}
 
@@ -786,7 +858,9 @@ export async function getAuctionRemainingTime(
 	const elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
 	const remainingTime = Math.max(0, duration - elapsedSeconds);
 
-	console.log(`📊 [Auction ${auctionId}] Calculated from DB: start_at=${start_at}, elapsed=${elapsedSeconds}s, remaining=${remainingTime}s`);
+	console.log(
+		`📊 [Auction ${auctionId}] Calculated from DB: start_at=${start_at}, elapsed=${elapsedSeconds}s, remaining=${remainingTime}s`,
+	);
 	return remainingTime;
 }
 
@@ -1072,6 +1146,39 @@ export async function startAuctionByAdmin(auctionId: number) {
 	console.log(
 		`✅ Admin approved auction ${auctionId} - Status: LIVE, Order tracking: AUCTION_PROCESSING, Current time: ${currentTime}`,
 	);
+
+	// 🔔 Gửi notification cho seller: Phiên đấu giá đã được mở
+	try {
+		const [auctionInfo]: any = await pool.query(
+			`SELECT a.seller_id, p.title, p.id as product_id 
+       FROM auctions a 
+       INNER JOIN products p ON a.product_id = p.id 
+       WHERE a.id = ?`,
+			[auctionId],
+		);
+
+		if (auctionInfo.length > 0) {
+			const { seller_id, title, product_id } = auctionInfo[0];
+			const notification = await notificationService.createNotification({
+				user_id: seller_id,
+				post_id: product_id,
+				type: 'auction_live',
+				title: 'Phiên đấu giá đã được mở',
+				message: `Phiên đấu giá cho "${title}" của bạn đã được admin duyệt và đang diễn ra. Thời gian: ${formatTimeDisplay(
+					auction.duration,
+				)}`,
+			});
+			sendNotificationToUser(seller_id, notification);
+			console.log(
+				`📧 Notification sent to seller ${seller_id}: Auction ${auctionId} is now LIVE`,
+			);
+		}
+	} catch (notifError: any) {
+		console.error(
+			'⚠️ Failed to send auction live notification:',
+			notifError.message,
+		);
+	}
 
 	// Set timer
 	await startAuctionTimer(auctionId, auction.duration, async () => {

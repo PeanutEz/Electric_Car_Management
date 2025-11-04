@@ -2,6 +2,8 @@ import pool from '../config/db';
 import axios from 'axios';
 import { Contract } from '../models/contract.model';
 import { getVietnamTime } from '../utils/datetime';
+import * as notificationService from './notification.service';
+import { sendNotificationToUser } from '../config/socket';
 
 const DOCUSEAL_API_URL =
 	process.env.DOCUSEAL_API_URL || 'https://api.docuseal.com';
@@ -37,6 +39,20 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		);
 
 		const contractId = result.insertId;
+
+		// 2️⃣ Cập nhật tracking auction order → DEALING (đang chờ ký hợp đồng)
+		await connection.query(
+			`UPDATE orders 
+       SET tracking = 'DEALING' 
+       WHERE product_id = ? 
+       AND type = 'auction' 
+       AND status = 'PAID'`,
+			[contract.product_id],
+		);
+
+		console.log(
+			`📝 Order tracking updated to DEALING for product ${contract.product_id}`,
+		);
 
 		const docusealResponse = await axios.post(
 			`${DOCUSEAL_API_URL}/submissions`,
@@ -173,7 +189,10 @@ export async function handleDocuSealWebhookService(
 			console.log('🔍 Contract signed! Looking for product_id...');
 
 			const [contractRows]: any = await connection.query(
-				`SELECT product_id FROM contracts WHERE contract_code = ?`,
+				`SELECT c.product_id, c.seller_id, p.title 
+         FROM contracts c
+         INNER JOIN products p ON c.product_id = p.id
+         WHERE c.contract_code = ?`,
 				[submissionId],
 			);
 
@@ -182,9 +201,16 @@ export async function handleDocuSealWebhookService(
 			);
 
 			if (contractRows.length > 0) {
-				const productId = contractRows[0].product_id;
-				console.log(`🔍 Product ID: ${productId}`);
+				const {
+					product_id: productId,
+					seller_id: sellerId,
+					title: productTitle,
+				} = contractRows[0];
+				console.log(
+					`🔍 Product ID: ${productId}, Seller ID: ${sellerId}`,
+				);
 
+				// Cập nhật product status = 'sold'
 				const [productUpdateResult]: any = await connection.query(
 					`UPDATE products SET status = 'sold', updated_at = ? WHERE id = ?`,
 					[getVietnamTime(), productId],
@@ -193,10 +219,109 @@ export async function handleDocuSealWebhookService(
 				console.log(
 					`🚗 Product ${productId} marked as SOLD (${productUpdateResult.affectedRows} rows affected)`,
 				);
+
+				// Cập nhật tracking auction order → DEALING_SUCCESS
+				const [orderUpdateResult]: any = await connection.query(
+					`UPDATE orders 
+           SET tracking = 'DEALING_SUCCESS' 
+           WHERE product_id = ? 
+           AND type = 'auction' 
+           AND status = 'PAID'
+           AND tracking = 'DEALING'`,
+					[productId],
+				);
+
+				console.log(
+					`✅ Order tracking updated to DEALING_SUCCESS for product ${productId} (${orderUpdateResult.affectedRows} rows affected)`,
+				);
+
+				// 🔔 Gửi notification cho seller: DEALING_SUCCESS
+				try {
+					const notification =
+						await notificationService.createNotification({
+							user_id: sellerId,
+							post_id: productId,
+							type: 'dealing_success',
+							title: 'Giao dịch thành công!',
+							message: `Giao dịch cho sản phẩm "${productTitle}" đã hoàn tất. Hợp đồng đã được ký và xe đã được bán thành công.`,
+						});
+					sendNotificationToUser(sellerId, notification);
+					console.log(
+						`📧 DEALING_SUCCESS notification sent to seller ${sellerId}`,
+					);
+				} catch (notifError: any) {
+					console.error(
+						'⚠️ Failed to send dealing success notification:',
+						notifError.message,
+					);
+				}
 			} else {
 				console.warn(
 					`⚠️ No contract found with contract_code = ${submissionId}`,
 				);
+			}
+		}
+
+		// 3️⃣ Nếu hợp đồng bị từ chối → Cập nhật tracking = DEALING_FAIL
+		if (newStatus === 'declined') {
+			console.log('❌ Contract declined! Looking for product_id...');
+
+			const [contractRows]: any = await connection.query(
+				`SELECT c.product_id, c.seller_id, p.title 
+         FROM contracts c
+         INNER JOIN products p ON c.product_id = p.id
+         WHERE c.contract_code = ?`,
+				[submissionId],
+			);
+
+			if (contractRows.length > 0) {
+				const {
+					product_id: productId,
+					seller_id: sellerId,
+					title: productTitle,
+				} = contractRows[0];
+				console.log(
+					`🔍 Product ID: ${productId}, Seller ID: ${sellerId}`,
+				);
+
+				// Cập nhật tracking auction order → DEALING_FAIL
+				const [orderUpdateResult]: any = await connection.query(
+					`UPDATE orders 
+           SET tracking = 'DEALING_FAIL' 
+           WHERE product_id = ? 
+           AND type = 'auction' 
+           AND status = 'PAID'
+           AND tracking = 'DEALING'`,
+					[productId],
+				);
+
+				console.log(
+					`❌ Order tracking updated to DEALING_FAIL for product ${productId} (${orderUpdateResult.affectedRows} rows affected)`,
+				);
+
+				// 🔔 Gửi notification cho seller: DEALING_FAIL
+				try {
+					const notification =
+						await notificationService.createNotification({
+							user_id: sellerId,
+							post_id: productId,
+							type: 'dealing_fail',
+							title: 'Giao dịch không thành công',
+							message: `Giao dịch cho sản phẩm "${productTitle}" đã thất bại. Lý do: Một bên đã từ chối ký hợp đồng. Vui lòng liên hệ admin để biết thêm chi tiết.`,
+						});
+					sendNotificationToUser(sellerId, notification);
+					console.log(
+						`📧 DEALING_FAIL notification sent to seller ${sellerId}`,
+					);
+				} catch (notifError: any) {
+					console.error(
+						'⚠️ Failed to send dealing fail notification:',
+						notifError.message,
+					);
+				}
+
+				// Ghi lý do vào report table (nếu cần)
+				// TODO: Implement report logging if needed
 			}
 		}
 
