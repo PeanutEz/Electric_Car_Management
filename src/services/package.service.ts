@@ -69,8 +69,8 @@ export async function createPackage(
 
 		// ✅ Insert vào database
 		const [result]: any = await pool.query(
-			`INSERT INTO services (name, type, cost, number_of_post, number_of_push, service_ref, product_type, description, feature)
-       VALUES (?, 'package', ?, ?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO services (name, type, cost, number_of_post, number_of_push, service_ref, product_type, description, feature, duration)
+       VALUES (?, 'package', ?, ?, ?, ?, ?, ?, ?, ?)`,
 			[
 				name,
 				cost,
@@ -80,6 +80,7 @@ export async function createPackage(
 				product_type,
 				description || null,
 				feature || null,
+				30, // Mặc định duration là 30 ngày
 			],
 		);
 
