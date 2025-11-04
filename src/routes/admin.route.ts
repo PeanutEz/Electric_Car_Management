@@ -1,5 +1,17 @@
 import Router from 'express';
-import { numOfPost, addService, editService, listServices, removeService,listOrders, getOrderTransactions, modifyAuction, verifyAuction, getDashboard } from '../controllers/admin.controller';
+import {
+	numOfPost,
+	addService,
+	editService,
+	listServices,
+	removeService,
+	listOrders,
+	getOrderTransactions,
+	modifyAuction,
+	verifyAuction,
+	getDashboard,
+	createReport,
+} from '../controllers/admin.controller';
 
 const router = Router();
 
@@ -263,6 +275,87 @@ router.put('/update-auction', modifyAuction);
  */
 router.post('/verify-auction', verifyAuction);
 
+/**
+ * @swagger
+ * /api/admin/report:
+ *   post:
+ *     summary: Tạo báo cáo lỗi cho phiên đấu giá
+ *     description: |
+ *       Admin tạo báo cáo khi có lỗi trong giao dịch đấu giá.
+ *       - **Lỗi của seller**: Hoàn tiền cọc cho winner, ban sản phẩm
+ *       - **Lỗi của winner**: Mất tiền cọc, sản phẩm trở lại trạng thái approved
+ *     tags: [Admin]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - auction_id
+ *               - user_id
+ *               - reason
+ *               - fault_type
+ *             properties:
+ *               auction_id:
+ *                 type: integer
+ *                 example: 5
+ *                 description: ID của phiên đấu giá
+ *               user_id:
+ *                 type: integer
+ *                 example: 12
+ *                 description: ID của người bị report (seller hoặc winner)
+ *               reason:
+ *                 type: string
+ *                 example: "Seller không đến ký hợp đồng"
+ *                 description: Lý do tạo report
+ *               fault_type:
+ *                 type: string
+ *                 enum: [seller, winner]
+ *                 example: "seller"
+ *                 description: Người gây lỗi (seller hoặc winner)
+ *     responses:
+ *       200:
+ *         description: Tạo report thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Đã tạo báo cáo và xử lý lỗi thành công"
+ *       400:
+ *         description: Thiếu thông tin hoặc fault_type không hợp lệ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "fault_type phải là 'seller' hoặc 'winner'"
+ *       500:
+ *         description: Lỗi server
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Lỗi khi tạo báo cáo"
+ */
+router.post('/report', createReport);
 
 /**
  * @swagger

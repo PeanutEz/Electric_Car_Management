@@ -16,13 +16,22 @@
 | 5 | post | pending | 3000.00 | 5 | NULL | 152502 | 2025-10-06 07:35:10 | 152502 | PAYOS | null| NULL |
 
 **Tracking values for Auction orders:**
-- `AUCTION_PROCESSING` - Đấu giá đang diễn ra
+
+**Seller's orders (type = 'auction'):**
+- `AUCTION_PROCESSING` - Đấu giá đang diễn ra (admin đã duyệt)
 - `AUCTION_SUCCESS` - Có người thắng, đợi giao dịch
 - `AUCTION_FAIL` - Không có ai đặt giá, post quay về approved
 - `DEALING` - Admin đã tạo hợp đồng, đang chờ ký
 - `DEALING_SUCCESS` - Giao dịch thành công, đã ký hợp đồng
 - `DEALING_FAIL` - Giao dịch thất bại (+ lý do trong report table)
-- `REFUND` - Hoàn tiền deposit cho người thua
+
+**Winner's orders (type = 'deposit'):**
+- `AUCTION_PROCESSING` - Đã đặt cọc, đang tham gia đấu giá
+- `AUCTION_SUCCESS` - Thắng đấu giá, đợi giao dịch
+- `DEALING` - Admin đã tạo hợp đồng, đang chờ ký
+- `DEALING_SUCCESS` - Giao dịch thành công, đã ký hợp đồng
+- `DEALING_FAIL` - Giao dịch thất bại, hoàn tiền nếu lỗi bên seller
+- `REFUND` - Thua đấu giá, đã hoàn tiền cọc
 
 ---
 ## 📦 Table: `services`
@@ -148,7 +157,7 @@ batteries
 ## 📦 Table: `report`
 | Cột          | Giá trị mẫu                                                    | Ý nghĩa                            |
 | ------------ | -------------------------------------------------------------- | ---------------------------------- |
-| `product_id` | 105                                                            | ID của sản phẩm bị báo lỗi         |
+| `auction_id` | 1                                                            | ID của sản phẩm bị báo lỗi         |
 | `user_id`    | 8                                                              | ID của người có lỗi (ví dụ seller) |
 | `reason`     | `'Người bán không đến ký hợp đồng sau khi đấu giá thành công'` | Lý do lỗi                          |
 | `created_at` | `NOW()`                                                        | Tự động ghi thời gian tạo báo cáo  |

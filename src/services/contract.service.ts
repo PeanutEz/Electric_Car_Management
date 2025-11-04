@@ -41,12 +41,24 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		const contractId = result.insertId;
 
 		// 2️⃣ Cập nhật tracking auction order → DEALING (đang chờ ký hợp đồng)
+		// Update seller's auction fee order
 		await connection.query(
 			`UPDATE orders 
        SET tracking = 'DEALING' 
        WHERE product_id = ? 
        AND type = 'auction' 
        AND status = 'PAID'`,
+			[contract.product_id],
+		);
+
+		// Update winner's deposit order
+		await connection.query(
+			`UPDATE orders 
+       SET tracking = 'DEALING' 
+       WHERE product_id = ? 
+       AND type = 'deposit' 
+       AND status = 'PAID'
+       AND tracking = 'AUCTION_SUCCESS'`,
 			[contract.product_id],
 		);
 
@@ -220,8 +232,8 @@ export async function handleDocuSealWebhookService(
 					`🚗 Product ${productId} marked as SOLD (${productUpdateResult.affectedRows} rows affected)`,
 				);
 
-				// Cập nhật tracking auction order → DEALING_SUCCESS
-				const [orderUpdateResult]: any = await connection.query(
+				// Cập nhật tracking seller's auction order → DEALING_SUCCESS
+				const [sellerOrderUpdateResult]: any = await connection.query(
 					`UPDATE orders 
            SET tracking = 'DEALING_SUCCESS' 
            WHERE product_id = ? 
@@ -232,7 +244,22 @@ export async function handleDocuSealWebhookService(
 				);
 
 				console.log(
-					`✅ Order tracking updated to DEALING_SUCCESS for product ${productId} (${orderUpdateResult.affectedRows} rows affected)`,
+					`✅ Seller order tracking updated to DEALING_SUCCESS for product ${productId} (${sellerOrderUpdateResult.affectedRows} rows affected)`,
+				);
+
+				// Cập nhật tracking winner's deposit order → DEALING_SUCCESS
+				const [winnerOrderUpdateResult]: any = await connection.query(
+					`UPDATE orders 
+           SET tracking = 'DEALING_SUCCESS' 
+           WHERE product_id = ? 
+           AND type = 'deposit' 
+           AND status = 'PAID'
+           AND tracking = 'DEALING'`,
+					[productId],
+				);
+
+				console.log(
+					`✅ Winner order tracking updated to DEALING_SUCCESS for product ${productId} (${winnerOrderUpdateResult.affectedRows} rows affected)`,
 				);
 
 				// 🔔 Gửi notification cho seller: DEALING_SUCCESS
@@ -284,8 +311,8 @@ export async function handleDocuSealWebhookService(
 					`🔍 Product ID: ${productId}, Seller ID: ${sellerId}`,
 				);
 
-				// Cập nhật tracking auction order → DEALING_FAIL
-				const [orderUpdateResult]: any = await connection.query(
+				// Cập nhật tracking seller's auction order → DEALING_FAIL
+				const [sellerOrderUpdateResult]: any = await connection.query(
 					`UPDATE orders 
            SET tracking = 'DEALING_FAIL' 
            WHERE product_id = ? 
@@ -296,7 +323,22 @@ export async function handleDocuSealWebhookService(
 				);
 
 				console.log(
-					`❌ Order tracking updated to DEALING_FAIL for product ${productId} (${orderUpdateResult.affectedRows} rows affected)`,
+					`❌ Seller order tracking updated to DEALING_FAIL for product ${productId} (${sellerOrderUpdateResult.affectedRows} rows affected)`,
+				);
+
+				// Cập nhật tracking winner's deposit order → DEALING_FAIL
+				const [winnerOrderUpdateResult]: any = await connection.query(
+					`UPDATE orders 
+           SET tracking = 'DEALING_FAIL' 
+           WHERE product_id = ? 
+           AND type = 'deposit' 
+           AND status = 'PAID'
+           AND tracking = 'DEALING'`,
+					[productId],
+				);
+
+				console.log(
+					`❌ Winner order tracking updated to DEALING_FAIL for product ${productId} (${winnerOrderUpdateResult.affectedRows} rows affected)`,
 				);
 
 				// 🔔 Gửi notification cho seller: DEALING_FAIL

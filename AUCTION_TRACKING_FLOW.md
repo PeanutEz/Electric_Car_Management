@@ -1,11 +1,21 @@
 # 🔄 Auction Order Tracking Flow
 
-## 📊 Tracking States cho Order Type = "auction"
+## 📊 Tracking States Overview
+
+### **Seller's Orders (type = 'auction')**
+Orders đại diện cho phí đấu giá mà seller đã thanh toán
+
+### **Winner's Orders (type = 'deposit')**  
+Orders đại diện cho tiền cọc mà winner đã đặt để tham gia đấu giá
+
+---
+
+## 📊 Tracking States cho Seller (type = "auction")
 
 ### **1. AUCTION_PROCESSING**
 **Khi nào:** Đấu giá đang diễn ra (auction.status = 'live')  
 **Action:** Timer đang chạy, users đang bid  
-**Database:** `orders.tracking = 'AUCTION_PROCESSING'`
+**Database:** `orders.tracking = 'AUCTION_PROCESSING'` (seller's auction fee order)
 
 ---
 
@@ -48,14 +58,26 @@ await connection.query(
 ### **4. DEALING** 📝
 **Khi nào:** Admin ấn nút "Tạo hợp đồng"  
 **Action:** Gửi hợp đồng DocuSeal cho buyer và seller ký  
-**Database:** `orders.tracking = 'DEALING'`  
+**Database:** 
+- `orders.tracking = 'DEALING'` (seller's auction fee order)
+- `orders.tracking = 'DEALING'` (winner's deposit order)
+
 **Code location:** `contract.service.ts` - hàm `createContract()`
 
 ```typescript
-// Khi admin tạo hợp đồng
+// Khi admin tạo hợp đồng - Update cả seller và winner orders
+// Update seller's auction fee order
 await connection.query(
   `UPDATE orders SET tracking = 'DEALING' 
    WHERE product_id = ? AND type = 'auction' AND status = 'PAID'`,
+  [contract.product_id]
+);
+
+// Update winner's deposit order
+await connection.query(
+  `UPDATE orders SET tracking = 'DEALING' 
+   WHERE product_id = ? AND type = 'deposit' AND status = 'PAID'
+   AND tracking = 'AUCTION_SUCCESS'`,
   [contract.product_id]
 );
 ```
@@ -70,7 +92,8 @@ await connection.query(
 - Có thể trigger payment release
 
 **Database:** 
-- `orders.tracking = 'DEALING_SUCCESS'`
+- `orders.tracking = 'DEALING_SUCCESS'` (seller's auction fee order)
+- `orders.tracking = 'DEALING_SUCCESS'` (winner's deposit order)
 - `products.status = 'sold'`
 - `contracts.status = 'signed'`
 
@@ -85,10 +108,17 @@ if (newStatus === 'signed') {
     [productId]
   );
   
-  // Cập nhật order tracking
+  // Cập nhật seller's order tracking
   await connection.query(
     `UPDATE orders SET tracking = 'DEALING_SUCCESS' 
      WHERE product_id = ? AND type = 'auction' AND tracking = 'DEALING'`,
+    [productId]
+  );
+  
+  // Cập nhật winner's order tracking
+  await connection.query(
+    `UPDATE orders SET tracking = 'DEALING_SUCCESS' 
+     WHERE product_id = ? AND type = 'deposit' AND tracking = 'DEALING'`,
     [productId]
   );
 }
@@ -104,11 +134,12 @@ if (newStatus === 'signed') {
 
 **Action:** 
 - Ghi lý do vào `report` table
-- Có thể refund deposit cho buyer
+- Có thể refund deposit cho winner (nếu lỗi bên seller)
 - Product có thể quay lại trạng thái approved
 
 **Database:** 
-- `orders.tracking = 'DEALING_FAIL'`
+- `orders.tracking = 'DEALING_FAIL'` (seller's auction fee order)
+- `orders.tracking = 'DEALING_FAIL'` (winner's deposit order)
 - `contracts.status = 'declined'`
 - Insert vào `report` table
 
@@ -117,18 +148,23 @@ if (newStatus === 'signed') {
 ```typescript
 // Webhook từ DocuSeal khi form.declined
 if (newStatus === 'declined') {
+  // Cập nhật seller's order tracking
   await connection.query(
     `UPDATE orders SET tracking = 'DEALING_FAIL' 
      WHERE product_id = ? AND type = 'auction' AND tracking = 'DEALING'`,
     [productId]
   );
   
-  // Ghi lý do vào report
+  // Cập nhật winner's order tracking
   await connection.query(
-    `INSERT INTO report (product_id, user_id, reason, created_at) 
-     VALUES (?, ?, ?, NOW())`,
-    [productId, userId, 'Từ chối ký hợp đồng']
+    `UPDATE orders SET tracking = 'DEALING_FAIL' 
+     WHERE product_id = ? AND type = 'deposit' AND tracking = 'DEALING'`,
+    [productId]
   );
+  
+  // Ghi lý do vào report (nếu cần)
+  // Admin sẽ tạo report với fault_type ('seller' hoặc 'winner')
+  // để xác định bên nào có lỗi và xử lý refund
 }
 ```
 
@@ -142,7 +178,160 @@ if (newStatus === 'declined') {
 
 ---
 
-## � Seller Notifications
+## 📊 Tracking States cho Winner (type = "deposit")
+
+### **1. AUCTION_PROCESSING** 
+**Khi nào:** Winner đã đặt cọc và tham gia đấu giá  
+**Action:** Có quyền bid, đang chờ kết quả  
+**Database:** `orders.tracking = 'AUCTION_PROCESSING'` (winner's deposit order)  
+**Code location:** `payment.service.ts` - hàm `depositUsingCredit()`
+
+```typescript
+// Khi user đặt cọc để join auction
+await connection.query(
+  `INSERT INTO orders (type, status, price, buyer_id, product_id, tracking) 
+   VALUES ('deposit', 'PAID', ?, ?, ?, 'AUCTION_PROCESSING')`,
+  [depositAmount, buyerId, auction.product_id]
+);
+```
+
+---
+
+### **2. AUCTION_SUCCESS** ✅
+**Khi nào:** Winner thắng đấu giá  
+**Action:** Đợi admin tạo hợp đồng  
+**Database:** `orders.tracking = 'AUCTION_SUCCESS'` (winner's deposit order)  
+**Code location:** `auction.service.ts` - hàm `closeAuction()`
+
+```typescript
+// Khi timer hết và user này là winner
+await conn.query(
+  `UPDATE orders SET tracking = 'AUCTION_SUCCESS' 
+   WHERE status = 'PAID' AND type = 'deposit' AND product_id = ? AND buyer_id = ?`,
+  [productId, winnerId]
+);
+```
+
+---
+
+### **3. DEALING** 📝
+**Khi nào:** Admin tạo hợp đồng  
+**Action:** Winner nhận email để ký hợp đồng  
+**Database:** `orders.tracking = 'DEALING'` (winner's deposit order)  
+**Code location:** `contract.service.ts` - hàm `createContract()`
+
+---
+
+### **4. DEALING_SUCCESS** ✅
+**Khi nào:** Winner và seller đã ký xong hợp đồng  
+**Action:** 
+- Deposit được giữ lại (thành công)
+- Có thể chuyển sang payment for vehicle
+
+**Database:** `orders.tracking = 'DEALING_SUCCESS'` (winner's deposit order)  
+**Code location:** `contract.service.ts` - hàm `handleDocuSealWebhookService()`
+
+---
+
+### **5. DEALING_FAIL** ❌
+**Khi nào:** Giao dịch thất bại (một bên từ chối ký)  
+**Action:** 
+- **Nếu lỗi seller:** Winner được hoàn tiền cọc (tracking → REFUND)
+- **Nếu lỗi winner:** Mất tiền cọc (deposit forfeited)
+
+**Database:** `orders.tracking = 'DEALING_FAIL'` (winner's deposit order)  
+**Code location:** `contract.service.ts` - hàm `handleDocuSealWebhookService()`
+
+**Note:** Admin cần tạo report để xác định fault_type ('seller' hoặc 'winner')
+
+---
+
+### **6. REFUND** 💰
+**Khi nào:** 
+- Winner thua đấu giá (không phải highest bidder)
+- Winner thắng nhưng seller có lỗi (DEALING_FAIL do seller)
+
+**Action:** Hoàn tiền cọc về credit của winner  
+**Database:** `orders.tracking = 'REFUND'` (winner's deposit order)  
+**Code location:** 
+- `auction.service.ts` - `closeAuction()` - Refund losers
+- `report.service.ts` - `createAuctionReport()` - Refund khi seller có lỗi
+
+```typescript
+// Refund deposit cho người thua
+await conn.query(
+  `UPDATE users SET total_credit = total_credit + ? WHERE id = ?`,
+  [deposit, loser.user_id]
+);
+
+await conn.query(
+  `UPDATE orders SET tracking = 'REFUND' WHERE id = ?`,
+  [order_id]
+);
+```
+
+---
+
+## 🔄 Winner Tracking Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Winner đặt cọc để join auction                         │
+│  orders.type = 'deposit'                                │
+│  orders.status = 'PAID'                                 │
+│  orders.tracking = 'AUCTION_PROCESSING'                 │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+                  ▼
+         ┌────────┴────────┐
+         │                 │
+         ▼                 ▼
+┌─────────────────┐  ┌─────────────────┐
+│ Thắng đấu giá   │  │ Thua đấu giá    │
+│ = highest bidder│  │ != highest      │
+└────────┬────────┘  └────────┬────────┘
+         │                    │
+         ▼                    ▼
+┌──────────────────┐  ┌──────────────────┐
+│ AUCTION_SUCCESS  │  │ REFUND           │
+│ Đợi tạo hợp đồng │  │ Hoàn tiền cọc    │
+└────────┬─────────┘  └──────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────┐
+│ Admin tạo hợp đồng                       │
+│ tracking = 'DEALING'                     │
+│ Winner nhận email ký                     │
+└────────┬─────────────────────────────────┘
+         │
+         ▼
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌─────────┐ ┌─────────┐
+│ Ký xong │ │ Từ chối │
+└────┬────┘ └────┬────┘
+     │           │
+     ▼           ▼
+┌───────────────┐ ┌──────────────┐
+│ DEALING_SUCCESS│ │ DEALING_FAIL │
+│ Thành công    │ │ Admin tạo    │
+│               │ │ report để    │
+│               │ │ xác định lỗi │
+└───────────────┘ └───────┬──────┘
+                          │
+                     ┌────┴────┐
+                     │         │
+                     ▼         ▼
+              ┌──────────┐ ┌──────────┐
+              │ Lỗi seller│ │Lỗi winner│
+              │ → REFUND │ │→ Mất cọc │
+              └──────────┘ └──────────┘
+```
+
+---
+
+## 🔔 Seller Notifications
 
 Seller sẽ nhận thông báo tại các tracking states sau:
 
