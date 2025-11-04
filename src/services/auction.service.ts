@@ -504,7 +504,7 @@ export async function closeAuction(
 							winningPrice,
 						).toLocaleString(
 							'vi-VN',
-						)} VNĐ. Admin sẽ tạo hợp đồng để bạn ký kết với người mua.`,
+						)} VNĐ. Đợi liên lạc và giao dịch với người mua.`,
 					});
 				sendNotificationToUser(rows[0].created_by, notification);
 				console.log(
@@ -970,7 +970,7 @@ export async function verifyAuctionByAdmin(
 	try {
 		await connection.beginTransaction();
 
-		// 1. Kiểm tra auction tồn tại và có status = 'verified'
+		// 1. Kiểm tra auction tồn tại
 		const [auctionRows]: any = await connection.query(
 			`SELECT a.*, p.status as product_status, p.id as product_id
 			 FROM auctions a
@@ -1007,13 +1007,10 @@ export async function verifyAuctionByAdmin(
 			};
 		}
 
-		// 4. Update duration và status thành 'verify'
-		// await connection.query(
-		// 	`UPDATE auctions
-		// 	 SET duration = ?, status = 'verify'
-		// 	 WHERE id = ?`,
-		// 	[duration, auctionId],
-		// );
+		await connection.query(
+			'UPDATE products SET status_verify = ? WHERE id = ?',
+			['verified', auction.product_id],
+		);
 
 		await connection.query(
 			'update orders set tracking = ? where product_id = ? and type = "auction"',
@@ -1090,7 +1087,7 @@ export async function verifyAuctionByAdmin(
 export async function startAuctionByAdmin(auctionId: number) {
 	// Lấy thông tin auction
 	const [rows]: any = await pool.query(
-		`SELECT a.*, p.status as product_status, p.id as product_id, p.created_by as seller_id
+		`SELECT a.*, p.status as product_status, p.id as product_id, p.created_by as seller_id, p.status_verify as product_status_verify
          FROM auctions a
          JOIN products p ON a.product_id = p.id
          WHERE a.id = ?`,
@@ -1105,112 +1102,126 @@ export async function startAuctionByAdmin(auctionId: number) {
 	const auction = rows[0];
 
 	// ✅ Kiểm tra status phải là 'verified'
-	if (auction.status !== 'verified') {
+	// if (auction.status !== 'verified') {
+	// 	return {
+	// 		success: false,
+	// 		message: `Cannot start auction with status '${auction.status}'. Auction must be verified first.`,
+	// 	};
+	// }
+
+	// ✅ Kiểm tra product phải có status_verify = 'verified'
+	if (auction.product_status_verify !== 'verified') {
+		return {
+			success: false,
+			message: 'Product must have status "verified" to start auction',
+		};
+	}
+
+	// Nếu đã có timer thì không cho start lại
+	if (auctionTimers.has(auctionId)) {
+		return { success: false, message: 'Auction already started' };
+	}
+
+	// ✅ Kiểm tra status phải là 'verified'
+	if (auction.status === 'verified') {
+		await pool.query('UPDATE products SET status = ? WHERE id = ?', [
+			'auctioning',
+			auction.product_id,
+		]);
+
+		// ✅ Update order tracking thành AUCTION_PROCESSING khi admin duyệt
+		await pool.query(
+			`UPDATE orders
+		SET tracking = 'AUCTION_PROCESSING'
+		WHERE status = 'PAID'
+		AND type = 'auction'
+		AND product_id = ?
+		AND buyer_id = ?`,
+			[auction.product_id, auction.seller_id],
+		);
+		const currentTime = getVietnamTime();
+
+		// ✅ Update auction status thành 'live' khi bắt đầu
+		await pool.query(
+			`UPDATE auctions SET status = 'live', start_at = ? WHERE id = ?`,
+			[currentTime, auctionId],
+		);
+
+		console.log(
+			`✅ Admin approved auction ${auctionId} - Status: LIVE, Order tracking: AUCTION_PROCESSING, Current time: ${currentTime}`,
+		);
+
+		// 🔔 Gửi notification cho seller: Phiên đấu giá đã được mở
+		try {
+			const [auctionInfo]: any = await pool.query(
+				`SELECT a.seller_id, p.title, p.id as product_id 
+       FROM auctions a 
+       INNER JOIN products p ON a.product_id = p.id 
+       WHERE a.id = ?`,
+				[auctionId],
+			);
+
+			if (auctionInfo.length > 0) {
+				const { seller_id, title, product_id } = auctionInfo[0];
+				const notification =
+					await notificationService.createNotification({
+						user_id: seller_id,
+						post_id: product_id,
+						type: 'auction_processing',
+						title: 'Phiên đấu giá đã được mở',
+						message: `Phiên đấu giá cho "${title}" của bạn đã được admin duyệt và đang diễn ra. Thời gian: ${formatTimeDisplay(
+							auction.duration,
+						)}`,
+					});
+				sendNotificationToUser(seller_id, notification);
+				console.log(
+					`📧 Notification sent to seller ${seller_id}: Auction ${auctionId} is now LIVE`,
+				);
+			}
+		} catch (notifError: any) {
+			console.error(
+				'⚠️ Failed to send auction live notification:',
+				notifError.message,
+			);
+		}
+
+		// Set timer
+		await startAuctionTimer(auctionId, auction.duration, async () => {
+			// Khi hết thời gian, kiểm tra winner_id và winning_price
+			const [auct]: any = await pool.query(
+				'SELECT winner_id, winning_price, product_id FROM auctions WHERE id = ?',
+				[auctionId],
+			);
+			if (auct.length === 0) return;
+			const { winner_id, winning_price, product_id } = auct[0];
+			let newStatus = 'not auctioned';
+			if (winner_id && winning_price) {
+				newStatus = 'auctioned';
+			}
+			await pool.query('UPDATE products SET status = ? WHERE id = ?', [
+				newStatus,
+				product_id,
+			]);
+			await pool.query('UPDATE auctions SET status = ? WHERE id = ?', [
+				'ended',
+				auctionId,
+			]);
+		});
+		const [result]: any = await pool.query(
+			'select * from auctions a inner join products p on a.product_id = p.id where a.id = ?',
+			[auctionId],
+		);
+		return {
+			success: true,
+			message: 'Auction started, will auto close after duration',
+			data: result[0],
+		};
+	} else {
 		return {
 			success: false,
 			message: `Cannot start auction with status '${auction.status}'. Auction must be verified first.`,
 		};
 	}
-
-	// ✅ Kiểm tra product phải có status = 'auctioning'
-	if (auction.product_status !== 'auctioning') {
-		return {
-			success: false,
-			message: 'Product must have status "auctioning" to start auction',
-		};
-	}
-
-	// Nếu đã có timer thì không set lại
-	if (auctionTimers.has(auctionId)) {
-		return { success: false, message: 'Auction already started' };
-	}
-
-	// ✅ Update order tracking thành AUCTION_PROCESSING khi admin duyệt
-	// await pool.query(
-	// 	`UPDATE orders
-	// 	SET tracking = 'AUCTION_PROCESSING'
-	// 	WHERE status = 'PAID'
-	// 	AND type = 'auction'
-	// 	AND product_id = ?
-	// 	AND buyer_id = ?`,
-	// 	[auction.product_id, auction.seller_id],
-	// );
-	const currentTime = getVietnamTime();
-
-	// ✅ Update auction status thành 'live' khi bắt đầu
-	await pool.query(
-		`UPDATE auctions SET status = 'live', start_at = ? WHERE id = ?`,
-		[currentTime, auctionId],
-	);
-
-	console.log(
-		`✅ Admin approved auction ${auctionId} - Status: LIVE, Order tracking: AUCTION_PROCESSING, Current time: ${currentTime}`,
-	);
-
-	// 🔔 Gửi notification cho seller: Phiên đấu giá đã được mở
-	try {
-		const [auctionInfo]: any = await pool.query(
-			`SELECT a.seller_id, p.title, p.id as product_id 
-       FROM auctions a 
-       INNER JOIN products p ON a.product_id = p.id 
-       WHERE a.id = ?`,
-			[auctionId],
-		);
-
-		if (auctionInfo.length > 0) {
-			const { seller_id, title, product_id } = auctionInfo[0];
-			const notification = await notificationService.createNotification({
-				user_id: seller_id,
-				post_id: product_id,
-				type: 'auction_live',
-				title: 'Phiên đấu giá đã được mở',
-				message: `Phiên đấu giá cho "${title}" của bạn đã được admin duyệt và đang diễn ra. Thời gian: ${formatTimeDisplay(
-					auction.duration,
-				)}`,
-			});
-			sendNotificationToUser(seller_id, notification);
-			console.log(
-				`📧 Notification sent to seller ${seller_id}: Auction ${auctionId} is now LIVE`,
-			);
-		}
-	} catch (notifError: any) {
-		console.error(
-			'⚠️ Failed to send auction live notification:',
-			notifError.message,
-		);
-	}
-
-	// Set timer
-	await startAuctionTimer(auctionId, auction.duration, async () => {
-		// Khi hết thời gian, kiểm tra winner_id và winning_price
-		const [auct]: any = await pool.query(
-			'SELECT winner_id, winning_price, product_id FROM auctions WHERE id = ?',
-			[auctionId],
-		);
-		if (auct.length === 0) return;
-		const { winner_id, winning_price, product_id } = auct[0];
-		let newStatus = 'not auctioned';
-		if (winner_id && winning_price) {
-			newStatus = 'auctioned';
-		}
-		await pool.query('UPDATE products SET status = ? WHERE id = ?', [
-			newStatus,
-			product_id,
-		]);
-		await pool.query('UPDATE auctions SET status = ? WHERE id = ?', [
-			'ended',
-			auctionId,
-		]);
-	});
-	const [result]: any = await pool.query(
-		'select * from auctions a inner join products p on a.product_id = p.id where a.id = ?',
-		[auctionId],
-	);
-	return {
-		success: true,
-		message: 'Auction started, will auto close after duration',
-		data: result[0],
-	};
 }
 
 /**

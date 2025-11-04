@@ -122,11 +122,13 @@ export async function getAllOrderByUserId(
           INNER JOIN users u ON u.id = o.buyer_id
           LEFT JOIN auctions a ON a.product_id = o.product_id
           LEFT JOIN products p ON p.id = a.product_id
+          LEFT JOIN users seller ON seller.id = p.created_by
+          INNER JOIN product_categories c ON c.id = p.product_category_id
+          LEFT JOIN vehicles v ON v.product_id = p.id
+          LEFT JOIN batteries b ON b.product_id = p.id
           WHERE o.type = 'deposit' and o.status = 'PAID' and o.payment_method = 'CREDIT' AND ${where}
         `;
-				break;
-
-			// --- CASE PACKAGE, TOPUP ---
+				break; // --- CASE PACKAGE, TOPUP ---
 			case 'package':
 			case 'pakage':
 			case 'topup':
@@ -168,8 +170,8 @@ export async function getAllOrderByUserId(
         a.deposit, a.winner_id, a.winning_price, a.step, a.note,
         p.title AS product_title, p.brand, p.model, p.price AS product_price,
         p.address, p.description, p.product_category_id, p.year, p.image,
-        c.type AS category_type, c.slug AS category_slug, c.name AS category_name,
-        p.color, v.seats, v.mileage_km, v.power,
+        c.type AS category_type, c.slug AS category_slug, c.name AS category_name, p.warranty,
+        p.color, v.seats, v.mileage_km, v.power, v.health as vehicle_health,
         b.capacity AS battery_capacity, b.health AS battery_health,
         b.chemistry AS battery_chemistry, b.voltage AS battery_voltage, b.dimension AS battery_dimension
       ${baseSql}
@@ -189,8 +191,8 @@ export async function getAllOrderByUserId(
         s.number_of_post, s.number_of_push, s.feature,
         p.title AS product_title, p.brand, p.model, p.price AS product_price, p.status as product_status,
         p.address, p.description, p.product_category_id, p.year, p.image,
-        c.type AS category_type, c.slug AS category_slug, c.name AS category_name,
-        p.color, v.seats, v.mileage_km, v.power,
+        c.type AS category_type, c.slug AS category_slug, c.name AS category_name, p.warranty,
+        p.color, v.seats, v.mileage_km, v.power, v.health as vehicle_health,
         b.capacity AS battery_capacity, b.health AS battery_health,
         b.chemistry AS battery_chemistry, b.voltage AS battery_voltage, b.dimension AS battery_dimension
       ${baseSql}
@@ -200,27 +202,62 @@ export async function getAllOrderByUserId(
 				break;
 
 			// === SELECT FOR DEPOSIT (UPDATED) ===
+			// 		case 'deposit':
+			// 			sql = `
+			//    SELECT
+			//      o.id AS order_id, o.type, o.status, o.tracking, o.price, o.service_id, o.product_id, o.buyer_id,
+			//      o.created_at, o.code AS order_code, o.payment_method, o.updated_at,
+			//      u.full_name, u.email, u.phone,
+			//      s.cost AS service_cost, s.name AS service_name, s.description AS service_description,
+			//      s.type AS service_type, s.feature,
+			//      a.id AS auction_id, a.starting_price, a.original_price, a.target_price,
+			//      a.deposit AS auction_deposit, a.winning_price, a.step, a.note, a.winner_id,
+			//      p.title AS product_title, p.brand, p.model, p.price AS product_price
+			//    ${baseSql}
+			//    ORDER BY o.created_at DESC
+			//    LIMIT ${page_size} OFFSET ${offset};
+			//  `;
+			// 			break;
+
 			case 'deposit':
 				sql = `
-      SELECT
-        o.id AS order_id, o.type, o.status, o.tracking, o.price, o.service_id, o.product_id, o.buyer_id,
-        o.created_at, o.code AS order_code, o.payment_method, o.updated_at,
-        u.full_name, u.email, u.phone,
-        s.cost AS service_cost, s.name AS service_name, s.description AS service_description,
-        s.type AS service_type, s.feature,
+    SELECT
+      -- Order
+      o.id AS order_id, o.type, o.status, o.tracking, o.price, o.service_id, o.product_id, o.buyer_id,
+      o.created_at, o.code AS order_code, o.payment_method, o.updated_at,
 
+      -- Buyer
+      u.full_name, u.email, u.phone,
 
-        a.id AS auction_id, a.starting_price, a.original_price, a.target_price,
-        a.deposit AS auction_deposit, a.winning_price, a.step, a.note, a.winner_id,
+      -- Seller
+      seller.id AS seller_id, seller.full_name AS seller_full_name, 
+      seller.email AS seller_email, seller.phone AS seller_phone,
 
+      -- Service
+      s.cost AS service_cost, s.name AS service_name, s.description AS service_description,
+      s.type AS service_type, s.number_of_post, s.number_of_push, s.feature,
 
-        p.title AS product_title, p.brand, p.model, p.price AS product_price
+      -- Auction
+      a.id AS auction_id, a.starting_price, a.original_price, a.target_price,
+      a.deposit AS auction_deposit, a.winning_price, a.step, a.note, a.winner_id,
 
+      -- Product (đủ bộ như auction)
+      p.title AS product_title, p.brand, p.model, p.price AS product_price,
+      p.address, p.description, p.product_category_id, p.year, p.image,
+      c.type AS category_type, c.slug AS category_slug, c.name AS category_name, p.warranty,
+      p.color,
 
-      ${baseSql}
-      ORDER BY o.created_at DESC
-      LIMIT ${page_size} OFFSET ${offset};
-    `;
+      -- Vehicle-specific
+      v.seats, v.mileage_km, v.power, v.health AS vehicle_health,
+
+      -- Battery-specific
+      b.capacity AS battery_capacity, b.health AS battery_health,
+      b.chemistry AS battery_chemistry, b.voltage AS battery_voltage, b.dimension AS battery_dimension
+
+    ${baseSql}
+    ORDER BY o.created_at DESC
+    LIMIT ${page_size} OFFSET ${offset};
+  `;
 				break;
 
 			// === DEFAULT SELECT ===
@@ -287,6 +324,7 @@ export async function getAllOrderByUserId(
 								price: parseFloat(r.product_price) || 0,
 								address: r.address,
 								description: r.description,
+								warranty: r.warranty,
 								category: {
 									id: r.product_category_id,
 									typeSlug: r.category_slug,
@@ -295,10 +333,8 @@ export async function getAllOrderByUserId(
 								year: r.year,
 								color: r.color,
 								seats: r.seats,
-								mileage: r.mileage_km
-									? `${r.mileage_km} km`
-									: null,
-								battery_capacity: r.battery_capacity,
+								mileage: r.mileage_km,
+								health: r.vehicle_health || r.battery_health,
 								power: r.power,
 								is_verified: !!r.is_verified,
 							},
@@ -306,7 +342,7 @@ export async function getAllOrderByUserId(
 						auction: {
 							id: r.auction_id,
 							startingBid: parseFloat(r.starting_price) || 0,
-							original_price: parseFloat(r.original_price) || 0,
+							originalPrice: parseFloat(r.original_price) || 0,
 							buyNowPrice: parseFloat(r.target_price) || 0,
 							bidIncrement: parseFloat(r.step) || 0,
 							deposit: parseFloat(r.deposit) || 0,
@@ -329,6 +365,7 @@ export async function getAllOrderByUserId(
 						price: parseFloat(r.product_price) || 0,
 						address: r.address,
 						description: r.description,
+						warranty: r.warranty,
 						category: {
 							id: r.product_category_id,
 							typeSlug: r.category_slug,
@@ -348,12 +385,14 @@ export async function getAllOrderByUserId(
 									: null,
 								power: r.power,
 								battery_capacity: r.battery_capacity,
+								vehicle_health: r.vehicle_health,
 								is_verified: !!r.is_verified,
 						  }
 						: isBattery
 						? {
 								capacity: r.battery_capacity,
 								health: r.battery_health,
+								color: r.color,
 								chemistry: r.battery_chemistry,
 								voltage: r.battery_voltage,
 								dimension: r.battery_dimension,
@@ -431,6 +470,12 @@ export async function getAllOrderByUserId(
 				if (r.type === 'deposit') {
 					return {
 						...base,
+						seller: {
+							id: r.seller_id,
+							full_name: r.seller_full_name,
+							email: r.seller_email,
+							phone: r.seller_phone,
+						},
 						service: {
 							id: r.service_id,
 							name: r.service_name,
@@ -456,19 +501,33 @@ export async function getAllOrderByUserId(
 									winner_id: r.winner_id,
 							  }
 							: null,
-						product: r.product_id
-							? {
-									id: r.product_id,
-									title: r.product_title,
-									brand: r.brand,
-									model: r.model,
-									price: parseFloat(r.product_price) || 0,
-							  }
-							: null,
+						post: {
+							id: r.product_id,
+							title: r.product_title,
+							product: {
+								id: r.product_id,
+								brand: r.brand,
+								model: r.model,
+								price: parseFloat(r.product_price) || 0,
+								address: r.address,
+								description: r.description,
+								warranty: r.warranty,
+								category: {
+									id: r.product_category_id,
+									typeSlug: r.category_slug,
+									name: r.category_name,
+								},
+								year: r.year,
+								color: r.color,
+								seats: r.seats,
+								mileage: r.mileage_km,
+								health: r.vehicle_health || r.battery_health,
+								power: r.power,
+								is_verified: !!r.is_verified,
+							},
+						},
 					};
-				}
-
-				// === FORMAT DEFAULT TYPES (unchanged) ===
+				} // === FORMAT DEFAULT TYPES (unchanged) ===
 				if (['package', 'pakage', 'topup'].includes(r.type)) {
 					return {
 						...base,

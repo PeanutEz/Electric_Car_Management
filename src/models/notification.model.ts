@@ -12,7 +12,7 @@ export type NotificationType =
 	| 'deposit_success'
 	| 'deposit_win'
 	| 'deposit_fail'
-	| 'auction_live' // Phiên đấu giá đã mở (AUCTION_PROCESSING)
+	| 'auction_processing' // Phiên đấu giá đã mở (AUCTION_PROCESSING)
 	| 'auction_success' // Đấu giá thành công, có người thắng
 	| 'auction_fail' // Đấu giá thất bại, không có ai bid
 	| 'dealing_success' // Giao dịch thành công, đã ký hợp đồng
