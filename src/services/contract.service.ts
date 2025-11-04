@@ -120,13 +120,25 @@ export async function getContractByUserId(
 export async function handleDocuSealWebhookService(
 	payload: any,
 ): Promise<void> {
+	const connection = await pool.getConnection();
 	try {
+		await connection.beginTransaction();
+
+		console.log(
+			'📩 Received DocuSeal Webhook:',
+			JSON.stringify(payload, null, 2),
+		);
+
 		const eventType = payload.event_type;
 		const submissionId = payload?.data?.submission?.id;
 		const status = payload?.data?.submission?.status;
 		const submissionUrl = payload?.data?.submission?.url;
 		const auditLogUrl = payload?.data?.audit_log_url;
 		const documentUrl = payload?.data?.documents?.[0]?.url;
+
+		console.log(`🔍 Event Type: ${eventType}`);
+		console.log(`🔍 Submission ID: ${submissionId}`);
+		console.log(`🔍 Status: ${status}`);
 
 		if (!submissionId) {
 			throw new Error('Missing submission_id');
@@ -141,17 +153,10 @@ export async function handleDocuSealWebhookService(
 			newStatus = 'in_progress';
 		}
 
-		// await pool.query(
-		//   `UPDATE contracts
-		//    SET status = ?,
-		//        url = ?,
-		//        audit_log_url = ?,
-		//        document_url = ?
-		//    WHERE contract_code = ?`,
-		//   [newStatus, submissionUrl, auditLogUrl, documentUrl, submissionId]
-		// );
+		console.log(`📝 New Status will be: ${newStatus}`);
 
-		await pool.query(
+		// 1️⃣ Cập nhật contract status
+		const [updateResult]: any = await connection.query(
 			`UPDATE contracts
        SET status = ?,
            url = ?
@@ -159,9 +164,50 @@ export async function handleDocuSealWebhookService(
 			[newStatus, documentUrl, submissionId],
 		);
 
-		console.log(`✅ Updated contract ${submissionId} → ${newStatus}`);
+		console.log(
+			`✅ Updated contract ${submissionId} → ${newStatus} (${updateResult.affectedRows} rows affected)`,
+		);
+
+		// 2️⃣ Nếu hợp đồng được ký xong → Cập nhật product status = 'sold'
+		if (newStatus === 'signed') {
+			console.log('🔍 Contract signed! Looking for product_id...');
+
+			const [contractRows]: any = await connection.query(
+				`SELECT product_id FROM contracts WHERE contract_code = ?`,
+				[submissionId],
+			);
+
+			console.log(
+				`🔍 Found ${contractRows.length} contracts with code ${submissionId}`,
+			);
+
+			if (contractRows.length > 0) {
+				const productId = contractRows[0].product_id;
+				console.log(`🔍 Product ID: ${productId}`);
+
+				const [productUpdateResult]: any = await connection.query(
+					`UPDATE products SET status = 'sold', updated_at = ? WHERE id = ?`,
+					[getVietnamTime(), productId],
+				);
+
+				console.log(
+					`🚗 Product ${productId} marked as SOLD (${productUpdateResult.affectedRows} rows affected)`,
+				);
+			} else {
+				console.warn(
+					`⚠️ No contract found with contract_code = ${submissionId}`,
+				);
+			}
+		}
+
+		await connection.commit();
+		console.log('✅ Transaction committed successfully');
 	} catch (error: any) {
+		await connection.rollback();
 		console.error('❌ Error processing DocuSeal webhook:', error.message);
+		console.error('❌ Stack trace:', error.stack);
 		throw error;
+	} finally {
+		connection.release();
 	}
 }
