@@ -751,3 +751,78 @@ export const confirmAuctionDepositController = async (
 		});
 	}
 };
+
+/**
+ * Cancel payment - Update order status to CANCELLED
+ * Manual cancellation since PayOS doesn't support cancel webhook
+ */
+export const cancelPaymentController = async (req: Request, res: Response) => {
+	try {
+		const { orderCode } = req.params;
+
+		if (!orderCode) {
+			return res.status(400).json({
+				success: false,
+				message: 'Order code is required',
+			});
+		}
+
+		// Find order by code
+		const [orderRows]: any = await pool.query(
+			'SELECT * FROM orders WHERE code = ?',
+			[orderCode],
+		);
+
+		if (orderRows.length === 0) {
+			return res.status(404).json({
+				success: false,
+				message: `Order with code ${orderCode} not found`,
+			});
+		}
+
+		const order = orderRows[0];
+
+		// Check if order can be cancelled
+		if (order.status === 'PAID') {
+			return res.status(400).json({
+				success: false,
+				message: 'Cannot cancel paid order',
+			});
+		}
+
+		if (order.status === 'CANCELLED') {
+			return res.status(400).json({
+				success: false,
+				message: 'Order is already cancelled',
+			});
+		}
+
+		// Update order status to CANCELLED
+		await pool.query(
+			"UPDATE orders SET status = 'CANCELLED', tracking = 'FAILED', updated_at = NOW() WHERE code = ?",
+			[orderCode],
+		);
+
+		console.log(
+			`✅ Order ${orderCode} manually cancelled (type: ${order.type})`,
+		);
+
+		return res.json({
+			success: true,
+			message: 'Payment cancelled successfully',
+			data: {
+				orderCode: orderCode,
+				orderType: order.type,
+				previousStatus: order.status,
+				newStatus: 'CANCELLED',
+				tracking: 'FAILED',
+			},
+		});
+	} catch (error: any) {
+		console.error('❌ Error cancelling payment:', error);
+		return res.status(500).json({
+			success: false,
+			message: error.message || 'Failed to cancel payment',
+		});
+	}
+};

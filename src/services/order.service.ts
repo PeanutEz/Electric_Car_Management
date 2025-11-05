@@ -68,7 +68,7 @@ export async function getTransactionDetail(userId: number) {
 		service_type: row.changing === 'Increase' ? 'top up' : row.service_type,
 		service_name:
 			row.changing === 'Increase' ? 'Nạp tiền' : row.service_name,
-		total_topup: Number(totalTopup[0].total_credits),
+		totalTopup: Number(totalTopup[0].total_credits),
 		total_spend: Number(totalSpend[0].total_credits),
 	}));
 }
@@ -112,14 +112,13 @@ export async function getAllOrderByUserId(
           INNER JOIN services s ON s.id = o.service_id
           INNER JOIN auctions a ON a.product_id = o.product_id
           INNER JOIN products p ON p.id = a.product_id
+          LEFT JOIN contracts ct ON ct.product_id = p.id
           INNER JOIN product_categories c ON c.id = p.product_category_id
           LEFT JOIN vehicles v ON v.product_id = p.id
           LEFT JOIN batteries b ON b.product_id = p.id
           WHERE o.type = 'auction' AND ${where}
         `;
-				break;
-
-			// --- CASE POST ---
+				break; // --- CASE POST ---
 			case 'post':
 				baseSql = `
           FROM orders o
@@ -142,6 +141,7 @@ export async function getAllOrderByUserId(
           LEFT JOIN auctions a ON a.product_id = o.product_id
           LEFT JOIN products p ON p.id = a.product_id
           LEFT JOIN users seller ON seller.id = p.created_by
+          LEFT JOIN contracts ct ON ct.product_id = p.id
           INNER JOIN product_categories c ON c.id = p.product_category_id
           LEFT JOIN vehicles v ON v.product_id = p.id
           LEFT JOIN batteries b ON b.product_id = p.id
@@ -187,6 +187,7 @@ export async function getAllOrderByUserId(
         s.number_of_post, s.number_of_push, s.feature,
         a.id AS auction_id, a.starting_price, a.original_price, a.target_price,
         a.deposit, a.winner_id, a.winning_price, a.step, a.note,
+        ct.id AS contract_id, ct.contract_code, ct.status AS contract_status, ct.url AS contract_url,
         p.title AS product_title, p.brand, p.model, p.price AS product_price,
         p.address, p.description, p.product_category_id, p.year, p.image,
         c.type AS category_type, c.slug AS category_slug, c.name AS category_name, p.warranty,
@@ -197,9 +198,7 @@ export async function getAllOrderByUserId(
       ORDER BY o.created_at DESC
       LIMIT ${page_size} OFFSET ${offset};
     `;
-				break;
-
-			// === SELECT FOR POST ===
+				break; // === SELECT FOR POST ===
 			case 'post':
 				sql = `
       SELECT
@@ -252,6 +251,9 @@ export async function getAllOrderByUserId(
       seller.id AS seller_id, seller.full_name AS seller_full_name, 
       seller.email AS seller_email, seller.phone AS seller_phone,
 
+      -- Contract
+      ct.id AS contract_id, ct.contract_code, ct.status AS contract_status, ct.url AS contract_url,
+
       -- Service
       s.cost AS service_cost, s.name AS service_name, s.description AS service_description,
       s.type AS service_type, s.number_of_post, s.number_of_push, s.feature,
@@ -277,9 +279,7 @@ export async function getAllOrderByUserId(
     ORDER BY o.created_at DESC
     LIMIT ${page_size} OFFSET ${offset};
   `;
-				break;
-
-			// === DEFAULT SELECT ===
+				break; // === DEFAULT SELECT ===
 			default:
 				sql = `
       SELECT
@@ -368,6 +368,12 @@ export async function getAllOrderByUserId(
 							winner,
 							winning_price: parseFloat(r.winning_price) || 0,
 							note: r.note,
+						},
+						contract: {
+							id: r.contract_id,
+							contract_code: r.contract_code,
+							status: r.contract_status,
+							url: r.contract_url,
 						},
 					};
 				}
@@ -495,6 +501,14 @@ export async function getAllOrderByUserId(
 							email: r.seller_email,
 							phone: r.seller_phone,
 						},
+						contract: r.contract_id
+							? {
+									id: r.contract_id,
+									contract_code: r.contract_code,
+									status: r.contract_status,
+									url: r.contract_url,
+							  }
+							: null,
 						service: {
 							id: r.service_id,
 							name: r.service_name,

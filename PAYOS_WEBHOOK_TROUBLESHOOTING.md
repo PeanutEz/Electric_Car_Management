@@ -1,5 +1,16 @@
 # PayOS Webhook Troubleshooting Guide
 
+## ⚠️ IMPORTANT UPDATE
+**PayOS không hỗ trợ webhook hủy thanh toán!**
+
+### ✅ Giải pháp thay thế
+Đã tạo **Manual Cancel Payment API** để hủy thanh toán:
+- **Endpoint**: `POST /api/payment/cancel/:orderCode`
+- **Documentation**: Xem file `CANCEL_PAYMENT_API.md`
+- **Test Script**: `test-cancel-payment.ps1`
+
+---
+
 ## 🔍 Vấn đề hiện tại
 Webhook PayOS chưa được gọi để hủy thanh toán và cập nhật status order.
 
