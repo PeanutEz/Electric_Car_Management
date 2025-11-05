@@ -304,7 +304,7 @@ export async function checkAndProcessPostPayment(
 			// Tạo payment link PayOS
 			try {
 				const envAppUrl =
-					process.env.APP_URL || 'http://localhost:3000';
+					process.env.APP_URL || 'http://localhost:8080';
 				const paymentLinkRes = await payos.paymentRequests.create({
 					orderCode: orderCode,
 					amount: Math.round(amountNeeded),
@@ -769,7 +769,7 @@ export async function processPackagePayment(
 			// Tạo payment link PayOS
 			try {
 				const envAppUrl =
-					process.env.APP_URL || 'http://localhost:3000';
+					process.env.APP_URL || 'http://localhost:8080';
 				const paymentLinkRes = await payos.paymentRequests.create({
 					orderCode: orderCode,
 					amount: Math.round(serviceCost),
@@ -870,7 +870,7 @@ export async function processTopUpPayment(
 
 		// 4. Create PayOS payment link
 		try {
-			const envAppUrl = process.env.APP_URL || 'http://localhost:3000';
+			const envAppUrl = process.env.APP_URL || 'http://localhost:8080';
 			const paymentDescription =
 				description || `Nap tien tai khoan ${orderCode}`;
 
