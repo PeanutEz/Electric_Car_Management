@@ -13,11 +13,28 @@ export async function getRevenue() {
 
 	const result = rows[0];
 
+	// Get daily revenue for last 7 days
+	const [dailyRows]: any = await pool.query(`
+		SELECT 
+			DATE_FORMAT(o.created_at, '%d/%m') as date,
+			COALESCE(SUM(CASE WHEN o.status = 'PAID' AND o.payment_method = 'CREDIT' THEN o.price ELSE 0 END), 0) as revenue
+		FROM orders o
+		WHERE o.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+		GROUP BY DATE(o.created_at), DATE_FORMAT(o.created_at, '%d/%m')
+		ORDER BY DATE(o.created_at) ASC
+	`);
+
+	const daily_revenue = dailyRows.map((row: any) => ({
+		date: row.date,
+		revenue: Number(row.revenue),
+	}));
+
 	return {
 		revenue: Number(result.revenue),
 		revenue_post: Number(result.order_posts),
 		revenue_packages: Number(result.order_packages),
 		revenue_auctions: Number(result.order_auctions),
+		daily_revenue,
 	};
 }
 

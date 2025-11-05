@@ -13,9 +13,9 @@ export async function getRevenueController(req: Request,res: Response,){
 	try {
 		const revenue = await getRevenue();
 
-        res.status(200).json({
+      res.status(200).json({
 			message: "Lấy revenue thành công!",
-			revenue
+			data: revenue,
 		})
 
 	} catch (error: any) {
