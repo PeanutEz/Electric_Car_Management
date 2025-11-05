@@ -72,6 +72,7 @@ export async function getTransactionDetail(userId: number) {
 
 	return {
 		data: transactions,
+		total_credit: Number(rows[0]?.total_credit) || 0,
 		total_topup: Number(totalTopup[0].total_credits) || 0,
 		total_spend: Number(totalSpend[0].total_credits) || 0,
 	};
