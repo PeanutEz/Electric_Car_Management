@@ -128,3 +128,11 @@ export async function deletePackage(id: number) {
 	}
 	return { success: true, message: 'Package deleted successfully' };
 }
+
+export async function getPackageByUserId(userId: number) {
+	const [rows] = await pool.query(
+		`SELECT * FROM user_packages WHERE user_id = ?`,
+		[userId]
+	);
+	return rows;
+}

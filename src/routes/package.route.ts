@@ -4,7 +4,9 @@ import {
 	addPackage,
 	editPackage,
 	removePackage,
+	getUserPackage,
 } from '../controllers/package.controller';
+import { authenticateToken } from '../middleware/AuthMiddleware';
 const router = Router();
 /**
  * @swagger
@@ -274,5 +276,8 @@ router.put('/:id', editPackage);
  *         description: Lỗi server
  */
 router.delete('/:id', removePackage);
+
+
+router.get('/user', authenticateToken, getUserPackage);
 
 export default router;
