@@ -432,7 +432,7 @@ export async function getAllOrderByUserId(
 									: null,
 								power: r.power,
 								battery_capacity: r.battery_capacity,
-								vehicle_health: r.vehicle_health,
+								health: r.vehicle_health,
 								is_verified: !!r.is_verified,
 						  }
 						: isBattery
