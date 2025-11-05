@@ -15,9 +15,9 @@ export async function getRevenue() {
 
 	return {
 		revenue: Number(result.revenue),
-		order_post: Number(result.order_posts),
-		order_packages: Number(result.order_packages),
-		order_auctions: Number(result.order_auctions),
+		revenue_post: Number(result.order_posts),
+		revenue_packages: Number(result.order_packages),
+		revenue_auctions: Number(result.order_auctions),
 	};
 }
 
