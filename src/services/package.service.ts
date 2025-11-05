@@ -131,7 +131,8 @@ export async function deletePackage(id: number) {
 
 export async function getPackageByUserId(userId: number) {
 	const [rows] = await pool.query(
-		`SELECT * FROM user_packages WHERE user_id = ?`,
+		`SELECT * FROM user_packages LEFT JOIN services ON user_packages.package_id = services.id
+		WHERE user_id = ?`,
 		[userId]
 	);
 	return rows;
