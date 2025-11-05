@@ -67,7 +67,18 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 	try {
 		const payload = req.body;
 
-		const orderCode = payload.data.orderCode;
+		// PayOS webhook format:
+		// {
+		//   "code": "00",
+		//   "desc": "success",
+		//   "data": {
+		//     "orderCode": 123456,
+		//     "status": "PAID" | "CANCELLED" | "EXPIRED"
+		//   }
+		// }
+
+		const orderCode = payload.data?.orderCode;
+		const paymentStatus = payload.data?.status; // "PAID", "CANCELLED", "EXPIRED"
 
 		if (!orderCode) {
 			return res
@@ -75,15 +86,48 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 				.json({ message: 'Missing orderCode in webhook data' });
 		}
 
-		// Kiểm tra xem order có phải là deposit không
+		console.log(
+			`📩 PayOS Webhook received: orderCode=${orderCode}, status=${paymentStatus}`,
+		);
+
+		// Kiểm tra order trong database
 		const [orderRows]: any = await pool.query(
-			'SELECT id, type FROM orders WHERE code = ?',
+			'SELECT id, type, status FROM orders WHERE code = ?',
 			[orderCode.toString()],
 		);
 
-		if (orderRows && orderRows.length > 0) {
-			const order = orderRows[0];
+		if (!orderRows || orderRows.length === 0) {
+			console.warn(`⚠️ Order not found: ${orderCode}`);
+			return res.json({
+				success: true,
+				message: 'Order not found, but webhook processed',
+			});
+		}
 
+		const order = orderRows[0];
+
+		// ========== XỬ LÝ KHI PAYMENT BỊ HỦY HOẶC HẾT HẠN ==========
+		if (paymentStatus === 'CANCELLED' || paymentStatus === 'EXPIRED') {
+			// Cập nhật order status thành CANCELLED
+			if (order.status !== 'CANCELLED' && order.status !== 'PAID') {
+				await pool.query(
+					"UPDATE orders SET status = 'CANCELLED', tracking = 'FAILED', updated_at = NOW() WHERE code = ?",
+					[orderCode.toString()],
+				);
+				console.log(
+					`❌ Order ${orderCode} marked as CANCELLED (type: ${order.type}, status: ${paymentStatus})`,
+				);
+			}
+
+			return res.json({
+				success: true,
+				message: `Payment ${paymentStatus.toLowerCase()} processed`,
+				orderCode: orderCode,
+				orderType: order.type,
+				newStatus: 'CANCELLED',
+			});
+		} // ========== XỬ LÝ KHI PAYMENT THÀNH CÔNG ==========
+		if (paymentStatus === 'PAID') {
 			// Nếu là deposit order, xử lý riêng
 			if (order.type === 'deposit') {
 				await confirmDepositPayment(order.id);
@@ -93,11 +137,8 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 				});
 			}
 
-			// Nếu là auction_fee order, cần thông tin auction_data từ client
-			// Webhook này sẽ được gọi từ PayOS, nên cần lưu auction_data vào đâu đó
-			// hoặc client sẽ gọi confirm-auction-fee endpoint riêng
+			// Nếu là auction_fee order, client sẽ gọi confirm-auction-fee endpoint
 			if (order.type === 'auction_fee') {
-				// Skip auto-confirm, client sẽ phải gọi confirm-auction-fee endpoint
 				return res.json({
 					success: true,
 					message:
@@ -108,7 +149,6 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 
 			// Nếu là auction_deposit order, client sẽ gọi confirm-auction-deposit endpoint
 			if (order.type === 'auction_deposit') {
-				// Skip auto-confirm, client sẽ phải gọi confirm-auction-deposit endpoint
 				return res.json({
 					success: true,
 					message:
@@ -116,12 +156,17 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 					orderId: order.id,
 				});
 			}
+
+			// Xử lý các loại order khác (service, package, topup)
+			await processServicePayment(orderCode.toString());
+			return res.json({ success: true, message: 'Webhook processed' });
 		}
 
-		// Xử lý các loại order khác (service, package, topup)
-		await processServicePayment(orderCode);
-
-		return res.json({ success: true, message: 'Webhook processed' });
+		// Trường hợp status khác (PENDING, etc.)
+		return res.json({
+			success: true,
+			message: `Webhook received with status: ${paymentStatus}`,
+		});
 	} catch (error: any) {
 		console.error('Webhook error:', error);
 		return res.status(500).json({ message: 'Xử lý webhook thất bại' });
@@ -329,7 +374,14 @@ export const auctionFeePaymentController = async (
 		const sellerId = (jwt.decode(token) as any).id;
 
 		//const { product_id, starting_price, target_price, deposit, step, note } = req.body;
-		const { bidIncrement, buyNowPrice, deposit, note, product_id, startingBid } = req.body;
+		const {
+			bidIncrement,
+			buyNowPrice,
+			deposit,
+			note,
+			product_id,
+			startingBid,
+		} = req.body;
 
 		// Validate input
 		if (!product_id) {
@@ -339,10 +391,16 @@ export const auctionFeePaymentController = async (
 			});
 		}
 
-		if (isNaN(startingBid) || isNaN(buyNowPrice) || isNaN(deposit) || isNaN(bidIncrement)) {
+		if (
+			isNaN(startingBid) ||
+			isNaN(buyNowPrice) ||
+			isNaN(deposit) ||
+			isNaN(bidIncrement)
+		) {
 			return res.status(400).json({
 				success: false,
-				message: 'startingBid, buyNowPrice, deposit and bidIncrement must be numbers',
+				message:
+					'startingBid, buyNowPrice, deposit and bidIncrement must be numbers',
 			});
 		}
 

@@ -72,7 +72,21 @@ router.post('/create-payment', createPaymentLink);
 router.get('/payment-status/:paymentId', getPaymentInfo);
 
 // PayOS Webhook - Không cần authentication vì đây là webhook từ PayOS
-router.post('/payos-webhook', payosWebhookHandler);
+// Debug middleware để log mọi request webhook nhận được
+router.post(
+	'/payos-webhook',
+	(req, res, next) => {
+		console.log('🔔 ===== PAYOS WEBHOOK RECEIVED =====');
+		console.log('🕒 Time:', new Date().toISOString());
+		console.log('📨 Headers:', JSON.stringify(req.headers, null, 2));
+		console.log('📦 Body:', JSON.stringify(req.body, null, 2));
+		console.log('🔗 URL:', req.url);
+		console.log('🌐 IP:', req.ip || req.socket.remoteAddress);
+		console.log('=====================================');
+		next();
+	},
+	payosWebhookHandler,
+);
 
 /**
  * @swagger

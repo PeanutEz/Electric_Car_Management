@@ -1,16 +1,19 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import {
-	getAllServices,
-	getServicePostByProductType,
 	checkAndProcessPostPayment,
-	processServicePayment,
-	getPackage,
 	createService,
-	getServiceById,
-	updateService,
 	deleteService,
+	getActiveUserPackages,
+	getAllServices,
+	getPackage,
+	getServiceById,
+	getServicePostByProductType,
 	getServices,
+	getUserPackages,
+	processServicePayment,
+	updateExpiredPackages,
+	updateService,
 } from '../services/service.service';
 import { getVietnamISOString } from '../utils/datetime';
 
@@ -21,6 +24,62 @@ export async function listServices(req: Request, res: Response) {
 			message: 'Lấy danh sách dịch vụ thành công',
 			data: {
 				services: services,
+			},
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
+		});
+	}
+}
+
+/**
+ * Lấy danh sách tất cả packages mà user đã mua
+ * @route GET /api/services/my-packages
+ */
+export async function getMyPackages(req: Request, res: Response) {
+	try {
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res.status(401).json({ message: 'Unauthorized' });
+		}
+		const token = authHeader.split(' ')[1];
+		const user = jwt.decode(token) as any;
+		const userId = user.id;
+
+		const packages = await getUserPackages(userId);
+		res.status(200).json({
+			message: 'Lấy danh sách gói đã mua thành công',
+			data: {
+				packages: packages,
+			},
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
+		});
+	}
+}
+
+/**
+ * Lấy danh sách các packages đang active (chưa hết hạn) của user
+ * @route GET /api/services/my-packages/active
+ */
+export async function getMyActivePackages(req: Request, res: Response) {
+	try {
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res.status(401).json({ message: 'Unauthorized' });
+		}
+		const token = authHeader.split(' ')[1];
+		const user = jwt.decode(token) as any;
+		const userId = user.id;
+
+		const activePackages = await getActiveUserPackages(userId);
+		res.status(200).json({
+			message: 'Lấy danh sách gói đang active thành công',
+			data: {
+				packages: activePackages,
 			},
 		});
 	} catch (error: any) {
@@ -220,6 +279,27 @@ export async function getAllServicesController(req: Request, res: Response) {
 		res.status(200).json({
 			message: 'Lấy danh sách dịch vụ thành công',
 			data: services,
+		});
+	} catch (error: any) {
+		res.status(500).json({ message: error.message });
+	}
+}
+
+/**
+ * Cập nhật trạng thái các package đã hết hạn (manual trigger)
+ * @route POST /api/service/update-expired-packages
+ */
+export async function updateExpiredPackagesController(
+	req: Request,
+	res: Response,
+) {
+	try {
+		const expiredCount = await updateExpiredPackages();
+		res.status(200).json({
+			message: `Đã cập nhật ${expiredCount} packages hết hạn`,
+			data: {
+				expiredCount: expiredCount,
+			},
 		});
 	} catch (error: any) {
 		res.status(500).json({ message: error.message });
