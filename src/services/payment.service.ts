@@ -177,6 +177,19 @@ export async function processAuctionFeePayment(
 				],
 			);
 
+			// 💳 Insert transaction_detail (Decrease credit)
+			await connection.query(
+				`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) 
+				 VALUES (?, ?, ?, ?, ?)`,
+				[
+					orderResult.insertId,
+					sellerId,
+					'CREDIT',
+					'Decrease',
+					auctionFee,
+				],
+			);
+
 			// Cập nhật status của product thành "auctioning"
 			// await connection.query(
 			// 	'UPDATE products SET status = ? WHERE id = ?',
@@ -517,6 +530,19 @@ export async function processDepositPayment(
 					getVietnamTime(),
 					18,
 					'AUCTION_PROCESSING',
+				],
+			);
+
+			// 💳 Insert transaction_detail (Decrease credit)
+			await connection.query(
+				`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) 
+				 VALUES (?, ?, ?, ?, ?)`,
+				[
+					orderResult.insertId,
+					buyerId,
+					'CREDIT',
+					'Decrease',
+					depositAmount,
 				],
 			);
 

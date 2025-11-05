@@ -452,10 +452,10 @@ export async function closeAuction(
 			[auctionId],
 		);
 
-		// await pool.query(
-		// 	`UPDATE orders SET tracking = 'AUCTION_SUCCESS' where status = 'PAID' and type = 'auction' and product_id = ? and buyer_id = ?`,
-		// 	[rows[0].product_id, rows[0].created_by],
-		// );
+		await pool.query(
+			`UPDATE orders SET tracking = 'AUCTION_SUCCESS' where status = 'PAID' and type = 'auction' and product_id = ? and buyer_id = ?`,
+			[rows[0].product_id, rows[0].created_by],
+		);
 
 		// Update product status to 'auctioned' (regardless of winner)
 		await conn.query(

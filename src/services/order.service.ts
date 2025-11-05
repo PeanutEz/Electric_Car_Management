@@ -42,15 +42,34 @@ export async function getTransactionDetail(userId: number) {
 		`select u.id as user_id,u.full_name,u.email, u.phone, u.total_credit, s.type as service_type,s.name as service_name,
       s.description, s.cost, d.credits, d.type as changing,d.unit,o.status,o.created_at  from transaction_detail d
                                     inner join orders o on o.id = d.order_id
-                                    inner join services s on s.id = o.service_id
+                                    left join services s on s.id = o.service_id
                                     inner join users u on u.id = d.user_id where d.user_id = ?`,
 		[userId],
 	);
+
+	const [totalTopup]: any = await pool.query(
+		`select sum(d.credits) as total_credits from transaction_detail d
+                                    inner join orders o on o.id = d.order_id
+                                    left join services s on s.id = o.service_id
+                                    inner join users u on u.id = d.user_id where d.user_id = ? and d.type = 'increase'`,
+		[userId],
+	);
+	// Total spend là transaction mà changing = 'decrease'
+	const [totalSpend]: any = await pool.query(
+		`select sum(d.credits) as total_credits from transaction_detail d
+                                    inner join orders o on o.id = d.order_id
+                                    left join services s on s.id = o.service_id
+                                    inner join users u on u.id = d.user_id where d.user_id = ? and d.type = 'decrease'`,
+		[userId],
+	);
+
 	return rows.map((row: any) => ({
 		...row,
 		service_type: row.changing === 'Increase' ? 'top up' : row.service_type,
 		service_name:
 			row.changing === 'Increase' ? 'Nạp tiền' : row.service_name,
+		total_topup: Number(totalTopup[0].total_credits),
+		total_spend: Number(totalSpend[0].total_credits),
 	}));
 }
 
