@@ -758,7 +758,14 @@ export const confirmAuctionDepositController = async (
  */
 export const cancelPaymentController = async (req: Request, res: Response) => {
 	try {
-		const { orderCode } = req.params;
+		const authHeader = req.headers.authorization;
+		if (!authHeader) {
+			return res.status(401).json({ message: 'Unauthorized' });
+		}
+		const token = authHeader.split(' ')[1];
+		const id = (jwt.decode(token) as any).id;
+		const userId = id;
+		const { orderCode } = req.body;
 
 		if (!orderCode) {
 			return res.status(400).json({
@@ -772,6 +779,14 @@ export const cancelPaymentController = async (req: Request, res: Response) => {
 			'SELECT * FROM orders WHERE code = ?',
 			[orderCode],
 		);
+
+		//check order of user
+		if (orderRows[0].user_id !== userId) {
+			return res.status(403).json({
+				success: false,
+				message: 'You do not have permission to cancel this order',
+			});
+		}
 
 		if (orderRows.length === 0) {
 			return res.status(404).json({

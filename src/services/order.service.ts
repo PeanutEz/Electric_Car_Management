@@ -63,14 +63,18 @@ export async function getTransactionDetail(userId: number) {
 		[userId],
 	);
 
-	return rows.map((row: any) => ({
+	const transactions = rows.map((row: any) => ({
 		...row,
 		service_type: row.changing === 'Increase' ? 'top up' : row.service_type,
 		service_name:
 			row.changing === 'Increase' ? 'Nạp tiền' : row.service_name,
-		totalTopup: Number(totalTopup[0].total_credits),
-		total_spend: Number(totalSpend[0].total_credits),
 	}));
+
+	return {
+		data: transactions,
+		total_topup: Number(totalTopup[0].total_credits) || 0,
+		total_spend: Number(totalSpend[0].total_credits) || 0,
+	};
 }
 
 export async function getOrderDetail(orderId: number) {
