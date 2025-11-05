@@ -781,10 +781,10 @@ export const cancelPaymentController = async (req: Request, res: Response) => {
 		);
 
 		//check order of user
-		if (orderRows[0].user_id !== userId) {
+		if (orderRows[0].buyer_id !== userId) {
 			return res.status(403).json({
 				success: false,
-				message: 'You do not have permission to cancel this order',
+				message: 'Bạn không có quyền hủy đơn hàng này',
 			});
 		}
 
