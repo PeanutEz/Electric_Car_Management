@@ -56,11 +56,6 @@ export async function createAuctionReport(
 			],
 		);
 
-		await connection.query(
-			`UPDATE auctions SET status = 'reported', updated_at = ? WHERE id = ?`,
-			[getVietnamTime(), reportData.auction_id],
-		);
-
 		console.log(
 			`📝 Report created for auction ${reportData.auction_id}: ${reportData.fault_type} fault - ${reportData.reason}`,
 		);
