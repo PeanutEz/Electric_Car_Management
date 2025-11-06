@@ -67,10 +67,17 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 	try {
 		const payload = req.body;
 
-		const orderCode = payload.data?.orderCode;
-		const paymentStatus = payload.data?.status; // "PAID", "CANCELLED", "EXPIRED"
+		// Log full payload to debug
+		console.log(
+			'📩 PayOS Webhook Full Payload:',
+			JSON.stringify(payload, null, 2),
+		);
+
+		const orderCode = payload.data?.orderCode || payload.orderCode;
+		const paymentStatus = payload.data?.status || payload.status; // "PAID", "CANCELLED", "EXPIRED"
 
 		if (!orderCode) {
+			console.error('❌ Missing orderCode in webhook data:', payload);
 			return res
 				.status(400)
 				.json({ message: 'Missing orderCode in webhook data' });
@@ -152,10 +159,19 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 			return res.json({ success: true, message: 'Webhook processed' });
 		}
 
-		// Trường hợp status khác (PENDING, etc.)
+		// Trường hợp status khác hoặc undefined
+		console.warn(
+			`⚠️ Unknown payment status: ${paymentStatus} for order ${orderCode}`,
+		);
+		console.warn('Full payload:', JSON.stringify(payload, null, 2));
+
 		return res.json({
 			success: true,
-			message: `Webhook received with status: ${paymentStatus}`,
+			message: `Webhook received with status: ${
+				paymentStatus || 'undefined'
+			}`,
+			orderCode: orderCode,
+			note: 'Status not recognized, please check PayOS documentation',
 		});
 	} catch (error: any) {
 		console.error('Webhook error:', error);

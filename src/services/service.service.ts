@@ -398,8 +398,7 @@ export async function processServicePayment(orderCode: string) {
 	// ========== XỬ LÝ KHI PAYMENT THÀNH CÔNG (PAID) ==========
 	// Chỉ cập nhật nếu trạng thái payment là PAID và order chưa được xử lý
 	if (
-		paymentStatus.data.data.status === 'PAID' &&
-		currentOrderStatus !== 'PAID'
+		paymentStatus.data.data.status === 'PAID'
 	) {
 		// Cập nhật order status thành PAID
 		await pool.query('update orders set status = ? where code = ?', [
