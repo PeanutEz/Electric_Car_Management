@@ -125,6 +125,10 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 			});
 		} // ========== XỬ LÝ KHI PAYMENT THÀNH CÔNG ==========
 		if (paymentStatus === 'PAID') {
+			console.log(
+				`✅ Processing PAID payment for order ${orderCode} (type: ${order.type})`,
+			);
+
 			// Nếu là deposit order, xử lý riêng
 			if (order.type === 'deposit') {
 				await confirmDepositPayment(order.id);
@@ -155,11 +159,60 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 			}
 
 			// Xử lý các loại order khác (service, package, topup)
+			console.log(
+				`🔄 Calling processServicePayment for orderCode: ${orderCode}`,
+			);
 			await processServicePayment(orderCode.toString());
-			return res.json({ success: true, message: 'Webhook processed' });
+			return res.json({
+				success: true,
+				message: 'Webhook processed',
+				orderType: order.type,
+			});
 		}
 
-		// Trường hợp status khác hoặc undefined
+		// Trường hợp status undefined - Có thể là webhook confirmation từ PayOS
+		// PayOS có thể gửi webhook khi user vừa thanh toán xong (status chưa có)
+		// Trong trường hợp này, check lại payment status từ PayOS API
+		if (!paymentStatus || paymentStatus === undefined) {
+			console.log(
+				`⚠️ Payment status is undefined, checking payment status from PayOS API...`,
+			);
+
+			try {
+				// Import getPaymentStatus từ payment service
+				const { getPaymentStatus } = await import(
+					'../services/payment.service'
+				);
+				const paymentInfo = await getPaymentStatus(
+					orderCode.toString(),
+				);
+
+				const actualStatus = paymentInfo.data?.data?.status;
+				console.log(
+					`📊 Actual payment status from PayOS API: ${actualStatus}`,
+				);
+
+				if (actualStatus === 'PAID') {
+					console.log(
+						`✅ Payment confirmed as PAID, processing order ${orderCode}`,
+					);
+					await processServicePayment(orderCode.toString());
+					return res.json({
+						success: true,
+						message: 'Payment confirmed and processed',
+						orderCode: orderCode,
+						status: actualStatus,
+					});
+				}
+			} catch (error: any) {
+				console.error(
+					`❌ Error checking payment status:`,
+					error.message,
+				);
+			}
+		}
+
+		// Trường hợp status khác hoặc không xử lý được
 		console.warn(
 			`⚠️ Unknown payment status: ${paymentStatus} for order ${orderCode}`,
 		);

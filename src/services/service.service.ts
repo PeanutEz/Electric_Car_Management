@@ -395,11 +395,23 @@ export async function processServicePayment(orderCode: string) {
 	const currentOrderStatus = orderRows[0].status;
 	const orderPrice = orderRows[0].price;
 
+	console.log('📊 Order Info:', {
+		orderId,
+		orderCode,
+		currentOrderStatus,
+		orderPrice,
+		orderType,
+		paymentStatusFromPayOS: paymentStatus.data?.data?.status,
+	});
+
 	// ========== XỬ LÝ KHI PAYMENT THÀNH CÔNG (PAID) ==========
 	// Chỉ cập nhật nếu trạng thái payment là PAID và order chưa được xử lý
 	if (
-		paymentStatus.data.data.status === 'PAID'
+		paymentStatus.data.data.status === 'PAID' &&
+		currentOrderStatus !== 'PAID'
 	) {
+		console.log('✅ Processing PAID payment for order:', orderCode);
+
 		// Cập nhật order status thành PAID
 		await pool.query('update orders set status = ? where code = ?', [
 			'PAID',
