@@ -201,7 +201,7 @@ export async function handleDocuSealWebhookService(
 			console.log('🔍 Contract signed! Looking for product_id...');
 
 			const [contractRows]: any = await connection.query(
-				`SELECT c.product_id, c.seller_id, p.title 
+				`SELECT c.product_id, c.seller_id, c.buyer_id, c.deposit_amount, p.title 
          FROM contracts c
          INNER JOIN products p ON c.product_id = p.id
          WHERE c.contract_code = ?`,
@@ -216,11 +216,58 @@ export async function handleDocuSealWebhookService(
 				const {
 					product_id: productId,
 					seller_id: sellerId,
+					buyer_id: buyerId,
+					deposit_amount: depositAmount,
 					title: productTitle,
 				} = contractRows[0];
 				console.log(
-					`🔍 Product ID: ${productId}, Seller ID: ${sellerId}`,
+					`🔍 Product ID: ${productId}, Seller ID: ${sellerId}, Buyer ID: ${buyerId}, Deposit: ${depositAmount}`,
 				);
+
+				// 💰 Transfer deposit from winner to seller
+				console.log(
+					`💰 Transferring deposit ${depositAmount} from winner ${buyerId} to seller ${sellerId}...`,
+				);
+
+				// Increase seller's credit
+				await connection.query(
+					`UPDATE users SET total_credit = total_credit + ? WHERE id = ?`,
+					[depositAmount, sellerId],
+				);
+				console.log(
+					`✅ Seller ${sellerId} credit increased by ${depositAmount}`,
+				);
+
+				// Get the deposit order for transaction logging
+				const [depositOrderRows]: any = await connection.query(
+					`SELECT id FROM orders 
+           WHERE product_id = ? 
+           AND type = 'deposit' 
+           AND buyer_id = ?
+           AND status = 'PAID'
+           LIMIT 1`,
+					[productId, buyerId],
+				);
+
+				if (depositOrderRows.length > 0) {
+					const depositOrderId = depositOrderRows[0].id;
+
+					// Insert transaction_detail for seller (Increase credit)
+					await connection.query(
+						`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) 
+             VALUES (?, ?, ?, ?, ?)`,
+						[
+							depositOrderId,
+							sellerId,
+							'CREDIT',
+							'Increase',
+							depositAmount,
+						],
+					);
+					console.log(
+						`💳 Transaction detail logged for seller ${sellerId}`,
+					);
+				}
 
 				// Cập nhật product status = 'sold'
 				const [productUpdateResult]: any = await connection.query(
@@ -270,7 +317,9 @@ export async function handleDocuSealWebhookService(
 							post_id: productId,
 							type: 'dealing_success',
 							title: 'Giao dịch thành công!',
-							message: `Giao dịch cho sản phẩm "${productTitle}" đã hoàn tất. Hợp đồng đã được ký và xe đã được bán thành công.`,
+							message: `Giao dịch cho sản phẩm "${productTitle}" đã hoàn tất. Hợp đồng đã được ký và bạn đã nhận được ${parseFloat(
+								depositAmount,
+							).toLocaleString('vi-VN')} VNĐ tiền cọc.`,
 						});
 					sendNotificationToUser(sellerId, notification);
 					console.log(
@@ -279,6 +328,31 @@ export async function handleDocuSealWebhookService(
 				} catch (notifError: any) {
 					console.error(
 						'⚠️ Failed to send dealing success notification:',
+						notifError.message,
+					);
+				}
+
+				// 🔔 Gửi notification cho buyer: DEALING_SUCCESS
+				try {
+					const notification =
+						await notificationService.createNotification({
+							user_id: buyerId,
+							post_id: productId,
+							type: 'dealing_success',
+							title: 'Giao dịch thành công!',
+							message: `Giao dịch cho sản phẩm "${productTitle}" đã hoàn tất. Hợp đồng đã được ký và tiền cọc ${parseFloat(
+								depositAmount,
+							).toLocaleString(
+								'vi-VN',
+							)} VNĐ đã được chuyển cho người bán.`,
+						});
+					sendNotificationToUser(buyerId, notification);
+					console.log(
+						`📧 DEALING_SUCCESS notification sent to buyer ${buyerId}`,
+					);
+				} catch (notifError: any) {
+					console.error(
+						'⚠️ Failed to send dealing success notification to buyer:',
 						notifError.message,
 					);
 				}

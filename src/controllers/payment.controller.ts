@@ -67,16 +67,6 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 	try {
 		const payload = req.body;
 
-		// PayOS webhook format:
-		// {
-		//   "code": "00",
-		//   "desc": "success",
-		//   "data": {
-		//     "orderCode": 123456,
-		//     "status": "PAID" | "CANCELLED" | "EXPIRED"
-		//   }
-		// }
-
 		const orderCode = payload.data?.orderCode;
 		const paymentStatus = payload.data?.status; // "PAID", "CANCELLED", "EXPIRED"
 

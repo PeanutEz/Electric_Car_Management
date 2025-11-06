@@ -431,10 +431,6 @@ export async function processServicePayment(orderCode: string) {
 		// Xử lý TOPUP: Chỉ cần cộng credit, không cần làm gì thêm
 		if (orderType === 'topup') {
 			message = `Nạp tiền thành công ${orderPrice} VND vào tài khoản.`;
-			await pool.query('update orders set tracking = ? where code = ?', [
-				'SUCCESS',
-				orderCode,
-			]);
 
 			// 🔔 Gửi notification cho user khi nạp tiền thành công
 			try {
