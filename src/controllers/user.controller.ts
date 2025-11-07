@@ -10,7 +10,7 @@ import {
 	updatePhoneUser,
 	getPostByUserId,
 	getOrderByUserId,
-	changeAndConfirmPassword
+	changeAndConfirmPassword,
 } from '../services/user.service';
 import jwt from 'jsonwebtoken';
 import * as uploadService from '../services/upload.service';
@@ -69,8 +69,14 @@ export async function userDetail(req: Request, res: Response) {
 
 export async function listUsers(req: Request, res: Response) {
 	try {
-		const users = await getAllUsers();
-		const nowVN = new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
+		let searchName = req.query.search as string;
+		if (searchName === undefined) {
+			searchName = '';
+		}
+		const users = await getAllUsers(searchName);
+		const nowVN = new Date().toLocaleString('en-US', {
+			timeZone: 'Asia/Ho_Chi_Minh',
+		});
 		res.status(200).json({
 			message: 'Lấy danh sách người dùng thành công',
 			data: users,
@@ -261,6 +267,12 @@ export async function updateUserInfo(req: Request, res: Response) {
 		}
 
 		const user = await updateUser(id, userData, description);
+		console.log('✅ User updated in DB:', {
+			id: user?.id,
+			avatar: user?.avatar,
+			full_name: user?.full_name,
+		});
+
 		res.status(200).json({
 			message: 'Cập nhật thông tin người dùng thành công',
 			data: {
@@ -425,7 +437,10 @@ export async function getUserOrders(req: Request, res: Response) {
 	}
 }
 
-export async function changeAndConfirmUserPassword(req: Request, res: Response) {
+export async function changeAndConfirmUserPassword(
+	req: Request,
+	res: Response,
+) {
 	try {
 		// lấy userId trong header Authorization: token decode
 		const authHeader = req.headers.authorization;
@@ -438,7 +453,12 @@ export async function changeAndConfirmUserPassword(req: Request, res: Response) 
 		const id = (jwt.decode(token) as any).id;
 		const { currentPassword, newPassword, confirmPassword } = req.body;
 
-		const result = await changeAndConfirmPassword(id, currentPassword, newPassword, confirmPassword);
+		const result = await changeAndConfirmPassword(
+			id,
+			currentPassword,
+			newPassword,
+			confirmPassword,
+		);
 
 		res.status(200).json({
 			message: 'Đổi mật khẩu thành công',
@@ -451,5 +471,3 @@ export async function changeAndConfirmUserPassword(req: Request, res: Response) 
 		});
 	}
 }
-
-

@@ -87,10 +87,11 @@ export function getTokenById(user: User): any {
   return tokens;
 }
 
-export async function getAllUsers() {
+export async function getAllUsers(searchName?: string) {
   const [users] = await pool.query(
     `select id, status, full_name, email, phone, rating, total_credit, created_at, role_id, refresh_token 
-		 from users`
+		 from users where full_name like ? order by created_at desc`,
+    [`%${searchName}%`]
   );
 
   const [totalUsers]: any = await pool.query(

@@ -1,8 +1,9 @@
 import pool from '../config/db';
 
-export async function getAllPackages() {
+export async function getAllPackages(productType?: string) {
 	const [rows] = await pool.query(
-		'SELECT * FROM services WHERE type = "package"',
+		'SELECT * FROM services WHERE type = "package"' + (productType ? ' AND product_type = ?' : ''),
+		[productType]
 	);
 	return rows;
 }

@@ -60,7 +60,7 @@ export async function getTransactionDetail(userId: number) {
       s.description, s.cost, d.credits, d.type as changing,d.unit,o.status,o.created_at  from transaction_detail d
                                     inner join orders o on o.id = d.order_id
                                     left join services s on s.id = o.service_id
-                                    inner join users u on u.id = d.user_id where d.user_id = ?`,
+                                    inner join users u on u.id = d.user_id where d.user_id = ? order by o.created_at desc`,
 		[userId],
 	);
 
@@ -68,7 +68,7 @@ export async function getTransactionDetail(userId: number) {
 		`select sum(d.credits) as total_credits from transaction_detail d
                                     inner join orders o on o.id = d.order_id
                                     left join services s on s.id = o.service_id
-                                    inner join users u on u.id = d.user_id where d.user_id = ? and d.type = 'increase'`,
+                                    inner join users u on u.id = d.user_id where d.user_id = ? and d.type = 'increase' order by o.created_at desc`,
 		[userId],
 	);
 	// Total spend là transaction mà changing = 'decrease'
@@ -76,7 +76,7 @@ export async function getTransactionDetail(userId: number) {
 		`select sum(d.credits) as total_credits from transaction_detail d
                                     inner join orders o on o.id = d.order_id
                                     left join services s on s.id = o.service_id
-                                    inner join users u on u.id = d.user_id where d.user_id = ? and d.type = 'decrease'`,
+                                    inner join users u on u.id = d.user_id where d.user_id = ? and d.type = 'decrease' order by o.created_at desc`,
 		[userId],
 	);
 

@@ -10,7 +10,8 @@ import jwt from 'jsonwebtoken';
 
 export async function listPackages(req: Request, res: Response) {
 	try {
-		const packages = await getAllPackages();
+		const productType = req.query.product_type as string | undefined;
+		const packages = await getAllPackages(productType);
 		res.status(200).json({
 			message: 'Lấy danh sách gói dịch vụ thành công',
 			data: packages,

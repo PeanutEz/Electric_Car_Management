@@ -26,7 +26,7 @@ export async function getPostApprovedController(req: Request, res: Response) {
 		const health = (req.query.health as string) || '';
 		const voltage = (req.query.voltage as string) || '';
 		const color = (req.query.color as string) || '';
-		const seats = parseInt(req.query.seats as string);
+		const seats = parseInt(req.query.seat as string);
 		const mileage = (req.query.mileage as string) || '';
 		const power = parseInt(req.query.power as string);
 		const title = (req.query.title as string) || '';
