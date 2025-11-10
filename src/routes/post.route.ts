@@ -61,7 +61,7 @@ const router = Router();
  *         required: false
  *         description: Năm sản xuất của sản phẩm.
  *       - in: query
- *         name: title
+ *         name: search
  *         schema:
  *           type: string
  *         required: false

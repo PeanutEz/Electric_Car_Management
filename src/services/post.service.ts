@@ -223,9 +223,13 @@ export async function paginatePosts(
 	limit: number,
 	status?: string,
 	year?: number,
+	search?: string,
 	category_type?: string,
 ): Promise<Post[]> {
 	const offset = (page - 1) * limit;
+
+	console.log(year);
+	console.log(search);
 
 	let query = `SELECT p.id, p.title, p.priority,
       p.model, p.price, p.description, p.image, p.brand, p.year, p.created_at,p.updated_at, p.address,p.status,p.previousOwners,
@@ -237,9 +241,10 @@ export async function paginatePosts(
 		left join vehicles v on v.product_id = p.id
 		left join batteries bat on bat.product_id = p.id
       where p.status like '%${status}%'  
-		and pc.slug like '%${category_type}%'`;
-	if (year !== undefined) {
-		query.concat(` and p.year = ${year} `);
+		and pc.slug like '%${category_type}%'
+		and p.title like '%${search}%'`;
+	if (year && !isNaN(year)) {
+		query += ` and p.year = ${year} `;
 	}
 
 	query += 'ORDER BY p.updated_at desc, p.id desc LIMIT ? OFFSET ?';
