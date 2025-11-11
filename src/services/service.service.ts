@@ -1,3 +1,4 @@
+import { get } from 'http';
 import pool from '../config/db';
 import payos from '../config/payos';
 import { sendNotificationToUser } from '../config/socket';
@@ -752,7 +753,7 @@ export async function processServicePayment(orderCode: string) {
 				const duration = parseInt(packageData.duration || 30);
 
 				// Tính expires_at: purchased_at + duration (ngày)
-				const purchasedAt = getVietnamTime();
+				const purchasedAt = '';
 				const expiresAt = new Date(purchasedAt);
 				expiresAt.setDate(expiresAt.getDate() + duration);
 
