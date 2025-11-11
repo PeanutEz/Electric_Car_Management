@@ -119,27 +119,271 @@ export async function getServicePostByProductType(
  * @param serviceId - ID của service (post/push)
  * @returns Kết quả: có thể đăng bài không, cần thanh toán không, link thanh toán nếu cần
  */
-export async function checkAndProcessPostPayment(
-	userId: number,
-	serviceId: number,
-): Promise<{
-	canPost: boolean;
-	needPayment: boolean;
-	message: string;
-	priceRequired?: number;
-	checkoutUrl?: string;
-	orderCode?: number;
-	payosResponse?: any;
-}> {
-	const conn = await pool.getConnection();
-	try {
-		await conn.beginTransaction();
+// export async function checkAndProcessPostPayment(
+// 	userId: number,
+// 	serviceId: number,
+// ): Promise<{
+// 	canPost: boolean;
+// 	needPayment: boolean;
+// 	message: string;
+// 	priceRequired?: number;
+// 	checkoutUrl?: string;
+// 	orderCode?: number;
+// 	payosResponse?: any;
+// }> {
+// 	const conn = await pool.getConnection();
+// 	try {
+// 		await conn.beginTransaction();
 
-		// ========== BƯỚC 1: Kiểm tra quota từ các package active ==========
-		// Chỉ check từ các package chưa hết hạn và status = 'active'
-		const now = getVietnamTime();
-		const [quotaRows]: any = await conn.query(
-			`SELECT 
+// 		// ========== BƯỚC 1: Kiểm tra quota từ các package active ==========
+// 		// Chỉ check từ các package chưa hết hạn và status = 'active'
+// 		const now = getVietnamTime();
+// 		const [quotaRows]: any = await conn.query(
+// 			`SELECT 
+//         id,
+//         remaining_amount,
+//         package_id,
+//         expires_at
+//       FROM user_packages
+//       WHERE user_id = ? 
+//         AND service_id = ? 
+//         AND status = 'active'
+//         AND expires_at > ?
+//         AND remaining_amount > 0
+//       ORDER BY expires_at ASC
+//       LIMIT 1
+//       FOR UPDATE`,
+// 			[userId, serviceId, now],
+// 		);
+
+// 		// Nếu có quota từ package active → Trừ quota và cho phép đăng
+// 		if (quotaRows.length > 0) {
+// 			const quotaToUse = quotaRows[0];
+
+// 			// Trừ 1 lần sử dụng
+// 			await conn.query(
+// 				`UPDATE user_packages 
+//         SET remaining_amount = remaining_amount - 1,
+//             used_amount = used_amount + 1
+//         WHERE id = ?`,
+// 				[quotaToUse.id],
+// 			);
+
+// 			// const orderCode = Math.floor(Math.random() * 1000000);
+// 			// 	const [row]: any = await conn2.query(
+// 			// 		'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+// 			// 		[
+// 			// 			orderCode,
+// 			// 			'post',
+// 			// 			serviceId,
+// 			// 			productId,
+// 			// 			userId,
+// 			// 			serviceCost,
+// 			// 			'PAID',
+// 			// 			'CREDIT',
+// 			// 			getVietnamTime(),
+// 			// 			'PROCESSING',
+// 			// 		],
+// 			// 	);
+
+// 			await conn.commit();
+// 			return {
+// 				canPost: true,
+// 				needPayment: false,
+// 				message: 'Sử dụng quota thành công',
+// 			};
+// 		}
+
+// 		// ========== BƯỚC 2: Không có quota → Kiểm tra credit ==========
+// 		await conn.commit();
+
+// 		// Lấy thông tin service để biết giá
+// 		const [serviceRows]: any = await conn.query(
+// 			'SELECT cost, name, number_of_post FROM services WHERE id = ?',
+// 			[serviceId],
+// 		);
+
+// 		if (serviceRows.length === 0) {
+// 			return {
+// 				canPost: false,
+// 				needPayment: false,
+// 				message: 'Dịch vụ không tồn tại',
+// 			};
+// 		}
+
+// 		const serviceCost = parseFloat(serviceRows[0].cost);
+// 		const serviceName = serviceRows[0].name;
+// 		const numberOfPost = parseInt(serviceRows[0].number_of_post || 1);
+
+// 		// Lấy thông tin credit của user
+// 		const [userRows]: any = await pool.query(
+// 			'SELECT total_credit FROM users WHERE id = ?',
+// 			[userId],
+// 		);
+
+// 		if (userRows.length === 0) {
+// 			return {
+// 				canPost: false,
+// 				needPayment: false,
+// 				message: 'User không tồn tại',
+// 			};
+// 		}
+
+// 		const userCredit = parseFloat(userRows[0].total_credit);
+
+// 		// Lấy productId của user (product mới nhất)
+// 		const [productRows]: any = await pool.query(
+// 			'SELECT id FROM products WHERE created_by = ? ORDER BY id DESC LIMIT 1',
+// 			[userId],
+// 		);
+// 		const productId = productRows.length > 0 ? productRows[0].id : null;
+
+// 		// ========== BƯỚC 3: Kiểm tra credit có đủ không ==========
+// 		if (userCredit >= serviceCost) {
+// 			// ✅ ĐỦ CREDIT → Trừ tiền và cho phép đăng bài (mua lẻ, không cộng quota)
+// 			const conn2 = await pool.getConnection();
+// 			try {
+// 				await conn2.beginTransaction();
+
+// 				// Trừ tiền từ credit
+// 				await conn2.query(
+// 					'UPDATE users SET total_credit = total_credit - ? WHERE id = ?',
+// 					[serviceCost, userId],
+// 				);
+
+// 				// Tạo order để tracking
+// 				const orderCode = Math.floor(Math.random() * 1000000);
+// 				const [row]: any = await conn2.query(
+// 					'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+// 					[
+// 						orderCode,
+// 						'post',
+// 						serviceId,
+// 						productId,
+// 						userId,
+// 						serviceCost,
+// 						'PAID',
+// 						'CREDIT',
+// 						getVietnamTime(),
+// 						'PROCESSING',
+// 					],
+// 				);
+
+// 				const insertedOrderId = row.insertId;
+
+// 				// Log transaction
+// 				await conn2.query(
+// 					'INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) VALUES (?, ?, ?, ?, ?)',
+// 					[
+// 						insertedOrderId,
+// 						userId,
+// 						'CREDIT',
+// 						'Decrease',
+// 						serviceCost,
+// 					],
+// 				);
+
+// 				await conn2.commit();
+// 				return {
+// 					canPost: true,
+// 					needPayment: false,
+// 					message: `Thanh toán thành công ${serviceCost} VND. Bạn có thể đăng bài ngay.`,
+// 				};
+// 			} catch (error) {
+// 				await conn2.rollback();
+// 				throw error;
+// 			} finally {
+// 				conn2.release();
+// 			}
+// 		} else {
+// 			// ❌ KHÔNG ĐỦ CREDIT → Tạo link PayOS để thanh toán
+
+// 			// Tạo order với status PENDING
+// 			const orderCode = Math.floor(Math.random() * 1000000);
+// 			const amountNeeded = serviceCost - userCredit;
+
+// 			await pool.query(
+// 				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+// 				[
+// 					orderCode,
+// 					'post',
+// 					serviceId,
+// 					productId,
+// 					userId,
+// 					amountNeeded,
+// 					'PENDING',
+// 					'PAYOS',
+// 					getVietnamTime(),
+// 					'PENDING',
+// 				],
+// 			);
+
+// 			// Tạo payment link PayOS
+// 			try {
+// 				const envAppUrl =
+// 					process.env.APP_URL || 'http://localhost:8080';
+// 				const paymentLinkRes = await payos.paymentRequests.create({
+// 					orderCode: orderCode,
+// 					amount: Math.round(amountNeeded),
+// 					description: `Thanh toan dich vu`,
+// 					returnUrl: buildUrl(envAppUrl, '/payment/result', {
+// 						provider: 'payos',
+// 						next: '/post?draft=true',
+// 					}),
+// 					cancelUrl: buildUrl(envAppUrl, '/payment/result', {
+// 						provider: 'payos',
+// 						next: '/',
+// 					}),
+// 				});
+
+// 				return {
+// 					canPost: false,
+// 					needPayment: true,
+// 					message: `Không đủ credit. Cần ${serviceCost} VND, hiện tại: ${userCredit} VND. Vui lòng thanh toán.`,
+// 					priceRequired: amountNeeded,
+// 					checkoutUrl: paymentLinkRes.checkoutUrl,
+// 					orderCode: orderCode,
+// 					payosResponse: paymentLinkRes,
+// 				};
+// 			} catch (payosError: any) {
+// 				console.error('PayOS error:', payosError);
+// 				return {
+// 					canPost: false,
+// 					needPayment: true,
+// 					message: `Không đủ credit. Cần ${serviceCost} VND, hiện tại: ${userCredit} VND. Lỗi tạo link thanh toán: ${payosError.message}`,
+// 					priceRequired: amountNeeded,
+// 				};
+// 			}
+// 		}
+// 	} catch (error) {
+// 		throw error;
+// 	} finally {
+// 		conn.release();
+// 	}
+// }
+
+export async function checkAndProcessPostPayment(
+  userId: number,
+  serviceId: number,
+  productId: number | null = null // productId từ product đã tạo (status='draft')
+): Promise<{
+  canPost: boolean;
+  needPayment: boolean;
+  message: string;
+  priceRequired?: number;
+  checkoutUrl?: string;
+  orderCode?: number;
+  payosResponse?: any;
+}> {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // ========== BƯỚC 1: Kiểm tra quota từ các package active ==========
+    // Chỉ check từ các package chưa hết hạn và status = 'active'
+    const now = getVietnamTime();
+    const [quotaRows]: any = await conn.query(
+      `SELECT 
         id,
         remaining_amount,
         package_id,
@@ -153,213 +397,221 @@ export async function checkAndProcessPostPayment(
       ORDER BY expires_at ASC
       LIMIT 1
       FOR UPDATE`,
-			[userId, serviceId, now],
-		);
+      [userId, serviceId, now]
+    );
 
-		// Nếu có quota từ package active → Trừ quota và cho phép đăng
-		if (quotaRows.length > 0) {
-			const quotaToUse = quotaRows[0];
+    // Nếu có quota từ package active → Trừ quota và cho phép đăng
+    if (quotaRows.length > 0) {
+      const quotaToUse = quotaRows[0];
 
-			// Trừ 1 lần sử dụng
-			await conn.query(
-				`UPDATE user_packages 
+      // Trừ 1 lần sử dụng
+      await conn.query(
+        `UPDATE user_packages 
         SET remaining_amount = remaining_amount - 1,
             used_amount = used_amount + 1
         WHERE id = ?`,
-				[quotaToUse.id],
-			);
+        [quotaToUse.id]
+      );
 
-			// const orderCode = Math.floor(Math.random() * 1000000);
-			// 	const [row]: any = await conn2.query(
-			// 		'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-			// 		[
-			// 			orderCode,
-			// 			'post',
-			// 			serviceId,
-			// 			productId,
-			// 			userId,
-			// 			serviceCost,
-			// 			'PAID',
-			// 			'CREDIT',
-			// 			getVietnamTime(),
-			// 			'PROCESSING',
-			// 		],
-			// 	);
+      // Lấy thông tin service để biết giá
+      const [serviceRows]: any = await conn.query(
+        "SELECT cost, name FROM services WHERE id = ?",
+        [serviceId]
+      );
 
-			await conn.commit();
-			return {
-				canPost: true,
-				needPayment: false,
-				message: 'Sử dụng quota thành công',
-			};
-		}
+      const serviceCost =
+        serviceRows.length > 0 ? parseFloat(serviceRows[0].cost) : 0;
 
-		// ========== BƯỚC 2: Không có quota → Kiểm tra credit ==========
-		await conn.commit();
+      // Tạo order để tracking khi dùng package quota
+      const orderCode = Math.floor(Math.random() * 1000000);
+      await conn.query(
+        "INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          orderCode,
+          "post",
+          serviceId,
+          productId, // Dùng productId đã tạo
+          userId,
+          serviceCost,
+          "PAID",
+          "PACKAGE", // Đánh dấu là thanh toán bằng package
+          getVietnamTime(),
+          "PROCESSING",
+        ]
+      );
 
-		// Lấy thông tin service để biết giá
-		const [serviceRows]: any = await conn.query(
-			'SELECT cost, name, number_of_post FROM services WHERE id = ?',
-			[serviceId],
-		);
+      await conn.commit();
+      return {
+        canPost: true,
+        needPayment: false,
+        message: "Sử dụng quota thành công",
+        orderCode: orderCode,
+      };
+    }
 
-		if (serviceRows.length === 0) {
-			return {
-				canPost: false,
-				needPayment: false,
-				message: 'Dịch vụ không tồn tại',
-			};
-		}
+    // ========== BƯỚC 2: Không có quota → Kiểm tra credit ==========
+    await conn.commit();
 
-		const serviceCost = parseFloat(serviceRows[0].cost);
-		const serviceName = serviceRows[0].name;
-		const numberOfPost = parseInt(serviceRows[0].number_of_post || 1);
+    // Lấy thông tin service để biết giá
+    const [serviceRows]: any = await conn.query(
+      "SELECT cost, name, number_of_post FROM services WHERE id = ?",
+      [serviceId]
+    );
 
-		// Lấy thông tin credit của user
-		const [userRows]: any = await pool.query(
-			'SELECT total_credit FROM users WHERE id = ?',
-			[userId],
-		);
+    if (serviceRows.length === 0) {
+      return {
+        canPost: false,
+        needPayment: false,
+        message: "Dịch vụ không tồn tại",
+      };
+    }
 
-		if (userRows.length === 0) {
-			return {
-				canPost: false,
-				needPayment: false,
-				message: 'User không tồn tại',
-			};
-		}
+    const serviceCost = parseFloat(serviceRows[0].cost);
+    const serviceName = serviceRows[0].name;
+    const numberOfPost = parseInt(serviceRows[0].number_of_post || 1);
 
-		const userCredit = parseFloat(userRows[0].total_credit);
+    // Lấy thông tin credit của user
+    const [userRows]: any = await pool.query(
+      "SELECT total_credit FROM users WHERE id = ?",
+      [userId]
+    );
 
-		// Lấy productId của user (product mới nhất)
-		const [productRows]: any = await pool.query(
-			'SELECT id FROM products WHERE created_by = ? ORDER BY id DESC LIMIT 1',
-			[userId],
-		);
-		const productId = productRows.length > 0 ? productRows[0].id : null;
+    if (userRows.length === 0) {
+      return {
+        canPost: false,
+        needPayment: false,
+        message: "User không tồn tại",
+      };
+    }
 
-		// ========== BƯỚC 3: Kiểm tra credit có đủ không ==========
-		if (userCredit >= serviceCost) {
-			// ✅ ĐỦ CREDIT → Trừ tiền và cho phép đăng bài (mua lẻ, không cộng quota)
-			const conn2 = await pool.getConnection();
-			try {
-				await conn2.beginTransaction();
+    const userCredit = parseFloat(userRows[0].total_credit);
 
-				// Trừ tiền từ credit
-				await conn2.query(
-					'UPDATE users SET total_credit = total_credit - ? WHERE id = ?',
-					[serviceCost, userId],
-				);
+    // ✅ Sử dụng productId đã được truyền vào (từ product draft đã tạo)
+    // Nếu không có thì lấy product mới nhất (fallback cho trường hợp cũ)
+    if (!productId) {
+      const [productRows]: any = await pool.query(
+        "SELECT id FROM products WHERE created_by = ? ORDER BY id DESC LIMIT 1",
+        [userId]
+      );
+      productId = productRows.length > 0 ? productRows[0].id : null;
+    }
 
-				// Tạo order để tracking
-				const orderCode = Math.floor(Math.random() * 1000000);
-				const [row]: any = await conn2.query(
-					'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-					[
-						orderCode,
-						'post',
-						serviceId,
-						productId,
-						userId,
-						serviceCost,
-						'PAID',
-						'CREDIT',
-						getVietnamTime(),
-						'PROCESSING',
-					],
-				);
+    // ========== BƯỚC 3: Kiểm tra credit có đủ không ==========
+    if (userCredit >= serviceCost) {
+      // ✅ ĐỦ CREDIT → Trừ tiền và cho phép đăng bài (mua lẻ, không cộng quota)
+      const conn2 = await pool.getConnection();
+      try {
+        await conn2.beginTransaction();
 
-				const insertedOrderId = row.insertId;
+        // Trừ tiền từ credit
+        await conn2.query(
+          "UPDATE users SET total_credit = total_credit - ? WHERE id = ?",
+          [serviceCost, userId]
+        );
 
-				// Log transaction
-				await conn2.query(
-					'INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) VALUES (?, ?, ?, ?, ?)',
-					[
-						insertedOrderId,
-						userId,
-						'CREDIT',
-						'Decrease',
-						serviceCost,
-					],
-				);
+        // Tạo order để tracking
+        const orderCode = Math.floor(Math.random() * 1000000);
+        const [row]: any = await conn2.query(
+          "INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [
+            orderCode,
+            "post",
+            serviceId,
+            productId,
+            userId,
+            serviceCost,
+            "PAID",
+            "CREDIT",
+            getVietnamTime(),
+            "PROCESSING",
+          ]
+        );
 
-				await conn2.commit();
-				return {
-					canPost: true,
-					needPayment: false,
-					message: `Thanh toán thành công ${serviceCost} VND. Bạn có thể đăng bài ngay.`,
-				};
-			} catch (error) {
-				await conn2.rollback();
-				throw error;
-			} finally {
-				conn2.release();
-			}
-		} else {
-			// ❌ KHÔNG ĐỦ CREDIT → Tạo link PayOS để thanh toán
+        const insertedOrderId = row.insertId;
 
-			// Tạo order với status PENDING
-			const orderCode = Math.floor(Math.random() * 1000000);
-			const amountNeeded = serviceCost - userCredit;
+        // Log transaction
+        await conn2.query(
+          "INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) VALUES (?, ?, ?, ?, ?)",
+          [insertedOrderId, userId, "CREDIT", "Decrease", serviceCost]
+        );
 
-			await pool.query(
-				'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-				[
-					orderCode,
-					'post',
-					serviceId,
-					productId,
-					userId,
-					amountNeeded,
-					'PENDING',
-					'PAYOS',
-					getVietnamTime(),
-					'PENDING',
-				],
-			);
+        await conn2.commit();
+        return {
+          canPost: true,
+          needPayment: false,
+          message: `Thanh toán thành công ${serviceCost} VND. Bạn có thể đăng bài ngay.`,
+          orderCode: orderCode,
+        };
+      } catch (error) {
+        await conn2.rollback();
+        throw error;
+      } finally {
+        conn2.release();
+      }
+    } else {
+      // ❌ KHÔNG ĐỦ CREDIT → Tạo link PayOS để thanh toán
 
-			// Tạo payment link PayOS
-			try {
-				const envAppUrl =
-					process.env.APP_URL || 'http://localhost:8080';
-				const paymentLinkRes = await payos.paymentRequests.create({
-					orderCode: orderCode,
-					amount: Math.round(amountNeeded),
-					description: `Thanh toan dich vu`,
-					returnUrl: buildUrl(envAppUrl, '/payment/result', {
-						provider: 'payos',
-						next: '/post?draft=true',
-					}),
-					cancelUrl: buildUrl(envAppUrl, '/payment/result', {
-						provider: 'payos',
-						next: '/',
-					}),
-				});
+      // Tạo order với status PENDING
+      const orderCode = Math.floor(Math.random() * 1000000);
+      const amountNeeded = serviceCost - userCredit;
 
-				return {
-					canPost: false,
-					needPayment: true,
-					message: `Không đủ credit. Cần ${serviceCost} VND, hiện tại: ${userCredit} VND. Vui lòng thanh toán.`,
-					priceRequired: amountNeeded,
-					checkoutUrl: paymentLinkRes.checkoutUrl,
-					orderCode: orderCode,
-					payosResponse: paymentLinkRes,
-				};
-			} catch (payosError: any) {
-				console.error('PayOS error:', payosError);
-				return {
-					canPost: false,
-					needPayment: true,
-					message: `Không đủ credit. Cần ${serviceCost} VND, hiện tại: ${userCredit} VND. Lỗi tạo link thanh toán: ${payosError.message}`,
-					priceRequired: amountNeeded,
-				};
-			}
-		}
-	} catch (error) {
-		throw error;
-	} finally {
-		conn.release();
-	}
+      await pool.query(
+        "INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          orderCode,
+          "post",
+          serviceId,
+          productId,
+          userId,
+          amountNeeded,
+          "PENDING",
+          "PAYOS",
+          getVietnamTime(),
+          "PENDING",
+        ]
+      );
+
+      // Tạo payment link PayOS
+      try {
+        const envAppUrl = process.env.APP_URL || "http://localhost:8080";
+        const paymentLinkRes = await payos.paymentRequests.create({
+          orderCode: orderCode,
+          amount: Math.round(amountNeeded),
+          description: `Thanh toan dich vu`,
+          returnUrl: buildUrl(envAppUrl, "/payment/result", {
+            provider: "payos",
+            next: "/post?draft=true",
+          }),
+          cancelUrl: buildUrl(envAppUrl, "/payment/result", {
+            provider: "payos",
+            next: "/",
+          }),
+        });
+
+        return {
+          canPost: false,
+          needPayment: true,
+          message: `Không đủ credit. Cần ${serviceCost} VND, hiện tại: ${userCredit} VND. Vui lòng thanh toán.`,
+          priceRequired: amountNeeded,
+          checkoutUrl: paymentLinkRes.checkoutUrl,
+          orderCode: orderCode,
+          payosResponse: paymentLinkRes,
+        };
+      } catch (payosError: any) {
+        console.error("PayOS error:", payosError);
+        return {
+          canPost: false,
+          needPayment: true,
+          message: `Không đủ credit. Cần ${serviceCost} VND, hiện tại: ${userCredit} VND. Lỗi tạo link thanh toán: ${payosError.message}`,
+          priceRequired: amountNeeded,
+        };
+      }
+    }
+  } catch (error) {
+    throw error;
+  } finally {
+    conn.release();
+  }
 }
 
 /**

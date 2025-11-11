@@ -886,148 +886,305 @@ export async function updatePostByAdmin(
 //vehicle: brand, model, power, warranty, mileage_km, seats, year, color, price, address, title, description, images
 
 //nếu user tạo post mà chưa có số điện thoại thì không cho tạo
+
+// export async function createNewPost(
+// 	userId: number,
+// 	serviceId: number,
+// 	postData: Partial<Vehicle> | Partial<Battery>,
+// ) {
+// 	const conn = await pool.getConnection();
+// 	try {
+// 		await conn.beginTransaction();
+// 		const {
+// 			brand,
+// 			model,
+// 			price,
+// 			year,
+// 			color,
+// 			description,
+// 			address,
+// 			warranty,
+// 			title,
+// 			image,
+// 			images,
+// 			category,
+// 			previousOwners,
+// 			category_id,
+// 		} = postData;
+
+// 		const [duration]: any = await conn.query(
+// 			'SELECT duration FROM services WHERE id = ?',
+// 			[serviceId],
+// 		);
+
+// 		// ✅ Sử dụng múi giờ Việt Nam (GMT+7)
+// 		const milisecondsInDay = 24 * 60 * 60 * 1000;
+// 		const now = getVietnamTime();
+// 		const endDate = new Date(
+// 			now.getTime() + duration[0]?.duration * milisecondsInDay,
+// 		);
+
+// 		// const [rows]: any = await pool.query(
+// 		// 	'SELECT * FROM product_categories WHERE id = ? AND type = ?',
+// 		// 	[category?.id, category?.type],
+// 		// );
+
+// 		const [rows]: any = await pool.query(
+// 			'SELECT type as category_type FROM product_categories WHERE id = ?',
+// 			[category_id],
+// 		);
+// 		const category_type = rows[0]?.category_type;
+
+// 		if (rows.length === 0) {
+// 			throw new Error('Invalid category ID');
+// 		}
+
+// 		const [result] = await conn.query(
+// 			'INSERT INTO products (product_category_id, brand, model, price, year, color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority, previousOwners) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+// 			[
+// 				category_id,
+// 				brand,
+// 				model,
+// 				price,
+// 				year,
+// 				color,
+// 				warranty,
+// 				description,
+// 				address,
+// 				title,
+// 				image,
+// 				'pending',
+// 				userId,
+// 				getVietnamTime(),
+// 				endDate,
+// 				1,
+// 				previousOwners,
+// 			],
+// 		);
+
+// 		const insertId = (result as any).insertId;
+
+// 		await conn.query(
+// 			'UPDATE orders SET product_id = ? order by id DESC LIMIT 1',
+// 			[insertId],
+// 		);
+
+// 		// Lưu các ảnh phụ vào bảng product_imgs
+// 		if (images && Array.isArray(images) && images.length > 0) {
+// 			for (const imageUrl of images) {
+// 				await conn.query(
+// 					'INSERT INTO product_imgs (product_id, url) VALUES (?, ?)',
+// 					[insertId, imageUrl],
+// 				);
+// 			}
+// 		}
+
+// 		let data: Vehicle | Battery;
+
+// 		// ✅ Insert vehicle
+// 		if (category_type === 'vehicle') {
+// 			const { power, mileage, seats, health } =
+// 				postData as Partial<Vehicle>;
+
+// 			await conn.query(
+// 				'INSERT INTO vehicles (product_id, power, mileage_km, seats, health) VALUES (?, ?, ?, ?, ?)',
+// 				[insertId, power, mileage, seats, health],
+// 			);
+
+// 			const [rows]: any = await conn.query(
+// 				`SELECT p.*, v.power, v.mileage_km, v.seats
+// 				 FROM products p
+// 				 JOIN vehicles v ON p.id = v.product_id
+// 				 WHERE p.id = ?`,
+// 				[insertId],
+// 			);
+// 			data = rows[0];
+// 		}
+
+// 		// ✅ Insert battery
+// 		else if (category_type === 'battery') {
+// 			const { capacity, voltage, health } = postData as Partial<Battery>;
+
+// 			await conn.query(
+// 				'INSERT INTO batteries (product_id, capacity, voltage, health) VALUES (?, ?, ?, ?)',
+// 				[insertId, capacity, voltage, health],
+// 			);
+
+// 			const [rows]: any = await conn.query(
+// 				`SELECT p.*, b.capacity, b.voltage, b.health
+// 				 FROM products p
+// 				 JOIN batteries b ON p.id = b.product_id
+// 				 WHERE p.id = ?`,
+// 				[insertId],
+// 			);
+// 			data = rows[0];
+// 		} else {
+// 			throw new Error('Unknown product type');
+// 		}
+// 		await conn.commit();
+// 		return data;
+// 	} catch (error) {
+// 		await conn.rollback();
+// 		throw error;
+// 	} finally {
+// 		conn.release();
+// 	}
+// }
+
 export async function createNewPost(
-	userId: number,
-	serviceId: number,
-	postData: Partial<Vehicle> | Partial<Battery>,
+  userId: number,
+  serviceId: number,
+  postData: Partial<Vehicle> | Partial<Battery>,
+  status: string = "draft" // Mặc định là 'draft', sau khi thanh toán sẽ update thành 'pending'
 ) {
-	const conn = await pool.getConnection();
-	try {
-		await conn.beginTransaction();
-		const {
-			brand,
-			model,
-			price,
-			year,
-			color,
-			description,
-			address,
-			warranty,
-			title,
-			image,
-			images,
-			category,
-			previousOwners,
-			category_id,
-		} = postData;
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const {
+      brand,
+      model,
+      price,
+      year,
+      color,
+      description,
+      address,
+      warranty,
+      title,
+      image,
+      images,
+      category,
+      previousOwners,
+      category_id,
+    } = postData;
 
-		const [duration]: any = await conn.query(
-			'SELECT duration FROM services WHERE id = ?',
-			[serviceId],
-		);
+    const [duration]: any = await conn.query(
+      "SELECT duration FROM services WHERE id = ?",
+      [serviceId]
+    );
 
-		// ✅ Sử dụng múi giờ Việt Nam (GMT+7)
-		const milisecondsInDay = 24 * 60 * 60 * 1000;
-		const now = getVietnamTime();
-		const endDate = new Date(
-			now.getTime() + duration[0]?.duration * milisecondsInDay,
-		);
+    // ✅ Sử dụng múi giờ Việt Nam (GMT+7)
+    const milisecondsInDay = 24 * 60 * 60 * 1000;
+    const now = getVietnamTime();
+    const endDate = new Date(
+      now.getTime() + duration[0]?.duration * milisecondsInDay
+    );
 
-		// const [rows]: any = await pool.query(
-		// 	'SELECT * FROM product_categories WHERE id = ? AND type = ?',
-		// 	[category?.id, category?.type],
-		// );
+    // const [rows]: any = await pool.query(
+    // 	'SELECT * FROM product_categories WHERE id = ? AND type = ?',
+    // 	[category?.id, category?.type],
+    // );
 
-		const [rows]: any = await pool.query(
-			'SELECT type as category_type FROM product_categories WHERE id = ?',
-			[category_id],
-		);
-		const category_type = rows[0]?.category_type;
+    const [rows]: any = await pool.query(
+      "SELECT type as category_type FROM product_categories WHERE id = ?",
+      [category_id]
+    );
+    const category_type = rows[0]?.category_type;
 
-		if (rows.length === 0) {
-			throw new Error('Invalid category ID');
-		}
+    if (rows.length === 0) {
+      throw new Error("Invalid category ID");
+    }
 
-		const [result] = await conn.query(
-			'INSERT INTO products (product_category_id, brand, model, price, year, color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority, previousOwners) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-			[
-				category_id,
-				brand,
-				model,
-				price,
-				year,
-				color,
-				warranty,
-				description,
-				address,
-				title,
-				image,
-				'pending',
-				userId,
-				getVietnamTime(),
-				endDate,
-				1,
-				previousOwners,
-			],
-		);
+    const [result] = await conn.query(
+      "INSERT INTO products (product_category_id, brand, model, price, year, color, warranty, description, address, title, image, status, created_by, created_at, end_date, priority, previousOwners) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [
+        category_id,
+        brand,
+        model,
+        price,
+        year,
+        color,
+        warranty,
+        description,
+        address,
+        title,
+        image,
+        status, // Sử dụng status được truyền vào (mặc định 'draft')
+        userId,
+        getVietnamTime(),
+        endDate,
+        1,
+        previousOwners,
+      ]
+    );
 
-		const insertId = (result as any).insertId;
+    const insertId = (result as any).insertId;
 
-		await conn.query(
-			'UPDATE orders SET product_id = ? order by id DESC LIMIT 1',
-			[insertId],
-		);
+    // Lưu các ảnh phụ vào bảng product_imgs
+    if (images && Array.isArray(images) && images.length > 0) {
+      for (const imageUrl of images) {
+        await conn.query(
+          "INSERT INTO product_imgs (product_id, url) VALUES (?, ?)",
+          [insertId, imageUrl]
+        );
+      }
+    }
 
-		// Lưu các ảnh phụ vào bảng product_imgs
-		if (images && Array.isArray(images) && images.length > 0) {
-			for (const imageUrl of images) {
-				await conn.query(
-					'INSERT INTO product_imgs (product_id, url) VALUES (?, ?)',
-					[insertId, imageUrl],
-				);
-			}
-		}
+    let data: Vehicle | Battery;
 
-		let data: Vehicle | Battery;
+    // ✅ Insert vehicle
+    if (category_type === "vehicle") {
+      const { power, mileage, seats, health } = postData as Partial<Vehicle>;
 
-		// ✅ Insert vehicle
-		if (category_type === 'vehicle') {
-			const { power, mileage, seats, health } =
-				postData as Partial<Vehicle>;
+      await conn.query(
+        "INSERT INTO vehicles (product_id, power, mileage_km, seats, health) VALUES (?, ?, ?, ?, ?)",
+        [insertId, power, mileage, seats, health]
+      );
 
-			await conn.query(
-				'INSERT INTO vehicles (product_id, power, mileage_km, seats, health) VALUES (?, ?, ?, ?, ?)',
-				[insertId, power, mileage, seats, health],
-			);
-
-			const [rows]: any = await conn.query(
-				`SELECT p.*, v.power, v.mileage_km, v.seats
+      const [rows]: any = await conn.query(
+        `SELECT p.*, v.power, v.mileage_km, v.seats
 				 FROM products p
 				 JOIN vehicles v ON p.id = v.product_id
 				 WHERE p.id = ?`,
-				[insertId],
-			);
-			data = rows[0];
-		}
+        [insertId]
+      );
+      data = rows[0];
+    }
 
-		// ✅ Insert battery
-		else if (category_type === 'battery') {
-			const { capacity, voltage, health } = postData as Partial<Battery>;
+    // ✅ Insert battery
+    else if (category_type === "battery") {
+      const { capacity, voltage, health } = postData as Partial<Battery>;
 
-			await conn.query(
-				'INSERT INTO batteries (product_id, capacity, voltage, health) VALUES (?, ?, ?, ?)',
-				[insertId, capacity, voltage, health],
-			);
+      await conn.query(
+        "INSERT INTO batteries (product_id, capacity, voltage, health) VALUES (?, ?, ?, ?)",
+        [insertId, capacity, voltage, health]
+      );
 
-			const [rows]: any = await conn.query(
-				`SELECT p.*, b.capacity, b.voltage, b.health
+      const [rows]: any = await conn.query(
+        `SELECT p.*, b.capacity, b.voltage, b.health
 				 FROM products p
 				 JOIN batteries b ON p.id = b.product_id
 				 WHERE p.id = ?`,
-				[insertId],
-			);
-			data = rows[0];
-		} else {
-			throw new Error('Unknown product type');
-		}
-		await conn.commit();
-		return data;
-	} catch (error) {
-		await conn.rollback();
-		throw error;
-	} finally {
-		conn.release();
-	}
+        [insertId]
+      );
+      data = rows[0];
+    } else {
+      throw new Error("Unknown product type");
+    }
+    await conn.commit();
+    return data;
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
+export async function updateProductStatus(
+   productId: number,
+   newStatus: string
+): Promise<any> {
+  const [result]: any = await pool.query(
+    "UPDATE products SET status = ? WHERE id = ?",
+    [newStatus, productId]
+  );
+  if (result.affectedRows === 0) {
+    return null;
+  }
+  const [rows]: any = await pool.query("SELECT * FROM products WHERE id = ?", [
+    productId,
+  ]);
+  return rows.length > 0 ? rows[0] : null;
 }
 
 export async function updateUserPost(

@@ -13,9 +13,9 @@ import {
 	updateUserPost,
 	getPostApproved,
 	getPostsById2,
+	updateProductStatus,
 } from '../services/post.service';
 import { checkAndProcessPostPayment } from '../services/service.service';
-//import { emitToAll } from '../config/socket';
 
 export async function getPostApprovedController(req: Request, res: Response) {
 	try {
@@ -261,114 +261,233 @@ export async function updatePost(req: Request, res: Response) {
 	}
 }
 
+// export async function createPost(req: Request, res: Response) {
+// 	try {
+// 		// Extract userId from JWT token
+// 		const authHeader = req.headers.authorization;
+// 		if (!authHeader || !authHeader.startsWith('Bearer ')) {
+// 			return res
+// 				.status(401)
+// 				.json({ message: 'Không tìm thấy token xác thực' });
+// 		}
+
+// 		const token = authHeader.split(' ')[1];
+// 		const id = (jwt.decode(token) as any).id;
+
+// 		const userId = id;
+
+// 		// Lấy dữ liệu từ form
+// 		const postData = req.body;
+// 		const files = req.files as {
+// 			[fieldname: string]: Express.Multer.File[];
+// 		};
+
+// 		// Validate serviceId for payment check
+// 		if (!postData.service_id) {
+// 			return res.status(400).json({
+// 				message: 'Thiếu serviceId để kiểm tra thanh toán',
+// 			});
+// 		}
+
+// 		// Check payment/quota before creating post
+// 		const paymentCheck = await checkAndProcessPostPayment(
+// 			userId,
+// 			parseInt(postData.service_id),
+// 		);
+
+// 		if (!paymentCheck.canPost) {
+// 			// User needs to pay or top up credit
+// 			return res.status(402).json({
+// 				message: paymentCheck.message,
+// 				needPayment: true,
+// 				priceRequired: paymentCheck.priceRequired,
+// 				checkoutUrl: paymentCheck.checkoutUrl,
+// 				orderCode: paymentCheck.orderCode,
+// 				payosResponse: paymentCheck.payosResponse, // ⭐ Debug PayOS
+// 			});
+// 		}
+
+// 		// Validate dữ liệu cơ bản
+// 		if (
+// 			!postData.brand ||
+// 			!postData.model ||
+// 			!postData.price ||
+// 			!postData.title ||
+// 			!postData.category_id
+// 		) {
+// 			return res.status(400).json({
+// 				message:
+// 					'Thiếu thông tin bắt buộc (brand, model, price, title, category_id)',
+// 			});
+// 		}
+
+// 		let imageUrl = '';
+// 		let imageUrls: string[] = [];
+
+// 		// Upload nhiều ảnh nếu có
+// 		if (files?.images && files.images.length > 0) {
+// 			const uploadResults = await uploadService.uploadImages(
+// 				files.images.map((file) => file.buffer),
+// 			);
+// 			imageUrls = uploadResults.map((result) => result.secure_url);
+// 		}
+
+// 		// Chuẩn bị dữ liệu để insert
+// 		const postDataWithImages = {
+// 			...postData,
+// 			category_id: parseInt(postData.category_id),
+// 			image: imageUrls[0] || '', // Lấy ảnh đầu tiên làm ảnh chính
+// 			images: imageUrls,
+// 		};
+// 		const newPost = await createNewPost(
+// 			userId,
+// 			parseInt(postData.service_id),
+// 			postDataWithImages,
+// 		);
+
+// 		// 🔥 Emit WebSocket event for real-time update
+// 		try {
+// 			// emitToAll('post:created', {
+// 			// 	post: newPost,
+// 			// 	message: 'Bài viết mới đã được tạo',
+// 			// 	timestamp: new Date().toISOString(),
+// 			// });
+// 			console.log('📡 WebSocket event emitted: post:created');
+// 		} catch (socketError) {
+// 			// Log error but don't fail the request
+// 			console.error('⚠️ Failed to emit WebSocket event:', socketError);
+// 		}
+
+// 		return res.status(201).json({
+// 			message: 'Tạo bài viết mới thành công',
+// 			data: newPost,
+// 		});
+// 	} catch (error: any) {
+// 		console.error('Lỗi khi tạo post:', error);
+// 		return res.status(500).json({
+// 			message: 'Lỗi khi tạo bài viết',
+// 			error: error.message,
+// 		});
+// 	}
+// }
+
 export async function createPost(req: Request, res: Response) {
-	try {
-		// Extract userId from JWT token
-		const authHeader = req.headers.authorization;
-		if (!authHeader || !authHeader.startsWith('Bearer ')) {
-			return res
-				.status(401)
-				.json({ message: 'Không tìm thấy token xác thực' });
-		}
+  try {
+    // Extract userId from JWT token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Không tìm thấy token xác thực" });
+    }
 
-		const token = authHeader.split(' ')[1];
-		const id = (jwt.decode(token) as any).id;
+    const token = authHeader.split(" ")[1];
+    const id = (jwt.decode(token) as any).id;
 
-		const userId = id;
+    const userId = id;
 
-		// Lấy dữ liệu từ form
-		const postData = req.body;
-		const files = req.files as {
-			[fieldname: string]: Express.Multer.File[];
-		};
+    // Lấy dữ liệu từ form
+    const postData = req.body;
+    const files = req.files as {
+      [fieldname: string]: Express.Multer.File[];
+    };
 
-		// Validate serviceId for payment check
-		if (!postData.service_id) {
-			return res.status(400).json({
-				message: 'Thiếu serviceId để kiểm tra thanh toán',
-			});
-		}
+    // Validate dữ liệu cơ bản trước
+    if (
+      !postData.brand ||
+      !postData.model ||
+      !postData.price ||
+      !postData.title ||
+      !postData.category_id
+    ) {
+      return res.status(400).json({
+        message:
+          "Thiếu thông tin bắt buộc (brand, model, price, title, category_id)",
+      });
+    }
 
-		// Check payment/quota before creating post
-		const paymentCheck = await checkAndProcessPostPayment(
-			userId,
-			parseInt(postData.service_id),
-		);
+    // Validate serviceId for payment check
+    if (!postData.service_id) {
+      return res.status(400).json({
+        message: "Thiếu serviceId để kiểm tra thanh toán",
+      });
+    }
 
-		if (!paymentCheck.canPost) {
-			// User needs to pay or top up credit
-			return res.status(402).json({
-				message: paymentCheck.message,
-				needPayment: true,
-				priceRequired: paymentCheck.priceRequired,
-				checkoutUrl: paymentCheck.checkoutUrl,
-				orderCode: paymentCheck.orderCode,
-				payosResponse: paymentCheck.payosResponse, // ⭐ Debug PayOS
-			});
-		}
+    let imageUrl = "";
+    let imageUrls: string[] = [];
 
-		// Validate dữ liệu cơ bản
-		if (
-			!postData.brand ||
-			!postData.model ||
-			!postData.price ||
-			!postData.title ||
-			!postData.category_id
-		) {
-			return res.status(400).json({
-				message:
-					'Thiếu thông tin bắt buộc (brand, model, price, title, category_id)',
-			});
-		}
+    // Upload nhiều ảnh nếu có
+    if (files?.images && files.images.length > 0) {
+      const uploadResults = await uploadService.uploadImages(
+        files.images.map((file) => file.buffer)
+      );
+      imageUrls = uploadResults.map((result) => result.secure_url);
+    }
 
-		let imageUrl = '';
-		let imageUrls: string[] = [];
+    // Chuẩn bị dữ liệu để insert
+    const postDataWithImages = {
+      ...postData,
+      category_id: parseInt(postData.category_id),
+      image: imageUrls[0] || "", // Lấy ảnh đầu tiên làm ảnh chính
+      images: imageUrls,
+    };
 
-		// Upload nhiều ảnh nếu có
-		if (files?.images && files.images.length > 0) {
-			const uploadResults = await uploadService.uploadImages(
-				files.images.map((file) => file.buffer),
-			);
-			imageUrls = uploadResults.map((result) => result.secure_url);
-		}
+    // ✅ BƯỚC 1: Tạo product với status='draft' trước
+    const newPost = await createNewPost(
+      userId,
+      parseInt(postData.service_id),
+      postDataWithImages,
+      "draft" // Tạo với status='draft'
+    );
 
-		// Chuẩn bị dữ liệu để insert
-		const postDataWithImages = {
-			...postData,
-			category_id: parseInt(postData.category_id),
-			image: imageUrls[0] || '', // Lấy ảnh đầu tiên làm ảnh chính
-			images: imageUrls,
-		};
-		const newPost = await createNewPost(
-			userId,
-			parseInt(postData.service_id),
-			postDataWithImages,
-		);
+    const productId = (newPost as any).id;
 
-		// 🔥 Emit WebSocket event for real-time update
-		try {
-			// emitToAll('post:created', {
-			// 	post: newPost,
-			// 	message: 'Bài viết mới đã được tạo',
-			// 	timestamp: new Date().toISOString(),
-			// });
-			console.log('📡 WebSocket event emitted: post:created');
-		} catch (socketError) {
-			// Log error but don't fail the request
-			console.error('⚠️ Failed to emit WebSocket event:', socketError);
-		}
+    // ✅ BƯỚC 2: Check payment/quota với productId đã tạo
+    const paymentCheck = await checkAndProcessPostPayment(
+      userId,
+      parseInt(postData.service_id),
+      productId // Truyền productId đã tạo
+    );
 
-		return res.status(201).json({
-			message: 'Tạo bài viết mới thành công',
-			data: newPost,
-		});
-	} catch (error: any) {
-		console.error('Lỗi khi tạo post:', error);
-		return res.status(500).json({
-			message: 'Lỗi khi tạo bài viết',
-			error: error.message,
-		});
-	}
+    if (!paymentCheck.canPost) {
+      // User needs to pay or top up credit
+      // Product vẫn ở trạng thái 'draft', có thể thanh toán sau
+      return res.status(402).json({
+        message: paymentCheck.message,
+        needPayment: true,
+        priceRequired: paymentCheck.priceRequired,
+        checkoutUrl: paymentCheck.checkoutUrl,
+        orderCode: paymentCheck.orderCode,
+        payosResponse: paymentCheck.payosResponse,
+        productId: productId, // Trả về productId để frontend có thể update sau
+      });
+    }
+
+    // ✅ BƯỚC 3: Thanh toán thành công → Update product status từ 'draft' → 'pending'
+    await updateProductStatus(productId, "pending");
+
+    // 🔥 Emit WebSocket event for real-time update
+    try {
+      // emitToAll('post:created', {
+      // 	post: newPost,
+      // 	message: 'Bài viết mới đã được tạo',
+      // 	timestamp: new Date().toISOString(),
+      // });
+      console.log("📡 WebSocket event emitted: post:created");
+    } catch (socketError) {
+      // Log error but don't fail the request
+      console.error("⚠️ Failed to emit WebSocket event:", socketError);
+    }
+
+    return res.status(201).json({
+      message: "Tạo bài viết mới thành công",
+      data: newPost,
+    });
+  } catch (error: any) {
+    console.error("Lỗi khi tạo post:", error);
+    return res.status(500).json({
+      message: "Lỗi khi tạo bài viết",
+      error: error.message,
+    });
+  }
 }
 
 export async function editPost(req: Request, res: Response) {

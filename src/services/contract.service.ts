@@ -229,7 +229,16 @@ export async function handleDocuSealWebhookService(
 					`💰 Transferring deposit ${depositAmount} from winner ${buyerId} to seller ${sellerId}...`,
 				);
 
-				// Increase seller's credit
+				// Decrease winner's credit (trừ tiền cọc của winner)
+				await connection.query(
+					`UPDATE users SET total_credit = total_credit - ? WHERE id = ?`,
+					[depositAmount, buyerId],
+				);
+				console.log(
+					`✅ Winner ${buyerId} credit decreased by ${depositAmount}`,
+				);
+
+				// Increase seller's credit (cộng tiền cọc cho seller)
 				await connection.query(
 					`UPDATE users SET total_credit = total_credit + ? WHERE id = ?`,
 					[depositAmount, sellerId],
@@ -252,6 +261,22 @@ export async function handleDocuSealWebhookService(
 				if (depositOrderRows.length > 0) {
 					const depositOrderId = depositOrderRows[0].id;
 
+					// Insert transaction_detail for winner (Decrease credit)
+					await connection.query(
+						`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) 
+             VALUES (?, ?, ?, ?, ?)`,
+						[
+							depositOrderId,
+							buyerId,
+							'CREDIT',
+							'Decrease',
+							depositAmount,
+						],
+					);
+					console.log(
+						`💳 Transaction detail logged for winner ${buyerId} (Decrease)`,
+					);
+
 					// Insert transaction_detail for seller (Increase credit)
 					await connection.query(
 						`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) 
@@ -265,7 +290,7 @@ export async function handleDocuSealWebhookService(
 						],
 					);
 					console.log(
-						`💳 Transaction detail logged for seller ${sellerId}`,
+						`💳 Transaction detail logged for seller ${sellerId} (Increase)`,
 					);
 				}
 
