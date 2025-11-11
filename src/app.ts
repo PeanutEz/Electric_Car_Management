@@ -18,7 +18,7 @@ const server = http.createServer(app);
 const io = initializeSocket(server);
 
 app.use(bodyParser.json());
-const PORT = process.env.PORT || 3006;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 

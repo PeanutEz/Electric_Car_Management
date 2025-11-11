@@ -169,6 +169,23 @@ export async function checkAndProcessPostPayment(
 				[quotaToUse.id],
 			);
 
+			// const orderCode = Math.floor(Math.random() * 1000000);
+			// 	const [row]: any = await conn2.query(
+			// 		'INSERT INTO orders (code, type, service_id, product_id, buyer_id, price, status, payment_method, created_at, tracking) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+			// 		[
+			// 			orderCode,
+			// 			'post',
+			// 			serviceId,
+			// 			productId,
+			// 			userId,
+			// 			serviceCost,
+			// 			'PAID',
+			// 			'CREDIT',
+			// 			getVietnamTime(),
+			// 			'PROCESSING',
+			// 		],
+			// 	);
+
 			await conn.commit();
 			return {
 				canPost: true,
@@ -487,34 +504,38 @@ export async function processServicePayment(orderCode: string) {
 				const expiresAt = new Date(purchasedAt);
 				expiresAt.setDate(expiresAt.getDate() + duration);
 
-				// Parse service_ref để lấy các service_id cần tạo quota
-				// Ví dụ: service_ref = "1,3" → tạo quota cho service_id 1 và 3
-				const refServiceIds = serviceRef
-					? serviceRef
-							.split(',')
-							.map((id: string) => parseInt(id.trim()))
-					: [];
+				// Lấy service_id của post xe hoặc pin từ service_ref
+				// Ví dụ: service_ref = "1" → post xe, service_ref = "3" → post pin
+				const postServiceId = serviceRef
+					? parseInt(serviceRef.trim())
+					: null;
 
-				// Tạo record trong user_packages cho từng service trong package
-				// Mỗi service sẽ có 1 record riêng với total_amount = numberOfPost
-				for (const refServiceId of refServiceIds) {
-					await pool.query(
-						`INSERT INTO user_packages 
+				if (!postServiceId) {
+					console.error(
+						'⚠️ Package không có service_ref hợp lệ:',
+						serviceId,
+					);
+					return;
+				}
+
+				// Tạo 1 record duy nhất trong user_packages cho package này
+				// service_id là ID của post service (xe hoặc pin), không phải package ID
+				await pool.query(
+					`INSERT INTO user_packages 
             (user_id, package_id, service_id, order_id, purchased_at, expires_at, status, total_amount, remaining_amount, used_amount) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-						[
-							userId,
-							serviceId,
-							refServiceId,
-							orderId,
-							purchasedAt,
-							toMySQLDateTime(expiresAt),
-							'active',
-							numberOfPost,
-							numberOfPost,
-						],
-					);
-				}
+					[
+						userId,
+						serviceId, // package_id = ID của package
+						postServiceId, // service_id = ID của post service (xe hoặc pin)
+						orderId,
+						purchasedAt,
+						toMySQLDateTime(expiresAt),
+						'active',
+						numberOfPost,
+						numberOfPost,
+					],
+				);
 
 				// Gửi notification cho user khi mua package thành công
 				try {
@@ -619,7 +640,7 @@ export async function processPackagePayment(
 
 		// ========== BƯỚC 1: Lấy thông tin package ==========
 		const [serviceRows]: any = await conn.query(
-			'SELECT id, cost, name, number_of_post, number_of_push, service_ref, product_type, duration FROM services WHERE id = ?',
+			'SELECT id, cost, name, number_of_post, service_ref, product_type, duration FROM services WHERE id = ?',
 			[serviceId],
 		);
 
@@ -635,7 +656,6 @@ export async function processPackagePayment(
 		const serviceCost = parseFloat(serviceRows[0].cost);
 		const serviceName = serviceRows[0].name;
 		const numberOfPost = parseInt(serviceRows[0].number_of_post || 0);
-		const numberOfPush = parseInt(serviceRows[0].number_of_push || 0);
 		const serviceRef = serviceRows[0].service_ref; // Ví dụ: "1,3" cho vehicle post và push
 		const duration = parseInt(serviceRows[0].duration || 30); // Số ngày hiệu lực của package
 
@@ -692,37 +712,44 @@ export async function processPackagePayment(
 			);
 
 			// Lưu thông tin package vào user_packages
-			// Parse service_ref để lấy các service_id cần tạo quota
-			// Ví dụ: service_ref = "1,3" → tạo quota cho service_id 1 và 3
-			const refServiceIds = serviceRef
-				? serviceRef.split(',').map((id: string) => parseInt(id.trim()))
-				: [];
-
 			// Tính expires_at: purchased_at + duration (ngày)
 			const purchasedAt = getVietnamTime();
 			const expiresAt = new Date(purchasedAt);
 			expiresAt.setDate(expiresAt.getDate() + duration);
 
-			// Tạo record trong user_packages cho từng service trong package
-			// Mỗi service sẽ có 1 record riêng với total_amount = numberOfPost
-			for (const refServiceId of refServiceIds) {
-				await conn.query(
-					`INSERT INTO user_packages 
+			// Lấy service_id của post xe hoặc pin từ service_ref
+			// Ví dụ: service_ref = "1" → post xe, service_ref = "3" → post pin
+			const postServiceId = serviceRef
+				? parseInt(serviceRef.trim())
+				: null;
+
+			if (!postServiceId) {
+				await conn.rollback();
+				return {
+					success: false,
+					needPayment: false,
+					message: 'Package không có service_ref hợp lệ',
+				};
+			}
+
+			// Tạo 1 record duy nhất trong user_packages cho package này
+			// service_id là ID của post service (xe hoặc pin), không phải package ID
+			await conn.query(
+				`INSERT INTO user_packages 
           (user_id, package_id, service_id, order_id, purchased_at, expires_at, status, total_amount, remaining_amount, used_amount) 
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-					[
-						userId,
-						serviceId,
-						refServiceId,
-						insertedOrderId,
-						purchasedAt,
-						toMySQLDateTime(expiresAt),
-						'active',
-						numberOfPost,
-						numberOfPost,
-					],
-				);
-			}
+				[
+					userId,
+					serviceId, // package_id = ID của package
+					postServiceId, // service_id = ID của post service (xe hoặc pin)
+					insertedOrderId,
+					purchasedAt,
+					toMySQLDateTime(expiresAt),
+					'active',
+					numberOfPost,
+					numberOfPost,
+				],
+			);
 
 			await conn.commit();
 
