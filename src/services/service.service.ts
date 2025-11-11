@@ -760,14 +760,16 @@ export async function processServicePayment(orderCode: string) {
 				const duration = parseInt(packageData.duration || 30);
 
 				// Tính expires_at: purchased_at + duration (ngày)
-				const purchasedAt = getVietnamTime();
-				const expiresAt = new Date(purchasedAt);
-				expiresAt.setDate(expiresAt.getDate() + duration); // Lấy service_id của post xe hoặc pin từ service_ref
+				const purchasedAt = toMySQLDateTime(); // Thời gian hiện tại VN
+				const expiresAtDate = new Date();
+				expiresAtDate.setDate(expiresAtDate.getDate() + duration);
+				const expiresAt = toMySQLDateTime(expiresAtDate); // Thời gian hết hạn VN
+
+				// Lấy service_id của post xe hoặc pin từ service_ref
 				// Ví dụ: service_ref = "1" → post xe, service_ref = "3" → post pin
 				const postServiceId = serviceRef
 					? parseInt(serviceRef.trim())
 					: null;
-
 				if (!postServiceId) {
 					console.error(
 						'⚠️ Package không có service_ref hợp lệ:',
@@ -788,14 +790,12 @@ export async function processServicePayment(orderCode: string) {
 						postServiceId, // service_id = ID của post service (xe hoặc pin)
 						orderId,
 						purchasedAt,
-						toMySQLDateTime(expiresAt),
+						expiresAt,
 						'active',
 						numberOfPost,
 						numberOfPost,
 					],
-				);
-
-				// Gửi notification cho user khi mua package thành công
+				); // Gửi notification cho user khi mua package thành công
 				try {
 					const packageName = packageInfo[0]?.name || 'gói dịch vụ';
 					const notification =
@@ -971,9 +971,10 @@ export async function processPackagePayment(
 
 			// Lưu thông tin package vào user_packages
 			// Tính expires_at: purchased_at + duration (ngày)
-			const purchasedAt = getVietnamTime();
-			const expiresAt = new Date(purchasedAt);
-			expiresAt.setDate(expiresAt.getDate() + duration);
+			const purchasedAt = toMySQLDateTime(); // Thời gian hiện tại VN
+			const expiresAtDate = new Date();
+			expiresAtDate.setDate(expiresAtDate.getDate() + duration);
+			const expiresAt = toMySQLDateTime(expiresAtDate); // Thời gian hết hạn VN
 
 			// Lấy service_id của post xe hoặc pin từ service_ref
 			// Ví dụ: service_ref = "1" → post xe, service_ref = "3" → post pin
@@ -1002,7 +1003,7 @@ export async function processPackagePayment(
 					postServiceId, // service_id = ID của post service (xe hoặc pin)
 					insertedOrderId,
 					purchasedAt,
-					toMySQLDateTime(expiresAt),
+					expiresAt,
 					'active',
 					numberOfPost,
 					numberOfPost,
