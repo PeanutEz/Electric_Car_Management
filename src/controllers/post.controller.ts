@@ -14,6 +14,7 @@ import {
 	getPostApproved,
 	getPostsById2,
 	updateProductStatus,
+	updateSoldForPost,
 } from '../services/post.service';
 import { checkAndProcessPostPayment } from '../services/service.service';
 
@@ -499,6 +500,32 @@ export async function editPost(req: Request, res: Response) {
 		}
 		return res.status(200).json({
 			message: 'Cập nhật bài viết thành công',
+			data: updatedPost,
+		});
+	} catch (error: any) {
+		return res.status(500).json({ message: error.message });
+	}
+}
+
+export async function updateSoldStatusForPost(req: Request, res: Response) {
+	try {
+		const authHeader = req.headers.authorization;
+		if (!authHeader || !authHeader.startsWith('Bearer ')) {
+			return res
+				.status(401)
+				.json({ message: 'Không tìm thấy token xác thực' });
+		}
+		const token = authHeader.split(' ')[1];
+		const id = (jwt.decode(token) as any).id;
+		const userId = id;
+		const productId = req.body.productId;
+
+		const updatedPost = await updateSoldForPost(userId,productId);
+		if (!updatedPost) {
+			return res.status(404).json({ message: 'Không tìm thấy bài viết' });
+		}
+		return res.status(200).json({
+			message: 'Cập nhật trạng thái đã bán của bài viết thành công',
 			data: updatedPost,
 		});
 	} catch (error: any) {

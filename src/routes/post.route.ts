@@ -7,7 +7,8 @@ import {
 	createPost,
 	searchForPosts,
 	getPostApprovedController,
-	editPost
+	editPost,
+	updateSoldStatusForPost,
 } from '../controllers/post.controller';
 import {
 	authenticateToken,
@@ -792,5 +793,7 @@ router.post(
  *         description: Lỗi server
  */
 router.put('/update-post', editPost);
+
+router.put('/update-sold', updateSoldStatusForPost);
 
 export default router;
