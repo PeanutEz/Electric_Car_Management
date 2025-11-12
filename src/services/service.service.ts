@@ -639,7 +639,7 @@ export async function processServicePayment(orderCode: string) {
 	const paymentStatus = await getPaymentStatus(orderCode);
 
 	const [checkUser]: any = await pool.query(
-		'select buyer_id, id, price, service_id, type from orders where code = ?',
+		'select buyer_id, id, price, service_id, product_id, type from orders where code = ?',
 		[orderCode],
 	);
 	const orderId = checkUser[0].id;
@@ -647,7 +647,6 @@ export async function processServicePayment(orderCode: string) {
 	const userId = checkUser[0].buyer_id;
 	const productId = checkUser[0].product_id;
 	const orderType = checkUser[0].type; // 'post', 'package', 'topup', etc.
-
 	console.log(paymentStatus);
 
 	// Kiểm tra user
@@ -740,26 +739,24 @@ export async function processServicePayment(orderCode: string) {
 			}
 
 			// Xử lý POST: Đã xử lý ở checkAndProcessPostPayment, chỉ cập nhật message
-		} else if (orderType === null || orderType === 'post') {
+		} else if (orderType === 'post') {
 			message = 'Thanh toán thành công.';
-			await pool.query(`update orders set status = 'PAID' and tracking = 'PROCESSING' where id = ?`, [
-				orderId,
-			]);
-			await pool.query(`update users set total_credit = total_credit - ? where id = ?`, [
-				orderPrice,
-				userId,
-			]);
-			await pool.query(`insert into transaction_detail (order_id, user_id, unit, type, credits) values (?, ?, ?, ?, ?)`, [
-				orderId,
-				userId,
-				'CREDIT',
-				'Decrease',
-				orderPrice,
-			]);
-			await pool.query(`update products set status = 'pending' where id = ?`, [
-				productId,
-			]);
-
+			await pool.query(
+				`update orders set status = 'PAID', tracking = 'PROCESSING' where id = ?`,
+				[orderId],
+			);
+			await pool.query(
+				`update users set total_credit = total_credit - ? where id = ?`,
+				[orderPrice, userId],
+			);
+			await pool.query(
+				`insert into transaction_detail (order_id, user_id, unit, type, credits) values (?, ?, ?, ?, ?)`,
+				[orderId, userId, 'CREDIT', 'Decrease', orderPrice],
+			);
+			await pool.query(
+				`update products set status = 'pending' where id = ?`,
+				[productId],
+			);
 
 			// Xử lý PACKAGE: Lưu vào user_packages và cộng quota
 		} else if (orderType === 'package') {
@@ -799,9 +796,9 @@ export async function processServicePayment(orderCode: string) {
 			// 	// Tạo 1 record duy nhất trong user_packages cho package này
 			// 	// service_id là ID của post service (xe hoặc pin), không phải package ID
 			// 	await pool.query(
-			// 		`INSERT INTO user_packages 
-         //    (user_id, package_id, service_id, order_id, purchased_at, expires_at, status, total_amount, remaining_amount, used_amount) 
-         //    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+			// 		`INSERT INTO user_packages
+			//    (user_id, package_id, service_id, order_id, purchased_at, expires_at, status, total_amount, remaining_amount, used_amount)
+			//    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
 			// 		[
 			// 			userId,
 			// 			serviceId, // package_id = ID của package
@@ -813,7 +810,7 @@ export async function processServicePayment(orderCode: string) {
 			// 			numberOfPost,
 			// 			numberOfPost,
 			// 		],
-			// 	); 
+			// 	);
 			// 	// Gửi notification cho user khi mua package thành công
 			// 	try {
 			// 		const packageName = packageInfo[0]?.name || 'gói dịch vụ';
