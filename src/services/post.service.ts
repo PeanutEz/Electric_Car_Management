@@ -19,7 +19,7 @@ export async function postStatusTracking(){
 		update products
 		set status = 'expired'
 		where status = 'approved'
-		and end_date >= '${formattedNow}'`);
+		and '${formattedNow}' >= end_date`);
 }
 
 export async function getPostApproved(
