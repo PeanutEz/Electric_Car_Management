@@ -15,8 +15,23 @@ import {
 	getPostsById2,
 	updateProductStatus,
 	updateSoldForPost,
+	postStatusTracking
 } from '../services/post.service';
 import { checkAndProcessPostPayment } from '../services/service.service';
+
+export async function updatePostStatusAutomation(req: Request, res: Response) {
+	try{
+        await postStatusTracking();
+
+		res.status(200).json({
+			message: 'Update expired posts successfully'
+		})
+	} catch (error: any){
+		res.status(500).json({
+			message: error.message,
+		})
+	}
+}
 
 export async function getPostApprovedController(req: Request, res: Response) {
 	try {

@@ -9,6 +9,7 @@ import {
 	getPostApprovedController,
 	editPost,
 	updateSoldStatusForPost,
+	updatePostStatusAutomation
 } from '../controllers/post.controller';
 import {
 	authenticateToken,
@@ -24,6 +25,41 @@ const router = Router();
  *   name: Posts
  *   description: API quản lý bài viết
  */
+
+/**
+ * @swagger
+ * /api/post/tracking-expired-post:
+ *   get:
+ *     summary: Cập nhật trạng thái các bài đăng đã hết hạn
+ *     description: |
+ *       API này sẽ tự động quét bảng `products`, tìm các bài có `status = 'approved'` 
+ *       và `end_date < thời gian hiện tại`, sau đó cập nhật chúng thành `expired`.
+ *       <br>
+ *       Dùng để chạy tự động định kỳ hoặc test thủ công.
+ *     tags: [Posts]
+ *     responses:
+ *       200:
+ *         description: Cập nhật thành công các bài hết hạn
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Update expired posts successfully
+ *       500:
+ *         description: Lỗi hệ thống hoặc truy vấn thất bại
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error!
+ */
+router.get('/tracking-expired-post', updatePostStatusAutomation);
 
 /**
  * @swagger

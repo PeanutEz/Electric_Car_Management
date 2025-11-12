@@ -7,6 +7,21 @@ import * as notificationService from './notification.service';
 import { sendNotificationToUser } from '../config/socket';
 import { getVietnamTime, addHoursToVietnamTime } from '../utils/datetime';
 
+export async function postStatusTracking(){
+    const now = getVietnamTime();
+
+    const formattedNow = now
+        .toISOString()
+        .slice(0, 19)
+        .replace('T', ' '); 
+
+	await pool.query(`
+		update products
+		set status = 'expired'
+		where status = 'approved'
+		and end_date >= '${formattedNow}'`);
+}
+
 export async function getPostApproved(
 	userId: number | null,
 	page: number,
@@ -28,6 +43,8 @@ export async function getPostApproved(
 	category_id?: number,
 	category_type?: string,
 ): Promise<Post[]> {
+	const now = getVietnamTime();
+	console.log(now);
 	const offset = (page - 1) * limit;
 	if (sort_by === 'recommend') sort_by = undefined;
 	let query = `SELECT p.id, p.title, p.priority, p.color,
@@ -70,7 +87,7 @@ export async function getPostApproved(
 				query += ` FROM products p
 					INNER JOIN product_categories pc ON pc.id = p.product_category_id
 					INNER JOIN batteries b on b.product_id = p.id`;
-				query += ` WHERE p.status in('approved','auctioning') AND pc.slug = 'battery'`;
+				query += ` WHERE p.status in('approved','auctioning') AND p.end_date >= '${now.toISOString()}' AND pc.slug = 'battery'`;
 				if (year !== undefined && !isNaN(year))
 					query += ` AND p.year = ${year}`;
 				if (color !== undefined && color !== '' && color !== null)
@@ -108,7 +125,7 @@ export async function getPostApproved(
 				query += ` FROM products p
 					INNER JOIN product_categories pc ON pc.id = p.product_category_id
 					INNER JOIN vehicles v on v.product_id = p.id`;
-				query += ` WHERE p.status in('approved','auctioning') AND pc.slug = 'vehicle'`;
+				query += ` WHERE p.status in('approved','auctioning') AND p.end_date >= '${now.toISOString()}' AND pc.slug = 'vehicle'`;
 				if (year !== undefined && !isNaN(year))
 					query += ` AND p.year = ${year}`;
 				if (color !== undefined && color !== '' && color !== null)
@@ -144,7 +161,8 @@ export async function getPostApproved(
 			default:
 				query += ` FROM products p
 					INNER JOIN product_categories pc ON pc.id = p.product_category_id
-					WHERE p.status in('approved','auctioning')`;
+					WHERE p.status in('approved','auctioning')
+					AND p.end_date >= '${now.toISOString()}'`;
 				query += ` LIMIT ? OFFSET ?`;
 				break;
 		}
