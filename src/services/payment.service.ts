@@ -5,9 +5,7 @@ import pool from '../config/db';
 import { detectPaymentMethod } from '../utils/parser';
 import { title } from 'process';
 import * as notificationService from './notification.service';
-import * as chatService from './chat.service';
-import { sendNotificationToUser, getIO } from '../config/socket';
-import { getVietnamTime, getVietnamISOString } from '../utils/datetime';
+import { sendNotificationToUser } from '../config/socket';
 
 export async function createPayosPayment(payload: Payment) {
 	try {
@@ -134,7 +132,7 @@ export async function processAuctionFeePayment(
 
 		const productPrice = parseFloat(product.price);
 		const auctionFee = productPrice * 0.005; // 0.5% giá product
-		const duration = 1200; // default 1200 seconds
+		const duration = 120; // default 120 seconds
 
 		// Lấy số dư credit của seller
 		const [userRows]: any = await connection.query(
@@ -162,7 +160,7 @@ export async function processAuctionFeePayment(
 			// Insert vào bảng orders với type = 'auction_fee'
 			const [orderResult]: any = await connection.query(
 				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
 				[
 					'auction',
 					'PAID',
@@ -171,30 +169,16 @@ export async function processAuctionFeePayment(
 					orderCode,
 					'CREDIT',
 					productId,
-					getVietnamTime(),
 					17,
 					'VERIFYING',
 				],
 			);
 
-			// 💳 Insert transaction_detail (Decrease credit)
-			await connection.query(
-				`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) 
-				 VALUES (?, ?, ?, ?, ?)`,
-				[
-					orderResult.insertId,
-					sellerId,
-					'CREDIT',
-					'Decrease',
-					auctionFee,
-				],
-			);
-
 			// Cập nhật status của product thành "auctioning"
-			// await connection.query(
-			// 	'UPDATE products SET status = ? WHERE id = ?',
-			// 	['verified', productId],
-			// );
+			await connection.query(
+				'UPDATE products SET status = ? WHERE id = ?',
+				['auctioning', productId],
+			);
 
 			// Insert vào bảng auctions
 			const [auctionResult]: any = await connection.query(
@@ -245,7 +229,7 @@ export async function processAuctionFeePayment(
 			// Tạo order với status PENDING
 			const [orderResult]: any = await connection.query(
 				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
 				[
 					'auction',
 					'PENDING',
@@ -254,7 +238,6 @@ export async function processAuctionFeePayment(
 					orderCode.toString(),
 					'PAYOS',
 					productId,
-					getVietnamTime(),
 					17,
 					'PENDING',
 				],
@@ -461,11 +444,12 @@ export async function processDepositPayment(
 			throw new Error('Auction không tồn tại');
 		}
 
-		// if (
-		// 	auctionRows[0].status === 'ended'
-		// ) {
-		// 	throw new Error('Phiên đấu giá chưa bắt đầu hoặc đã kết thúc');
-		// }
+		if (
+			auctionRows[0].status !== 'live' ||
+			auctionRows[0].status === 'ended'
+		) {
+			throw new Error('Phiên đấu giá chưa bắt đầu hoặc đã kết thúc');
+		}
 
 		const auction = auctionRows[0];
 
@@ -518,7 +502,7 @@ export async function processDepositPayment(
 			// Insert vào bảng orders với type = 'deposit'
 			const [orderResult]: any = await connection.query(
 				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
 				[
 					'deposit',
 					'PAID',
@@ -527,22 +511,8 @@ export async function processDepositPayment(
 					orderCode,
 					'CREDIT',
 					auction.product_id,
-					getVietnamTime(),
 					18,
 					'AUCTION_PROCESSING',
-				],
-			);
-
-			// 💳 Insert transaction_detail (Decrease credit)
-			await connection.query(
-				`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) 
-				 VALUES (?, ?, ?, ?, ?)`,
-				[
-					orderResult.insertId,
-					buyerId,
-					'CREDIT',
-					'Decrease',
-					depositAmount,
 				],
 			);
 
@@ -575,61 +545,6 @@ export async function processDepositPayment(
 				);
 			}
 
-			// 🔌 Emit socket event: User joined auction room after successful deposit
-			try {
-				const io = getIO();
-				const auctionNamespace = io.of('/auction');
-
-				// Get user info for the event
-				const [userRows]: any = await connection.query(
-					`SELECT full_name, email FROM users WHERE id = ?`,
-					[buyerId],
-				);
-
-				const joinData = {
-					userId: buyerId,
-					userName: userRows[0]?.full_name || 'User',
-					auctionId: auctionId,
-					depositAmount: depositAmount,
-					timestamp: getVietnamISOString(),
-					message: `${
-						userRows[0]?.full_name || 'User'
-					} đã tham gia đấu giá`,
-				};
-
-				// Emit to auction room that user has joined (notify others)
-				auctionNamespace
-					.to(`auction_${auctionId}`)
-					.emit('auction:user_joined', joinData);
-
-				// Emit to the user themselves that they successfully joined
-				//const userSocketId = chatService.getUserSocketId(buyerId);
-				//if (userSocketId) {
-				auctionNamespace
-					.to(`auction_${auctionId}`)
-					.emit('auction:joined', {
-						...joinData,
-						auction: {
-							id: auction.id,
-							product_id: auction.product_id,
-							starting_price: auction.starting_price,
-							target_price: auction.target_price,
-							deposit: depositAmount,
-						},
-						message: 'Bạn đã tham gia đấu giá thành công',
-					});
-				//}
-
-				console.log(
-					`🔌 Socket emitted: User ${buyerId} joined auction ${auctionId}`,
-				);
-			} catch (socketError: any) {
-				console.error(
-					'⚠️ Failed to emit socket event for auction join:',
-					socketError.message,
-				);
-			}
-
 			return {
 				success: true,
 				paymentMethod: 'CREDIT',
@@ -643,11 +558,6 @@ export async function processDepositPayment(
 				auction: {
 					id: auction.id,
 					deposit: depositAmount,
-					starting_price: auction.starting_price,
-					target_price: auction.target_price,
-					winning_price:
-						auction.winning_price || auction.starting_price,
-					winner_id: auction.winner_id,
 				},
 			};
 		} else {
@@ -658,7 +568,7 @@ export async function processDepositPayment(
 			// Tạo order với status PENDING
 			const [orderResult]: any = await connection.query(
 				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
 				[
 					'deposit',
 					'PENDING',
@@ -667,7 +577,6 @@ export async function processDepositPayment(
 					orderCode.toString(),
 					'PAYOS',
 					auction.product_id,
-					getVietnamTime(),
 					18,
 					'PENDING',
 				],
@@ -757,122 +666,12 @@ export async function confirmAuctionDepositPayment(
 
 		// Insert vào bảng auction_members
 		const [memberResult]: any = await connection.query(
-			`INSERT INTO auction_members (user_id, auction_id, created_at) 
-			 VALUES (?, ?, ?)`,
-			[auctionData.buyer_id, auctionData.auction_id, getVietnamTime()],
+			`INSERT INTO auction_members (user_id, auction_id) 
+			 VALUES (?, ?, NOW())`,
+			[auctionData.buyer_id, auctionData.auction_id],
 		);
 
 		await connection.commit();
-
-		// � Gửi notification cho user khi đặt cọc thành công qua PayOS
-		try {
-			const [productRows]: any = await connection.query(
-				`SELECT title FROM products WHERE id IN (SELECT product_id FROM auctions WHERE id = ?)`,
-				[auctionData.auction_id],
-			);
-
-			const notification = await notificationService.createNotification({
-				user_id: auctionData.buyer_id,
-				post_id: productRows[0]?.id || null,
-				type: 'deposit_success',
-				title: 'Đặt cọc thành công',
-				message: `Bạn đã đặt cọc thành công ${orderRows[0].price.toLocaleString(
-					'vi-VN',
-				)} VNĐ để tham gia đấu giá "${
-					productRows[0]?.title || ''
-				}". Hãy bắt đầu đấu giá ngay!`,
-			});
-			sendNotificationToUser(auctionData.buyer_id, notification);
-		} catch (notifError: any) {
-			console.error(
-				'⚠️ Failed to send deposit notification (PayOS):',
-				notifError.message,
-			);
-		}
-
-		// �🔌 Emit socket event: User joined auction room after successful deposit via PayOS
-		try {
-			const io = getIO();
-			const auctionNamespace = io.of('/auction');
-
-			// Get user and auction info for the event
-			const [userRows]: any = await connection.query(
-				`SELECT full_name, email FROM users WHERE id = ?`,
-				[auctionData.buyer_id],
-			);
-
-			// Get auction details
-			const [auctionRows]: any = await connection.query(
-				`SELECT id, product_id, starting_price, target_price, deposit, winning_price, winner_id FROM auctions WHERE id = ?`,
-				[auctionData.auction_id],
-			);
-
-			// Get remaining time
-			const { getAuctionRemainingTime } = await import(
-				'./auction.service'
-			);
-			const remainingTime = await getAuctionRemainingTime(
-				auctionData.auction_id,
-			);
-
-			const depositSuccessData = {
-				userId: auctionData.buyer_id,
-				userName: userRows[0]?.full_name || 'User',
-				auctionId: auctionData.auction_id,
-				depositAmount: orderRows[0].price,
-				timestamp: getVietnamISOString(),
-				auction: auctionRows[0]
-					? {
-							id: auctionRows[0].id,
-							product_id: auctionRows[0].product_id,
-							starting_price: auctionRows[0].starting_price,
-							target_price: auctionRows[0].target_price,
-							deposit: auctionRows[0].deposit,
-							winning_price:
-								auctionRows[0].winning_price ||
-								auctionRows[0].starting_price,
-							winner_id: auctionRows[0].winner_id,
-					  }
-					: null,
-				remainingTime: remainingTime,
-				message:
-					'Đặt cọc thành công! Bạn có thể tham gia đấu giá ngay.',
-			};
-
-			// Emit tới main socket của user để FE nhận ngay (quan trọng!)
-			const userSocketId = chatService.getUserSocketId(
-				auctionData.buyer_id,
-			);
-			if (userSocketId) {
-				io.to(userSocketId).emit('deposit:success', depositSuccessData);
-				console.log(
-					`✅ Emitted deposit:success to user ${auctionData.buyer_id} socket ${userSocketId} (PayOS)`,
-				);
-			}
-
-			// Notify others in the auction room (nếu có người đã join trước)
-			auctionNamespace
-				.to(`auction_${auctionData.auction_id}`)
-				.emit('auction:user_joined', {
-					userId: auctionData.buyer_id,
-					userName: userRows[0]?.full_name || 'User',
-					auctionId: auctionData.auction_id,
-					depositAmount: orderRows[0].price,
-					timestamp: getVietnamISOString(),
-					message: `${
-						userRows[0]?.full_name || 'User'
-					} đã tham gia đấu giá`,
-				});
-
-			console.log(
-				`🔌 Socket emitted: User ${auctionData.buyer_id} joined auction ${auctionData.auction_id} (PayOS)`,
-			);
-		} catch (socketError: any) {
-			console.error(
-				'⚠️ Failed to emit socket event for auction join (PayOS):',
-				socketError.message,
-			);
-		}
 
 		return {
 			success: true,

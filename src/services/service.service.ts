@@ -588,7 +588,7 @@ export async function checkAndProcessPostPayment(
 					description: `Thanh toan dich vu`,
 					returnUrl: buildUrl(envAppUrl, '/payment/result', {
 						provider: 'payos',
-						next: '/post?draft=true',
+						next: '/account/posts',
 					}),
 					cancelUrl: buildUrl(envAppUrl, '/payment/result', {
 						provider: 'payos',
@@ -645,7 +645,7 @@ export async function processServicePayment(orderCode: string) {
 	const orderId = checkUser[0].id;
 	const price = checkUser[0].price;
 	const userId = checkUser[0].buyer_id;
-	const serviceId = checkUser[0].service_id;
+	const productId = checkUser[0].product_id;
 	const orderType = checkUser[0].type; // 'post', 'package', 'topup', etc.
 
 	console.log(paymentStatus);
@@ -742,79 +742,98 @@ export async function processServicePayment(orderCode: string) {
 			// Xử lý POST: Đã xử lý ở checkAndProcessPostPayment, chỉ cập nhật message
 		} else if (orderType === null || orderType === 'post') {
 			message = 'Thanh toán thành công.';
+			await pool.query(`update orders set status = 'PAID' and tracking = 'PROCESSING' where id = ?`, [
+				orderId,
+			]);
+			await pool.query(`update users set total_credit = total_credit - ? where id = ?`, [
+				orderPrice,
+				userId,
+			]);
+			await pool.query(`insert into transaction_detail (order_id, user_id, unit, type, credits) values (?, ?, ?, ?, ?)`, [
+				orderId,
+				userId,
+				'CREDIT',
+				'Decrease',
+				orderPrice,
+			]);
+			await pool.query(`update products set status = 'pending' where id = ?`, [
+				productId,
+			]);
+
 
 			// Xử lý PACKAGE: Lưu vào user_packages và cộng quota
 		} else if (orderType === 'package') {
-			message = 'Thanh toán package thành công.';
+			message = 'Thanh toán thành công.';
 
-			// Lấy thông tin package để tạo records trong user_packages
-			const [packageInfo]: any = await pool.query(
-				'SELECT id, name, number_of_post, number_of_push, service_ref, duration FROM services WHERE id = ?',
-				[serviceId],
-			);
+			// // Lấy thông tin package để tạo records trong user_packages
+			// const [packageInfo]: any = await pool.query(
+			// 	'SELECT id, name, number_of_post, number_of_push, service_ref, duration FROM services WHERE id = ?',
+			// 	[serviceId],
+			// );
 
-			if (packageInfo.length > 0) {
-				const packageData = packageInfo[0];
-				const numberOfPost = parseInt(packageData.number_of_post || 0);
-				const serviceRef = packageData.service_ref;
-				const duration = parseInt(packageData.duration || 30);
+			// if (packageInfo.length > 0) {
+			// 	const packageData = packageInfo[0];
+			// 	const numberOfPost = parseInt(packageData.number_of_post || 0);
+			// 	const serviceRef = packageData.service_ref;
+			// 	const duration = parseInt(packageData.duration || 30);
 
-				// Tính expires_at: purchased_at + duration (ngày)
-				const purchasedAt = toMySQLDateTime(); // Thời gian hiện tại VN
-				const expiresAtDate = new Date();
-				expiresAtDate.setDate(expiresAtDate.getDate() + duration);
-				const expiresAt = toMySQLDateTime(expiresAtDate); // Thời gian hết hạn VN
+			// 	// Tính expires_at: purchased_at + duration (ngày)
+			// 	const purchasedAt = toMySQLDateTime(); // Thời gian hiện tại VN
+			// 	const expiresAtDate = new Date();
+			// 	expiresAtDate.setDate(expiresAtDate.getDate() + duration);
+			// 	const expiresAt = toMySQLDateTime(expiresAtDate); // Thời gian hết hạn VN
 
-				// Lấy service_id của post xe hoặc pin từ service_ref
-				// Ví dụ: service_ref = "1" → post xe, service_ref = "3" → post pin
-				const postServiceId = serviceRef
-					? parseInt(serviceRef.trim())
-					: null;
-				if (!postServiceId) {
-					console.error(
-						'⚠️ Package không có service_ref hợp lệ:',
-						serviceId,
-					);
-					return;
-				}
+			// 	// Lấy service_id của post xe hoặc pin từ service_ref
+			// 	// Ví dụ: service_ref = "1" → post xe, service_ref = "3" → post pin
+			// 	const postServiceId = serviceRef
+			// 		? parseInt(serviceRef.trim())
+			// 		: null;
+			// 	if (!postServiceId) {
+			// 		console.error(
+			// 			'⚠️ Package không có service_ref hợp lệ:',
+			// 			serviceId,
+			// 		);
+			// 		return;
+			// 	}
 
-				// Tạo 1 record duy nhất trong user_packages cho package này
-				// service_id là ID của post service (xe hoặc pin), không phải package ID
-				await pool.query(
-					`INSERT INTO user_packages 
-            (user_id, package_id, service_id, order_id, purchased_at, expires_at, status, total_amount, remaining_amount, used_amount) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-					[
-						userId,
-						serviceId, // package_id = ID của package
-						postServiceId, // service_id = ID của post service (xe hoặc pin)
-						orderId,
-						purchasedAt,
-						expiresAt,
-						'active',
-						numberOfPost,
-						numberOfPost,
-					],
-				); // Gửi notification cho user khi mua package thành công
-				try {
-					const packageName = packageInfo[0]?.name || 'gói dịch vụ';
-					const notification =
-						await notificationService.createNotification({
-							user_id: userId,
-							type: 'package_success',
-							title: 'Mua gói thành công',
-							message: `Bạn đã mua thành công ${packageName} với giá ${orderPrice.toLocaleString(
-								'vi-VN',
-							)} VNĐ.`,
-						});
-					sendNotificationToUser(userId, notification);
-				} catch (notifError: any) {
-					console.error(
-						'⚠️ Failed to send package notification:',
-						notifError.message,
-					);
-				}
-			}
+			// 	// Tạo 1 record duy nhất trong user_packages cho package này
+			// 	// service_id là ID của post service (xe hoặc pin), không phải package ID
+			// 	await pool.query(
+			// 		`INSERT INTO user_packages 
+         //    (user_id, package_id, service_id, order_id, purchased_at, expires_at, status, total_amount, remaining_amount, used_amount) 
+         //    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+			// 		[
+			// 			userId,
+			// 			serviceId, // package_id = ID của package
+			// 			postServiceId, // service_id = ID của post service (xe hoặc pin)
+			// 			orderId,
+			// 			purchasedAt,
+			// 			expiresAt,
+			// 			'active',
+			// 			numberOfPost,
+			// 			numberOfPost,
+			// 		],
+			// 	); 
+			// 	// Gửi notification cho user khi mua package thành công
+			// 	try {
+			// 		const packageName = packageInfo[0]?.name || 'gói dịch vụ';
+			// 		const notification =
+			// 			await notificationService.createNotification({
+			// 				user_id: userId,
+			// 				type: 'package_success',
+			// 				title: 'Mua gói thành công',
+			// 				message: `Bạn đã mua thành công ${packageName} với giá ${orderPrice.toLocaleString(
+			// 					'vi-VN',
+			// 				)} VNĐ.`,
+			// 			});
+			// 		sendNotificationToUser(userId, notification);
+			// 	} catch (notifError: any) {
+			// 		console.error(
+			// 			'⚠️ Failed to send package notification:',
+			// 			notifError.message,
+			// 		);
+			// 	}
+			// }
 
 			// Xử lý AUCTION: Chỉ cập nhật message
 		} else if (orderType === 'auction') {
