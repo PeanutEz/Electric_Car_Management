@@ -1341,12 +1341,23 @@ export async function updateUserPost(
 }
 
 export async function updateSoldForPost(userId: number, productId: number) {
-	// Cập nhật trạng thái sản phẩm thành 'sold' nếu productId và userId khớp và trạng thái hiện tại là 'approved'
+	// Cập nhật trạng thái sản phẩm thành 'sold' nếu productId và userId khớp và trạng thái hiện tại là 'approved' nhớ res status
+	const [checkRows]: any = await pool.query(
+		`SELECT status FROM products 
+		 WHERE id = ? AND created_by = ?`,
+		[productId, userId],
+	);
+
+	if (checkRows.length === 0 || checkRows[0].status !== 'approved') {
+		throw new Error('Sản phẩm không tồn tại hoặc không được phép cập nhật trạng thái');
+	}
+
 	await pool.query(
 		`UPDATE products 
 		 SET status = 'sold', updated_at = ? 
-		 WHERE id = ? AND created_by = ? AND status = 'approved'`,
+		 WHERE id = ? AND created_by = ?`,
 		[getVietnamTime(), productId, userId],
 	);
+	
 	return getPostsById(productId);
 }
