@@ -1466,10 +1466,7 @@ export async function getServices(): Promise<Service[]> {
 	return rows;
 }
 
-export async function updateServiceCost(
-	serviceId: number,
-	newCost: number,
-) {
+export async function updateServiceCost(serviceId: number,newCost: number,) {
 	await pool.query('UPDATE services SET cost = ? WHERE id = ?', [
 		newCost,
 		serviceId,

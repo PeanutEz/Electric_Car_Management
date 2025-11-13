@@ -307,19 +307,26 @@ export async function updateExpiredPackagesController(
 	}
 }
 
-export async function updateServiceCostController(
-	req: Request,
-	res: Response,
-) {
+export async function updateServiceCostController(req: Request, res: Response) {
 	try {
 		const { serviceId, cost } = req.body;
-		console.log(serviceId + cost);
-		if (!serviceId || !cost) {
-			return res
-				.status(400)
-				.json({ message: 'serviceId và cost là bắt buộc' });
+
+		// Validate và parse input
+		const parsedServiceId = parseInt(serviceId);
+		const parsedCost = parseFloat(cost);
+
+		if (isNaN(parsedServiceId)) {
+			return res.status(400).json({ message: 'serviceId không hợp lệ' });
 		}
-		const updatedService = await updateServiceCost(serviceId, cost);
+
+		if (isNaN(parsedCost) || parsedCost < 0) {
+			return res.status(400).json({ message: 'cost không hợp lệ' });
+		}
+
+		const updatedService = await updateServiceCost(
+			parsedServiceId,
+			parsedCost,
+		);
 		res.status(200).json({
 			message: 'Cập nhật chi phí dịch vụ thành công',
 			data: updatedService,
