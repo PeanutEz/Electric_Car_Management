@@ -11,6 +11,7 @@ import {
 	auctionDepositController,
 	confirmAuctionDepositController,
 	cancelPaymentController,
+	updatePaymentStatusController,
 } from '../controllers/payment.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 
@@ -417,5 +418,7 @@ router.post('/auction-fee', authenticateToken, auctionFeePaymentController);
 router.post('/auction-deposit', authenticateToken, auctionDepositController);
 
 router.post('/cancel', authenticateToken, cancelPaymentController);
+
+router.post('/update-status', authenticateToken, updatePaymentStatusController);
 
 export default router;

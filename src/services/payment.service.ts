@@ -746,3 +746,39 @@ export async function confirmDepositPayment(orderId: number) {
 		connection.release();
 	}
 }
+
+export async function updatePaymentStatus(orderId: number) {
+	const connection = await pool.getConnection();
+
+	try {
+		await connection.beginTransaction();
+		// Lấy thông tin order
+		const [orderRows]: any = await connection.query(
+			'SELECT product_id, status FROM orders WHERE id = ?',
+			[orderId],
+		);
+		if (!orderRows || orderRows.length === 0) {
+			throw new Error('Order không tồn tại');
+		}
+		if (orderRows[0].status === 'pending') {	
+			const updatedAtVN = toMySQLDateTime();
+			// Cập nhật status của order thành PAID
+			await connection.query(
+				'UPDATE orders SET status = ?,tracking = ?, updated_at = ? WHERE id = ?',
+				['paid', 'SUCCESS',updatedAtVN, orderId],
+			);
+			await connection.commit();
+			return {
+				success: true,
+				message: 'Cập nhật trạng thái thanh toán thành công',
+			};
+		}
+
+	} catch (error: any) {
+		await connection.rollback();
+		throw new Error(error.message || 'Lỗi khi cập nhật trạng thái thanh toán');
+	}
+	finally {
+		connection.release();
+	}
+}

@@ -7,6 +7,7 @@ import {
 	confirmAuctionFeePayment,
 	processDepositPayment,
 	confirmAuctionDepositPayment,
+	updatePaymentStatus
 } from '../services/payment.service';
 import {
 	processServicePayment,
@@ -900,6 +901,21 @@ export const cancelPaymentController = async (req: Request, res: Response) => {
 		return res.status(500).json({
 			success: false,
 			message: error.message || 'Failed to cancel payment',
+		});
+	}
+};
+
+export const updatePaymentStatusController = async (req: Request, res: Response) => {
+	try {
+		const { orderCode} = req.body;
+		const result = await updatePaymentStatus(orderCode);
+		res.status(200).json({
+			message: 'Cập nhật trạng thái thanh toán thành công',
+			data: result,
+		});
+	} catch (error: any) {
+		res.status(500).json({
+			message: error.message,
 		});
 	}
 };
