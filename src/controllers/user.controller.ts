@@ -153,39 +153,6 @@ export async function login(req: Request, res: Response) {
 		});
 	}
 }
-//truyền refresh token lên header
-// Refresh token via Authorization header
-// export async function refreshToken(req: any, res: Response) {
-// 	try {
-// 		const authHeader =
-// 			req.headers['authorization'] || req.headers['Authorization'];
-// 		if (!authHeader || Array.isArray(authHeader)) {
-// 			return res
-// 				.status(400)
-// 				.json({ message: 'Authorization header is required' });
-// 		}
-
-// 		const tokenStr = (authHeader as string).trim();
-// 		if (!tokenStr) {
-// 			return res
-// 				.status(400)
-// 				.json({ message: 'Authorization header is empty' });
-// 		}
-
-// 		// Pass the whole header value to service; service will strip Bearer if present
-// 		const result = await refreshUserToken(tokenStr);
-
-// 		return res.status(200).json({
-// 			message: 'Làm mới token thành công',
-// 			data: {
-// 				access_token: result.access_token,
-// 			},
-// 		});
-// 	} catch (error: any) {
-// 		const msg = error?.message || 'Không thể làm mới token';
-// 		return res.status(401).json({ message: msg });
-// 	}
-// }
 export async function refreshToken(req: any, res: Response) {
 	try {
 		const refreshTokenRaw = req.body['refresh_token'];

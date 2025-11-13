@@ -1466,10 +1466,74 @@ export async function getServices(): Promise<Service[]> {
 	return rows;
 }
 
-export async function updateServiceCost(serviceId: number,newCost: number,) {
-	await pool.query('UPDATE services SET cost = ? WHERE id = ?', [
-		newCost,
-		serviceId,
-	]);
-	return getServiceById(serviceId);
+/**
+ * Hủy các order pending quá 5 phút
+ * Logic:
+ * - Tìm tất cả order có status = 'PENDING' và created_at < NOW() - 5 phút
+ * - Cập nhật status = 'CANCELLED' và tracking = 'FAILED'
+ * - Gửi notification cho user về việc order bị hủy do quá thời gian thanh toán
+ *
+ * @returns Số lượng orders đã được hủy
+ */
+export async function cancelExpiredPendingOrders(): Promise<number> {
+	const conn = await pool.getConnection();
+	try {
+		await conn.beginTransaction();
+
+		// Tìm các order pending quá 5 phút
+		const [expiredOrders]: any = await conn.query(
+			`SELECT id, code, buyer_id, type, price, created_at 
+			FROM orders 
+			WHERE status = 'PENDING' 
+			AND created_at < DATE_SUB(NOW(), INTERVAL 1 MINUTE)`,
+		);
+
+		if (expiredOrders.length === 0) {
+			await conn.commit();
+			return 0;
+		}
+
+		console.log(`🕐 Found ${expiredOrders.length} expired pending orders`);
+
+		// Cập nhật status và tracking thành CANCELLED/FAILED
+		const orderIds = expiredOrders.map((order: any) => order.id);
+		await conn.query(
+			`UPDATE orders 
+			SET status = 'CANCELLED', tracking = 'CANCELLED' 
+			WHERE id IN (?)`,
+			[orderIds],
+		);
+
+		// Gửi notification cho từng user về việc order bị hủy
+		for (const order of expiredOrders) {
+			try {
+				const notification =
+					await notificationService.createNotification({
+						user_id: order.buyer_id,
+						type: 'payment_expired',
+						title: 'Đơn hàng đã bị hủy',
+						message: `Đơn hàng #${order.code} (${order.type}) đã bị hủy do quá thời gian thanh toán (1 phút).`,
+					});
+				sendNotificationToUser(order.buyer_id, notification);
+
+				console.log(
+					`✅ Cancelled order ${order.code} for user ${order.buyer_id}`,
+				);
+			} catch (notifError: any) {
+				console.error(
+					`⚠️ Failed to send notification for order ${order.code}:`,
+					notifError.message,
+				);
+			}
+		}
+
+		await conn.commit();
+		return expiredOrders.length;
+	} catch (error) {
+		await conn.rollback();
+		console.error('❌ Error cancelling expired orders:', error);
+		throw error;
+	} finally {
+		conn.release();
+	}
 }

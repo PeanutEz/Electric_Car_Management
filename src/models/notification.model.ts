@@ -17,6 +17,7 @@ export type NotificationType =
 	| 'auction_fail' // Đấu giá thất bại, không có ai bid
 	| 'dealing_success' // Giao dịch thành công, đã ký hợp đồng
 	| 'dealing_fail' // Giao dịch thất bại
+	| 'payment_expired' // Đơn hàng bị hủy do quá thời gian thanh toán
 	| 'message'
 	| 'system';
 

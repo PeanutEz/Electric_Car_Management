@@ -10,7 +10,7 @@ import {
 	updateServiceController,
 	deleteServiceController,
 	getAllServicesController,
-	updateServiceCostController,
+	cancelExpiredOrdersController,
 } from '../controllers/service.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 
@@ -336,7 +336,30 @@ router.put('/:id', updateServiceController);
  */
 router.delete('/:id', deleteServiceController);
 
-router.put('/cost', updateServiceCostController);
-
+/**
+ * @swagger
+ * /api/service/cancel-expired-orders:
+ *   post:
+ *     summary: Hủy các đơn hàng pending quá 5 phút
+ *     tags: [Services]
+ *     responses:
+ *       200:
+ *         description: Hủy thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     cancelledCount:
+ *                       type: integer
+ *       500:
+ *         description: Lỗi server
+ */
+router.post('/cancel-expired-orders', cancelExpiredOrdersController);
 
 export default router;
