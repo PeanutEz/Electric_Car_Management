@@ -1465,3 +1465,14 @@ export async function getServices(): Promise<Service[]> {
 	const [rows]: any = await pool.query('SELECT * FROM services');
 	return rows;
 }
+
+export async function updateServiceCost(
+	serviceId: number,
+	newCost: number,
+) {
+	await pool.query('UPDATE services SET cost = ? WHERE id = ?', [
+		newCost,
+		serviceId,
+	]);
+	return getServiceById(serviceId);
+}

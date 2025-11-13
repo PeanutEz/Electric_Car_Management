@@ -10,6 +10,7 @@ import {
 	updateServiceController,
 	deleteServiceController,
 	getAllServicesController,
+	updateServiceCostController,
 } from '../controllers/service.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 
@@ -335,6 +336,7 @@ router.put('/:id', updateServiceController);
  */
 router.delete('/:id', deleteServiceController);
 
+router.put('/cost', updateServiceCostController);
 
 
 export default router;

@@ -14,6 +14,7 @@ import {
 	processServicePayment,
 	updateExpiredPackages,
 	updateService,
+	updateServiceCost,
 } from '../services/service.service';
 import { getVietnamISOString } from '../utils/datetime';
 
@@ -300,6 +301,28 @@ export async function updateExpiredPackagesController(
 			data: {
 				expiredCount: expiredCount,
 			},
+		});
+	} catch (error: any) {
+		res.status(500).json({ message: error.message });
+	}
+}
+
+export async function updateServiceCostController(
+	req: Request,
+	res: Response,
+) {
+	try {
+		const { serviceId, cost } = req.body;
+		console.log(serviceId + cost);
+		if (!serviceId || !cost) {
+			return res
+				.status(400)
+				.json({ message: 'serviceId và cost là bắt buộc' });
+		}
+		const updatedService = await updateServiceCost(serviceId, cost);
+		res.status(200).json({
+			message: 'Cập nhật chi phí dịch vụ thành công',
+			data: updatedService,
 		});
 	} catch (error: any) {
 		res.status(500).json({ message: error.message });
