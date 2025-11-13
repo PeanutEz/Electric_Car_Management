@@ -688,16 +688,18 @@ export async function processServicePayment(orderCode: string) {
 	) {
 		console.log('✅ Processing PAID payment for order:', orderCode);
 
+		const updatedAtVN = toMySQLDateTime();
+
 		// Cập nhật order status thành PAID
-		await pool.query('update orders set status = ? where code = ?', [
-			'PAID',
-			orderCode,
-		]);
+		await pool.query(
+			'update orders set status = ?, updated_at = ? where code = ?',
+			['PAID', updatedAtVN, orderCode],
+		);
 
 		// Cập nhật tracking thành SUCCESS
 		await pool.query(
-			`update orders set tracking = 'SUCCESS' where code = ?`,
-			[orderCode],
+			`update orders set tracking = 'SUCCESS', updated_at = ? where code = ?`,
+			[updatedAtVN, orderCode],
 		);
 
 		// Cộng tiền vào total_credit (vì đây là payment từ PayOS)
@@ -742,8 +744,8 @@ export async function processServicePayment(orderCode: string) {
 		} else if (orderType === 'post') {
 			message = 'Thanh toán thành công.';
 			await pool.query(
-				`update orders set status = 'PAID', tracking = 'PROCESSING' where id = ?`,
-				[orderId],
+				`update orders set status = 'PAID', tracking = 'PROCESSING', updated_at = ? where id = ?`,
+				[updatedAtVN, orderId],
 			);
 			await pool.query(
 				`update users set total_credit = total_credit - ? where id = ?`,
@@ -851,16 +853,18 @@ export async function processServicePayment(orderCode: string) {
 			paymentStatus.data.data.status === 'EXPIRED') &&
 		currentOrderStatus !== 'CANCELLED'
 	) {
+		const updatedAtVN = toMySQLDateTime();
+
 		// Cập nhật order status thành CANCELLED
-		await pool.query('update orders set status = ? where code = ?', [
-			'CANCELLED',
-			orderCode,
-		]);
+		await pool.query(
+			'update orders set status = ?, updated_at = ? where code = ?',
+			['CANCELLED', updatedAtVN, orderCode],
+		);
 
 		// Cập nhật tracking thành FAILED
 		await pool.query(
-			`update orders set tracking = 'FAILED' where code = ?`,
-			[orderCode],
+			`update orders set tracking = 'FAILED', updated_at = ? where code = ?`,
+			[updatedAtVN, orderCode],
 		);
 
 		const statusMessage =
@@ -1480,28 +1484,49 @@ export async function cancelExpiredPendingOrders(): Promise<number> {
 	try {
 		await conn.beginTransaction();
 
-		// Tìm các order pending quá 5 phút
+		// Lấy thời gian hiện tại (VN) dưới dạng MySQL format
+		const nowVNStr = toMySQLDateTime(); // Không truyền param để tránh cộng 2 lần +7
+
+		// Tính thời gian 5 phút trước
+		const now = new Date();
+		const fiveMinutesAgo = new Date(now.getTime() - 1 * 60 * 1000);
+		const fiveMinutesAgoStr = toMySQLDateTime(fiveMinutesAgo.getTime());
+
+		console.log(`⏰ Current VN time: ${nowVNStr}`);
+		console.log(`⏰ Checking orders created before: ${fiveMinutesAgoStr}`);
+
+		// Tìm các order pending quá 5 phút (so sánh với múi giờ VN)
 		const [expiredOrders]: any = await conn.query(
 			`SELECT id, code, buyer_id, type, price, created_at 
 			FROM orders 
 			WHERE status = 'PENDING' 
-			AND created_at < DATE_SUB(NOW(), INTERVAL 1 MINUTE)`,
+			AND created_at < ?`,
+			[fiveMinutesAgoStr],
 		);
 
 		if (expiredOrders.length === 0) {
 			await conn.commit();
+			console.log('✅ No expired pending orders found');
 			return 0;
 		}
 
 		console.log(`🕐 Found ${expiredOrders.length} expired pending orders`);
 
+		// Log chi tiết các orders sẽ bị hủy
+		expiredOrders.forEach((order: any) => {
+			console.log(
+				`   - Order ${order.code} created at: ${order.created_at}`,
+			);
+		});
+
 		// Cập nhật status và tracking thành CANCELLED/FAILED
 		const orderIds = expiredOrders.map((order: any) => order.id);
+		const updatedAtVN = toMySQLDateTime();
 		await conn.query(
 			`UPDATE orders 
-			SET status = 'CANCELLED', tracking = 'CANCELLED' 
+			SET status = 'CANCELLED', tracking = 'CANCELLED', updated_at = ? 
 			WHERE id IN (?)`,
-			[orderIds],
+			[updatedAtVN, orderIds],
 		);
 
 		// Gửi notification cho từng user về việc order bị hủy
@@ -1512,7 +1537,7 @@ export async function cancelExpiredPendingOrders(): Promise<number> {
 						user_id: order.buyer_id,
 						type: 'payment_expired',
 						title: 'Đơn hàng đã bị hủy',
-						message: `Đơn hàng #${order.code} (${order.type}) đã bị hủy do quá thời gian thanh toán (1 phút).`,
+						message: `Đơn hàng #${order.code} (${order.type}) đã bị hủy do quá thời gian thanh toán (5 phút).`,
 					});
 				sendNotificationToUser(order.buyer_id, notification);
 

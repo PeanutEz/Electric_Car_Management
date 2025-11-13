@@ -6,6 +6,7 @@ import { detectPaymentMethod } from '../utils/parser';
 import { title } from 'process';
 import * as notificationService from './notification.service';
 import { sendNotificationToUser } from '../config/socket';
+import { toMySQLDateTime } from '../utils/datetime';
 
 export async function createPayosPayment(payload: Payment) {
 	try {
@@ -338,16 +339,18 @@ export async function confirmAuctionFeePayment(
 		const productPrice = parseFloat(productRows[0].price);
 		const depositAmount = productPrice * 0.1; // 10% giá product
 
-		// Cập nhật status của order thành PAID
-		await connection.query('UPDATE orders SET status = ? WHERE id = ?', [
-			'PAID',
-			orderId,
-		]);
+		const updatedAtVN = toMySQLDateTime();
 
-		await connection.query('UPDATE orders SET tracking = ? WHERE id = ?', [
-			'PENDING',
-			orderId,
-		]);
+		// Cập nhật status của order thành PAID
+		await connection.query(
+			'UPDATE orders SET status = ?, updated_at = ? WHERE id = ?',
+			['PAID', updatedAtVN, orderId],
+		);
+
+		await connection.query(
+			'UPDATE orders SET tracking = ?, updated_at = ? WHERE id = ?',
+			['PENDING', updatedAtVN, orderId],
+		);
 
 		// Cập nhật status của product thành "auctioning"
 		await connection.query('UPDATE products SET status = ? WHERE id = ?', [
@@ -658,11 +661,13 @@ export async function confirmAuctionDepositPayment(
 			throw new Error('Bạn đã tham gia đấu giá này rồi');
 		}
 
+		const updatedAtVN = toMySQLDateTime();
+
 		// Cập nhật status của order thành PAID
-		await connection.query('UPDATE orders SET status = ? WHERE id = ?', [
-			'PAID',
-			orderId,
-		]);
+		await connection.query(
+			'UPDATE orders SET status = ?, updated_at = ? WHERE id = ?',
+			['PAID', updatedAtVN, orderId],
+		);
 
 		// Insert vào bảng auction_members
 		const [memberResult]: any = await connection.query(
@@ -714,11 +719,13 @@ export async function confirmDepositPayment(orderId: number) {
 			throw new Error('Order đã được thanh toán');
 		}
 
+		const updatedAtVN = toMySQLDateTime();
+
 		// Cập nhật status của order thành PAID
-		await connection.query('UPDATE orders SET status = ? WHERE id = ?', [
-			'PAID',
-			orderId,
-		]);
+		await connection.query(
+			'UPDATE orders SET status = ?, updated_at = ? WHERE id = ?',
+			['PAID', updatedAtVN, orderId],
+		);
 
 		// Cập nhật status của product thành "processing"
 		await connection.query('UPDATE products SET status = ? WHERE id = ?', [

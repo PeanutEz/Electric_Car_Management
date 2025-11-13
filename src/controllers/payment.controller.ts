@@ -15,6 +15,7 @@ import {
 } from '../services/service.service';
 import jwt from 'jsonwebtoken';
 import pool from '../config/db';
+import { toMySQLDateTime } from '../utils/datetime';
 
 export const createPaymentLink = async (req: Request, res: Response) => {
 	try {
@@ -103,13 +104,14 @@ export const payosWebhookHandler = async (req: Request, res: Response) => {
 
 		const order = orderRows[0];
 
-		// ========== XỬ LÝ KHI PAYMENT BỊ HỦY HOẶC HẾT HẠN ==========
+		// ========== XỨ LÝ KHI PAYMENT BỊ HỦY HOẶC HẾT HẠN ==========
 		if (paymentStatus === 'CANCELLED' || paymentStatus === 'EXPIRED') {
 			// Cập nhật order status thành CANCELLED
 			if (order.status !== 'CANCELLED' && order.status !== 'PAID') {
+				const updatedAtVN = toMySQLDateTime();
 				await pool.query(
-					"UPDATE orders SET status = 'CANCELLED', tracking = 'FAILED', updated_at = NOW() WHERE code = ?",
-					[orderCode.toString()],
+					"UPDATE orders SET status = 'CANCELLED', tracking = 'FAILED', updated_at = ? WHERE code = ?",
+					[updatedAtVN, orderCode.toString()],
 				);
 				console.log(
 					`❌ Order ${orderCode} marked as CANCELLED (type: ${order.type}, status: ${paymentStatus})`,
@@ -872,9 +874,10 @@ export const cancelPaymentController = async (req: Request, res: Response) => {
 		}
 
 		// Update order status to CANCELLED
+		const updatedAtVN = toMySQLDateTime();
 		await pool.query(
-			"UPDATE orders SET status = 'CANCELLED', tracking = 'FAILED', updated_at = NOW() WHERE code = ?",
-			[orderCode],
+			"UPDATE orders SET status = 'CANCELLED', tracking = 'FAILED', updated_at = ? WHERE code = ?",
+			[updatedAtVN, orderCode],
 		);
 
 		console.log(
