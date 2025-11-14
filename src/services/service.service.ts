@@ -1488,38 +1488,24 @@ export async function cancelExpiredPendingOrders(): Promise<number> {
 		const nowVNStr = toMySQLDateTime(); // Không truyền param để tránh cộng 2 lần +7
 
 		console.log(`⏰ Current VN time: ${nowVNStr}`);
-		console.log(`⏰ Checking orders PENDING over 30 seconds...`);
+		console.log(`⏰ Checking orders PENDING over 5 minutes...`);
 
-		// Tính thời gian 30 giây trước (VN timezone)
-		const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
-		const thirtySecondsAgoStr = toMySQLDateTime(thirtySecondsAgo.getTime());
-
-		console.log(`⏰ Cutoff time (30s ago): ${thirtySecondsAgoStr}`);
-
-		// Tìm các order pending quá 30 giây
-		// So sánh created_at với thời gian VN timezone đã tính sẵn
+		// Tìm các order pending quá 5 phút
+		// created_at đang lưu VN time, cần convert về UTC trước khi so sánh với NOW() (UTC)
 		const [expiredOrders]: any = await conn.query(
-			`SELECT id, code, buyer_id, type, price, created_at 
+			`SELECT id, code, buyer_id, type, price, created_at,
+			       TIMESTAMPDIFF(SECOND, CONVERT_TZ(created_at, '+07:00', '+00:00'), NOW()) as seconds_elapsed
 			FROM orders 
 			WHERE status = 'PENDING' 
-			AND created_at < ?`,
-			[thirtySecondsAgoStr],
+			AND TIMESTAMPDIFF(SECOND, CONVERT_TZ(created_at, '+07:00', '+00:00'), NOW()) > 300`,
 		);
 
 		if (expiredOrders.length === 0) {
 			await conn.commit();
-			console.log('✅ No expired pending orders found');
 			return 0;
 		}
 
 		console.log(`🕐 Found ${expiredOrders.length} expired pending orders`);
-
-		// Log chi tiết các orders sẽ bị hủy
-		expiredOrders.forEach((order: any) => {
-			console.log(
-				`   - Order ${order.code} created at: ${order.created_at}`,
-			);
-		});
 
 		// Cập nhật status và tracking thành CANCELLED/FAILED
 		const orderIds = expiredOrders.map((order: any) => order.id);
@@ -1542,15 +1528,8 @@ export async function cancelExpiredPendingOrders(): Promise<number> {
 						message: `Đơn hàng #${order.code} (${order.type}) đã bị hủy do quá thời gian thanh toán (5 phút).`,
 					});
 				sendNotificationToUser(order.buyer_id, notification);
-
-				console.log(
-					`✅ Cancelled order ${order.code} for user ${order.buyer_id}`,
-				);
 			} catch (notifError: any) {
-				console.error(
-					`⚠️ Failed to send notification for order ${order.code}:`,
-					notifError.message,
-				);
+				// Silent fail for notification errors
 			}
 		}
 
