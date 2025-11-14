@@ -798,13 +798,13 @@ export async function repaymentPost(orderId: number) {
 		);
 
 		await connection.query(`INSERT INTO transaction_detail
-		  (user_id, order_id, credits, type, created_at)
+		  (user_id, order_id, credits,unit, type)
 		  VALUES (?, ?, ?, ?, ?)`, [
 			order.buyer_id,
 			orderId,
 			orderPrice,
-			'Increase',
-			updatedAtVN
+			'CREDIT',
+			'Decrease'
 		]);
 
 		await connection.commit();
