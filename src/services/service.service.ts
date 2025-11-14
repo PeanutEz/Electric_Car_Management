@@ -1487,21 +1487,16 @@ export async function cancelExpiredPendingOrders(): Promise<number> {
 		// Lấy thời gian hiện tại (VN) dưới dạng MySQL format
 		const nowVNStr = toMySQLDateTime(); // Không truyền param để tránh cộng 2 lần +7
 
-		// Tính thời gian 5 phút trước
-		const now = new Date();
-		const fiveMinutesAgo = new Date(now.getTime() - 1 * 60 * 1000);
-		const fiveMinutesAgoStr = toMySQLDateTime(fiveMinutesAgo.getTime());
-
 		console.log(`⏰ Current VN time: ${nowVNStr}`);
-		console.log(`⏰ Checking orders created before: ${fiveMinutesAgoStr}`);
+		console.log(`⏰ Checking orders PENDING over 5 minutes...`);
 
-		// Tìm các order pending quá 5 phút (so sánh với múi giờ VN)
+		// Tìm các order pending quá 5 phút
+		// Dùng NOW() - INTERVAL 5 MINUTE để tránh lỗi timezone
 		const [expiredOrders]: any = await conn.query(
 			`SELECT id, code, buyer_id, type, price, created_at 
 			FROM orders 
 			WHERE status = 'PENDING' 
-			AND created_at < ?`,
-			[fiveMinutesAgoStr],
+			AND created_at < NOW() - INTERVAL 5 MINUTE`,
 		);
 
 		if (expiredOrders.length === 0) {
