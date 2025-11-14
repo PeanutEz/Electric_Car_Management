@@ -10,8 +10,8 @@ import {
 	confirmAuctionFeeController,
 	auctionDepositController,
 	confirmAuctionDepositController,
-	cancelPaymentController,
-	updatePaymentStatusController,
+	cancelPaymentController,  
+   RepaymentPostController,
 } from '../controllers/payment.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 
@@ -419,6 +419,6 @@ router.post('/auction-deposit', authenticateToken, auctionDepositController);
 
 router.post('/cancel', authenticateToken, cancelPaymentController);
 
-router.post('/update-status', authenticateToken, updatePaymentStatusController);
+router.post('/repay-post', authenticateToken, RepaymentPostController);
 
 export default router;

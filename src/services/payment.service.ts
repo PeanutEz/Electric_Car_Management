@@ -747,38 +747,68 @@ export async function confirmDepositPayment(orderId: number) {
 	}
 }
 
-export async function updatePaymentStatus(orderId: number) {
+export async function repaymentPost(orderId: number) {
 	const connection = await pool.getConnection();
 
 	try {
 		await connection.beginTransaction();
 		// Lấy thông tin order
 		const [orderRows]: any = await connection.query(
-			'SELECT product_id, status FROM orders WHERE id = ?',
-			[orderId],
+			'SELECT buyer_id, price, status FROM orders WHERE id = ? and type = ?',
+			[orderId, 'post'],
 		);
 		if (!orderRows || orderRows.length === 0) {
 			throw new Error('Order không tồn tại');
 		}
-		if (orderRows[0].status === 'pending') {	
-			const updatedAtVN = toMySQLDateTime();
-			// Cập nhật status của order thành PAID
-			await connection.query(
-				'UPDATE orders SET status = ?,tracking = ?, updated_at = ? WHERE id = ?',
-				['paid', 'SUCCESS',updatedAtVN, orderId],
-			);
-			await connection.commit();
-			return {
-				success: true,
-				message: 'Cập nhật trạng thái thanh toán thành công',
-			};
+
+		const order = orderRows[0];
+
+		if (order.status !== 'PENDING') {
+			throw new Error('Order không ở trạng thái PENDING');
 		}
 
+		// Kiểm tra số dư user
+		const [userRows]: any = await connection.query(
+			'SELECT total_credit FROM users WHERE id = ?',
+			[order.buyer_id],
+		);
+
+		if (!userRows || userRows.length === 0) {
+			throw new Error('User không tồn tại');
+		}
+
+		const userCredit = parseFloat(userRows[0].total_credit);
+		const orderPrice = parseFloat(order.price);
+
+		if (userCredit < orderPrice) {
+			throw new Error('Số dư không đủ để thanh toán');
+		}
+
+		// Trừ tiền từ user
+		await connection.query(
+			'UPDATE users SET total_credit = total_credit - ? WHERE id = ?',
+			[orderPrice, order.buyer_id],
+		);
+
+		const updatedAtVN = toMySQLDateTime();
+		// Cập nhật status của order thành PAID, tracking thành PROCESSING
+		await connection.query(
+			'UPDATE orders SET status = ?, tracking = ?, updated_at = ? WHERE id = ?',
+			['PAID', 'PROCESSING', updatedAtVN, orderId],
+		);
+
+		await connection.commit();
+		return {
+			success: true,
+			message: 'Thanh toán thành công',
+			newBalance: userCredit - orderPrice,
+		};
 	} catch (error: any) {
 		await connection.rollback();
-		throw new Error(error.message || 'Lỗi khi cập nhật trạng thái thanh toán');
-	}
-	finally {
+		throw new Error(
+			error.message || 'Lỗi khi cập nhật trạng thái thanh toán',
+		);
+	} finally {
 		connection.release();
 	}
 }

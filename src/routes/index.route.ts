@@ -20,7 +20,12 @@ import SellerRouter from './seller.route';
 import RelatedRouter from './related.route';
 
 const routes = Router();
-
+routes.use('/test', (req: any, res: any) => {
+	return res.status(200).json({
+		success: true,
+		message: 'Hello World',
+	});
+});
 routes.use('/api/user', UserRouter);
 routes.use('/api/product', ProductRouter);
 routes.use('/api/post', PostRouter);

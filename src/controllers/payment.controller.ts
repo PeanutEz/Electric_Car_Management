@@ -7,7 +7,7 @@ import {
 	confirmAuctionFeePayment,
 	processDepositPayment,
 	confirmAuctionDepositPayment,
-	updatePaymentStatus
+	repaymentPost
 } from '../services/payment.service';
 import {
 	processServicePayment,
@@ -905,10 +905,10 @@ export const cancelPaymentController = async (req: Request, res: Response) => {
 	}
 };
 
-export const updatePaymentStatusController = async (req: Request, res: Response) => {
+export const RepaymentPostController = async (req: Request, res: Response) => {
 	try {
 		const { orderCode} = req.body;
-		const result = await updatePaymentStatus(orderCode);
+		const result = await repaymentPost(orderCode);
 		res.status(200).json({
 			message: 'Cập nhật trạng thái thanh toán thành công',
 			data: result,
