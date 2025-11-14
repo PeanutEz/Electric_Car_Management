@@ -54,15 +54,18 @@ export async function getAllOrders() {
 	return rows;
 }
 
-export async function getTransactionDetail(userId: number) {
+export async function getTransactionDetail(userId: number, page: number, page_size: number) {
 	const [rows]: any = await pool.query(
 		`select u.id as user_id,u.full_name,u.email, u.phone, u.total_credit, s.type as service_type,s.name as service_name,
       s.description, s.cost, d.credits, d.type as changing,d.unit,o.status,o.created_at  from transaction_detail d
                                     inner join orders o on o.id = d.order_id
                                     left join services s on s.id = o.service_id
-                                    inner join users u on u.id = d.user_id where d.user_id = ? order by o.created_at desc`,
-		[userId],
+                                    inner join users u on u.id = d.user_id where d.user_id = ? order by o.created_at desc
+                                    LIMIT ? OFFSET ?`,
+		[userId, page_size, (page - 1) * page_size],
 	);
+
+	const [totalTransactions]: any = await pool.query(`select count(*) as total_records from transaction_detail where user_id = ?`, [userId]);
 
 	const [totalTopup]: any = await pool.query(
 		`select sum(d.credits) as total_credits from transaction_detail d
@@ -92,6 +95,7 @@ export async function getTransactionDetail(userId: number) {
 		total_credit: Number(rows[0]?.total_credit) || 0,
 		total_topup: Number(totalTopup[0].total_credits) || 0,
 		total_spend: Number(totalSpend[0].total_credits) || 0,
+		length : totalTransactions[0].total_records,
 	};
 }
 

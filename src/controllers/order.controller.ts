@@ -74,12 +74,18 @@ export async function getOrderTransactionDetail(req: Request, res: Response) {
 		const token = authHeader.split(' ')[1];
 		const id = (jwt.decode(token) as any).id;
 		const userId = id;
+		const page = req.query.page ? Number(req.query.page) : 1;
+		const limit = req.query.limit ? Number(req.query.limit) : 10;
 
-		const transactionDetail = await getTransactionDetail(userId);
-
+		const transactionDetail = await getTransactionDetail(userId, page, limit);
 		res.status(200).json({
 			message: 'Lấy danh sách chi tiết hóa đơn thành công thành công',
 			data: transactionDetail,
+			pagination: {
+				page: page,
+				limit: limit,
+				page_size: Math.ceil(transactionDetail.length / limit),
+			},
 		});
 	} catch (error: any) {
 		res.status(500).json({

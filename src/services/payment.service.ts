@@ -797,6 +797,16 @@ export async function repaymentPost(orderId: number) {
 			['PAID', 'PROCESSING', updatedAtVN, orderId],
 		);
 
+		await connection.query(`INSERT INTO transaction_detail
+		  (user_id, order_id, credits, type, created_at)
+		  VALUES (?, ?, ?, ?, ?)`, [
+			order.buyer_id,
+			orderId,
+			orderPrice,
+			'Increase',
+			updatedAtVN
+		]);
+
 		await connection.commit();
 		return {
 			success: true,
