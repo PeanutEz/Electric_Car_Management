@@ -81,11 +81,6 @@ export async function getOrderTransactionDetail(req: Request, res: Response) {
 		res.status(200).json({
 			message: 'Lấy danh sách chi tiết hóa đơn thành công thành công',
 			data: transactionDetail,
-			pagination: {
-				page: page,
-				limit: limit,
-				page_size: Math.ceil(transactionDetail.length / limit),
-			},
 		});
 	} catch (error: any) {
 		res.status(500).json({
