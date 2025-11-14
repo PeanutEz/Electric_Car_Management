@@ -176,6 +176,19 @@ export async function processAuctionFeePayment(
 				],
 			);
 
+			// Insert transaction_detail (Decrease credit)
+			await connection.query(
+				`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) 
+				 VALUES (?, ?, ?, ?, ?)`,
+				[
+					orderResult.insertId,
+					sellerId,
+					'CREDIT',
+					'Decrease',
+					auctionFee,
+				],
+			);
+
 			// Cập nhật status của product thành "auctioning"
 			await connection.query(
 				'UPDATE products SET status = ? WHERE id = ?',
@@ -522,6 +535,19 @@ export async function processDepositPayment(
 				],
 			);
 
+			// Insert transaction_detail (Decrease credit)
+			await connection.query(
+				`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) 
+				 VALUES (?, ?, ?, ?, ?)`,
+				[
+					orderResult.insertId,
+					buyerId,
+					'CREDIT',
+					'Decrease',
+					depositAmount,
+				],
+			);
+
 			// Insert vào bảng auction_members
 			const [memberResult]: any = await connection.query(
 				`INSERT INTO auction_members (user_id, auction_id) 
@@ -801,15 +827,12 @@ export async function repaymentPost(orderId: number) {
 			['PAID', 'PROCESSING', updatedAtVN, orderId],
 		);
 
-		await connection.query(`INSERT INTO transaction_detail
+		await connection.query(
+			`INSERT INTO transaction_detail
 		  (user_id, order_id, credits,unit, type)
-		  VALUES (?, ?, ?, ?, ?)`, [
-			order.buyer_id,
-			orderId,
-			orderPrice,
-			'CREDIT',
-			'Decrease'
-		]);
+		  VALUES (?, ?, ?, ?, ?)`,
+			[order.buyer_id, orderId, orderPrice, 'CREDIT', 'Decrease'],
+		);
 
 		await connection.commit();
 		return {
