@@ -3,8 +3,28 @@ import axios from 'axios';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_URL = process.env.GEMINI_URL || '';
 
+// Rate limiting: 1 request per 15 seconds
+let lastRequestTime = 0;
+const REQUEST_INTERVAL = 15000; // 15 seconds in milliseconds
+
 export async function generateText(prompt: string): Promise<string> {
 	try {
+		// Check rate limit
+		const now = Date.now();
+		const timeSinceLastRequest = now - lastRequestTime;
+
+		if (timeSinceLastRequest < REQUEST_INTERVAL) {
+			const waitTime = REQUEST_INTERVAL - timeSinceLastRequest;
+			throw new Error(
+				`Vui lòng đợi ${Math.ceil(
+					waitTime / 1000,
+				)} giây trước khi gửi yêu cầu tiếp theo.`,
+			);
+		}
+
+		// Update last request time
+		lastRequestTime = now;
+
 		const systemPrompt = `Bạn là một chuyên gia về xe điện và pin xe điện tại Việt Nam với nhiều năm kinh nghiệm.
 
 NHIỆM VỤ CỦA BẠN:
@@ -46,6 +66,24 @@ Câu hỏi của người dùng: `;
 			'Gemini API error:',
 			error.response?.data || error.message,
 		);
+
+		// Handle rate limit from Google (429)
+		if (
+			error.response?.status === 429 ||
+			error.response?.data?.error?.code === 429
+		) {
+			throw new Error(
+				'Hệ thống AI tạm thời quá tải. Vui lòng thử lại sau ít phút. Xin lỗi vì sự bất tiện này!',
+			);
+		}
+
+		// Handle other API errors gracefully
+		if (error.response?.data?.error?.message) {
+			throw new Error(
+				`Lỗi kết nối với AI: ${error.response.data.error.message}`,
+			);
+		}
+
 		throw error;
 	}
 }

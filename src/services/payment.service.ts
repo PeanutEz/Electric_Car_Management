@@ -175,6 +175,7 @@ export async function processAuctionFeePayment(
 					'VERIFYING',
 				],
 			);
+			console.log(orderResult.insertId);
 
 			// Insert transaction_detail (Decrease credit)
 			await connection.query(
