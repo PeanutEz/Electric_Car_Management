@@ -20,7 +20,6 @@ const app = express();
 const server = http.createServer(app);
 
 initializeSocket(server);
-setupAuctionSocket();
 
 app.use(bodyParser.json());
 const PORT = process.env.PORT || 3000;

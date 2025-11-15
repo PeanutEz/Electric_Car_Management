@@ -1,7 +1,6 @@
 import { Server as SocketServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
-import * as chatService from '../services/chat.service';
 import * as notificationService from '../services/notification.service';
 import * as auctionService from '../services/auction.service';
 import { getVietnamISOString } from '../utils/datetime';
@@ -13,7 +12,7 @@ interface SocketData {
 }
 
 /**
- * Initialize Socket.IO server cho chat
+ * Initialize Socket.IO server for notifications and auctions
  */
 export function initializeSocket(server: HttpServer): SocketServer {
 	io = new SocketServer(server, {
@@ -39,7 +38,6 @@ export function initializeSocket(server: HttpServer): SocketServer {
 				process.env.ACCESS_TOKEN_SECRET ||
 				'your_super_strong_secret_key_here';
 			const decoded = jwt.verify(token, jwtSecret) as any;
-			// Token có field 'id', không có 'userId'
 			(socket.data as SocketData).userId = decoded.id;
 			next();
 		} catch (error) {
@@ -53,116 +51,9 @@ export function initializeSocket(server: HttpServer): SocketServer {
 
 		console.log(`✅ User ${userId} connected: ${socket.id}`);
 
-		// Lưu user online
-		chatService.setUserOnline(userId, socket.id);
-
-		// Thông báo cho tất cả về user online
-		io.emit('user:online', { userId, status: 'online' });
-
-		// Lấy danh sách users đã chat
-		socket.on('chat:users', async (callback) => {
-			try {
-				const users = await chatService.getChatUsers(userId);
-				callback({ success: true, data: users });
-			} catch (error: any) {
-				callback({ success: false, error: error.message });
-			}
-		});
-
-		// Lấy lịch sử chat với user khác
-		socket.on('chat:history', async (data, callback) => {
-			try {
-				const { otherUserId, limit, offset } = data;
-				const messages = await chatService.getChatHistory(
-					userId,
-					otherUserId,
-					limit,
-					offset,
-				);
-
-				// Đánh dấu đã đọc
-				await chatService.markMessagesAsRead(otherUserId, userId);
-
-				callback({ success: true, data: messages });
-			} catch (error: any) {
-				callback({ success: false, error: error.message });
-			}
-		});
-
-		// Gửi tin nhắn
-		socket.on('chat:send', async (data, callback) => {
-			try {
-				const { receiverId, message } = data;
-				const chatMessage = await chatService.sendMessage(
-					userId,
-					receiverId,
-					message,
-				);
-
-				// Gửi cho người nhận (nếu đang online)
-				const receiverSocketId =
-					chatService.getUserSocketId(receiverId);
-				if (receiverSocketId) {
-					io.to(receiverSocketId).emit('chat:message', chatMessage);
-				}
-
-				// Confirm cho người gửi
-				callback({ success: true, data: chatMessage });
-			} catch (error: any) {
-				callback({ success: false, error: error.message });
-			}
-		});
-
-		// Đánh dấu đã đọc
-		socket.on('chat:read', async (data) => {
-			try {
-				const { senderId } = data;
-				await chatService.markMessagesAsRead(senderId, userId);
-
-				// Thông báo cho người gửi
-				const senderSocketId = chatService.getUserSocketId(senderId);
-				if (senderSocketId) {
-					io.to(senderSocketId).emit('chat:read', { userId });
-				}
-			} catch (error) {
-				console.error('Error marking as read:', error);
-			}
-		});
-
-		// User đang typing
-		socket.on('chat:typing', (data) => {
-			const { receiverId, isTyping } = data;
-			const receiverSocketId = chatService.getUserSocketId(receiverId);
-
-			if (receiverSocketId) {
-				io.to(receiverSocketId).emit('chat:typing', {
-					userId,
-					isTyping,
-				});
-			}
-		});
-
-		// Lấy số tin nhắn chưa đọc
-		socket.on('chat:unread', async (callback) => {
-			try {
-				const count = await chatService.getUnreadCount(userId);
-				callback({ success: true, count });
-			} catch (error: any) {
-				callback({ success: false, error: error.message });
-			}
-		});
-
 		// Disconnect
 		socket.on('disconnect', () => {
 			console.log(`❌ User ${userId} disconnected: ${socket.id}`);
-
-			const offlineUserId = chatService.setUserOffline(socket.id);
-			if (offlineUserId) {
-				io.emit('user:offline', {
-					userId: offlineUserId,
-					status: 'offline',
-				});
-			}
 		});
 
 		// ==================== NOTIFICATION EVENTS ====================
@@ -229,7 +120,7 @@ export function initializeSocket(server: HttpServer): SocketServer {
 		});
 	});
 
-	console.log('🔌 Chat & Notification WebSocket server initialized');
+	console.log('🔌 Notification WebSocket server initialized');
 	return io;
 }
 
@@ -259,17 +150,12 @@ export function sendNotificationToUser(
 		return;
 	}
 
-	const socketId = chatService.getUserSocketId(userId);
-	if (socketId) {
-		io.to(socketId).emit('notification:new', {
-			id: notification.id,
-			message: notification.message,
-		});
-	} else {
-		console.log(
-			`⚠️ User ${userId} not online, notification saved but not sent`,
-		);
-	}
+	// Broadcast to all connected clients for this user
+	io.emit('notification:new', {
+		userId,
+		id: notification.id,
+		message: notification.message,
+	});
 }
 
 /**
