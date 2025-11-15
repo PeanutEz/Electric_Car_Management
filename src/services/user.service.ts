@@ -387,7 +387,8 @@ export async function getPostByUserId(
 			SUM(CASE WHEN status = 'auctioning' THEN 1 ELSE 0 END) AS auctioning,
 			SUM(CASE WHEN status = 'auctioned' THEN 1 ELSE 0 END) AS auctioned,
 			SUM(CASE WHEN status = 'sold' THEN 1 ELSE 0 END) AS sold,
-			SUM(CASE WHEN status = 'banned' THEN 1 ELSE 0 END) AS banned
+			SUM(CASE WHEN status = 'banned' THEN 1 ELSE 0 END) AS banned,
+      SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END) AS expired
 		FROM products
 		WHERE created_by = ?
 	`,
@@ -418,6 +419,7 @@ export async function getPostByUserId(
     auctioned: Number(counts[0].auctioned) || 0,
     sold: Number(counts[0].sold) || 0,
     banned: Number(counts[0].banned) || 0,
+    expired: Number(counts[0].expired) || 0
   };
 
   // ✅ 2️⃣ Lấy danh sách bài đăng
