@@ -310,3 +310,14 @@ export async function sendFeedbackToSeller(orderId: number, feedback: string) {
 	]);
 	return { orderId, feedback };
 }
+
+export async function blockUser(userId: number, reason: string) {
+	if (!userId) throw new Error('Invalid user ID');
+	if (!reason) throw new Error('Reason cannot be empty');
+	await pool.query('UPDATE users SET status = ? , reason = ? WHERE id = ?', [
+		'blocked',
+		reason,
+		userId,
+	]);
+	return { userId, status: 'blocked', reason };
+}

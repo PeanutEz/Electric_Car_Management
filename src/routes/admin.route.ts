@@ -11,6 +11,7 @@ import {
 	verifyAuction,
 	getDashboard,
 	createReport,
+	blockUserController,
 } from '../controllers/admin.controller';
 
 const router = Router();
@@ -411,5 +412,7 @@ router.post('/report', createReport);
  *                   example: Internal server error
  */
 router.get('/get-num-of-posts', numOfPost);
+
+router.post('/block-user/:id', blockUserController);
 
 export default router;

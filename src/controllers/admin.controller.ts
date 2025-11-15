@@ -9,6 +9,7 @@ import {
 	updateAuction,
 	getNumOfPostForAdmin,
 	getDashboardData,
+	blockUser,
 } from '../services/admin.service';
 import { verifyAuctionByAdmin } from '../services/auction.service';
 import { createAuctionReport } from '../services/report.service';
@@ -242,6 +243,23 @@ export const createReport = async (req: Request, res: Response) => {
 		return res.status(500).json({
 			success: false,
 			message: error.message || 'Internal server error',
+		});
+	}
+};
+
+export const blockUserController = async (req: Request, res: Response) => {
+	try {
+		const userId = parseInt(req.params.id);
+		const { reason } = req.body;
+		const result = await blockUser(userId, reason);
+		res.status(200).json({
+			message: 'Người dùng đã bị khóa thành công',
+			data: result,
+		});
+	}
+	catch (error: any) {
+		res.status(500).json({
+			message: error.message,
 		});
 	}
 };
