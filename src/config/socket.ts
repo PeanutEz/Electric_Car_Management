@@ -4,6 +4,7 @@ import { Server as SocketServer } from 'socket.io';
 import * as auctionService from '../services/auction.service';
 import * as notificationService from '../services/notification.service';
 import { getVietnamISOString } from '../utils/datetime';
+import * as chatService from '../services/chat.service';
 
 let io: SocketServer;
 
