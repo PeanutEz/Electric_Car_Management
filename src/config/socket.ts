@@ -208,41 +208,28 @@ export function setupAuctionSocket() {
 			try {
 				const { auctionId } = data;
 
-				// Check if already in this auction room (prevent duplicate joins)
-				const rooms = Array.from(socket.rooms);
-				const auctionRoom = `auction_${auctionId}`;
-				if (rooms.includes(auctionRoom)) {
-					console.log(
-						`⚠️ User ${userId} already in auction room ${auctionId}`,
-					);
-					return; // Silently ignore duplicate join attempts
-				}
-
 				// Verify auction exists and is active
 				const auction = await auctionService.getActiveAuction(
 					auctionId,
 				);
 				if (!auction) {
 					socket.emit('auction:error', {
-						message: 'Auction not found or not active',
+						message:
+							'Không tìm thấy phiên đấu giá hoặc phiên đã kết thúc',
 					});
 					return;
-				}
-
-				// Check if user has joined (paid deposit)
+				} // Check if user has joined (paid deposit)
 				const hasJoined = await auctionService.hasUserJoinedAuction(
 					userId,
 					auctionId,
 				);
 				if (!hasJoined) {
 					socket.emit('auction:error', {
-						message: 'You must pay deposit to join this auction',
+						message: 'Bạn cần nộp tiền cọc để tham gia đấu giá',
 					});
 					return;
-				}
-
-				// Join the auction room
-				socket.join(auctionRoom);
+				} // Join the auction room
+				socket.join(`auction_${auctionId}`);
 
 				// Get remaining time
 				const remainingTime =
@@ -254,23 +241,20 @@ export function setupAuctionSocket() {
 					auctionId,
 					auction,
 					remainingTime,
-					message: 'Successfully joined auction',
-				});
-
-				// Notify others in the room
-				socket.to(auctionRoom).emit('auction:user_joined', {
+					message: 'Đã tham gia phiên đấu giá thành công',
+				}); // Notify others in the room
+				socket.to(`auction_${auctionId}`).emit('auction:user_joined', {
 					userId,
-					message: `User ${userId} joined the auction`,
+					message: `Người dùng ${userId} đã tham gia đấu giá`,
 					remainingTime,
 				});
-
 				console.log(
 					`✅ User ${userId} joined auction room ${auctionId}`,
 				);
 			} catch (error) {
 				console.error('Error joining auction:', error);
 				socket.emit('auction:error', {
-					message: 'Failed to join auction',
+					message: 'Không thể tham gia đấu giá',
 				});
 			}
 		});
@@ -288,12 +272,10 @@ export function setupAuctionSocket() {
 					// Validate input
 					if (!auctionId || !bidAmount || bidAmount <= 0) {
 						socket.emit('auction:error', {
-							message: 'Invalid bid data',
+							message: 'Dữ liệu đặt giá không hợp lệ',
 						});
 						return;
-					}
-
-					// Place the bid
+					} // Place the bid
 					const result = await auctionService.placeBid(
 						auctionId,
 						userId,
@@ -328,7 +310,7 @@ export function setupAuctionSocket() {
 								winnerId: userId,
 								winningPrice: bidAmount,
 								message:
-									'Auction closed - Target price reached!',
+									'Đấu giá kết thúc - Đã đạt giá mục tiêu!',
 							});
 						console.log(
 							`🎉 Auction ${auctionId} closed - target price reached by user ${userId}`,
@@ -341,7 +323,7 @@ export function setupAuctionSocket() {
 				} catch (error) {
 					console.error('Error placing bid:', error);
 					socket.emit('auction:error', {
-						message: 'Failed to place bid',
+						message: 'Không thể đặt giá',
 					});
 				}
 			},
@@ -398,7 +380,7 @@ export function broadcastAuctionClosed(
 		reason: 'duration_expired',
 		winnerId,
 		winningPrice,
-		message: 'Auction closed - Time expired!',
+		message: 'Đấu giá kết thúc - Hết thời gian!',
 	});
 
 	console.log(`⏰ Auction ${auctionId} closed due to timeout`);

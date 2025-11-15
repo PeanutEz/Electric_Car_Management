@@ -276,6 +276,26 @@ export async function getActiveAuction(
 	return rows[0] as Auction;
 }
 
+export async function getAuctionExisting(auctionId: number): Promise<Auction | null> {
+	const [rows]: any = await pool.query(
+		`SELECT * FROM auctions WHERE id = ?`,
+		[auctionId],
+	);
+
+	if (rows.length === 0) return null;
+	return rows[0] as Auction;
+}
+
+export async function getAuctionStatus(auctionId: number): Promise<string | null> {
+	const [rows]: any = await pool.query(
+		`SELECT result FROM auctions WHERE id = ?`,
+		[auctionId],
+	);
+
+	if (rows.length === 0) return null;
+	return rows[0].result;
+}
+
 /**
  * Check if user has joined the auction (paid deposit)
  */
