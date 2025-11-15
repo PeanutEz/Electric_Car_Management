@@ -191,10 +191,10 @@ export async function processAuctionFeePayment(
 			);
 
 			// Cập nhật status của product thành "auctioning"
-			await connection.query(
-				'UPDATE products SET status = ? WHERE id = ?',
-				['auctioning', productId],
-			);
+			// await connection.query(
+			// 	'UPDATE products SET status = ? WHERE id = ?',
+			// 	['auctioning', productId],
+			// );
 
 			// Insert vào bảng auctions
 			const [auctionResult]: any = await connection.query(
@@ -369,10 +369,10 @@ export async function confirmAuctionFeePayment(
 		);
 
 		// Cập nhật status của product thành "auctioning"
-		await connection.query('UPDATE products SET status = ? WHERE id = ?', [
-			'auctioning',
-			auctionData.product_id,
-		]);
+		// await connection.query('UPDATE products SET status = ? WHERE id = ?', [
+		// 	'auctioning',
+		// 	auctionData.product_id,
+		// ]);
 
 		// Insert vào bảng auctions
 		const [auctionResult]: any = await connection.query(
