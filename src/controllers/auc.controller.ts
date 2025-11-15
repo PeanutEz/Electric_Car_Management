@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import {
-	getAllAuctions, getNumOfAuctionForAdmin
+	getAllAuctions, getNumOfAuctionForAdmin, getAllAuctions2
 } from '../services/auc.service';
 
 export async function listAuctions(req: Request, res: Response) {
@@ -13,6 +13,18 @@ export async function listAuctions(req: Request, res: Response) {
    } catch (error: any) {
       res.status(500).json({ message: error.message });
    }
+}
+
+export async function listAuctions2(req: Request, res: Response) {
+	try {
+		const auctions = await getAllAuctions2();
+		res.status(200).json({
+			message: 'Lấy danh sách đấu giá thành công',
+			data: auctions,
+		});
+	} catch (error: any) {
+		res.status(500).json({ message: error.message });
+	}
 }
 
 export async function getAuctionStats(req: Request, res: Response) {

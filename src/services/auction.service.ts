@@ -1,10 +1,12 @@
 import pool from '../config/db';
+import {
+	broadcastAuctionClosed,
+	broadcastAuctionTimeUpdate,
+	sendNotificationToUser,
+} from '../config/socket';
 import { Auction } from '../models/auction.model';
-import { getIO } from '../config/socket';
-import { create } from 'domain';
 import { getVietnamTime } from '../utils/datetime';
 import * as notificationService from './notification.service';
-import { sendNotificationToUser } from '../config/socket';
 
 // Store active auction timers
 const auctionTimers = new Map<number, NodeJS.Timeout>();
@@ -15,8 +17,8 @@ const auctionRemainingTime = new Map<number, number>();
 export async function getAuctionByProductId(productId: number) {
 	const [rows]: any = await pool.query(
 		`SELECT a.*, p.title, p.description FROM auctions a INNER JOIN products p ON a.product_id = p.id
-		WHERE a.product_id = ?
-		`,
+        WHERE a.product_id = ?
+        `,
 		[productId],
 	);
 	if (rows.length === 0) return null;
@@ -110,7 +112,7 @@ export async function getParticipatedAuction(
       a.original_price,
       a.target_price AS buyNowPrice,
       a.deposit,
-		a.winner_id,
+        a.winner_id,
       a.winning_price AS topBid,
       a.step AS bidIncrement,
       a.note,
@@ -118,8 +120,8 @@ export async function getParticipatedAuction(
       a.start_at,
       a.end_at,
       m.bid_price AS currentPrice,
-		p.id AS product_id,
-		a.id AS id
+        p.id AS product_id,
+        a.id AS id
     FROM auctions a
     LEFT JOIN products p ON p.id = a.product_id
     INNER JOIN auction_members m ON m.auction_id = a.id
@@ -150,22 +152,22 @@ export async function getParticipatedAuction(
 	); // nếu seller cũng là user
 
 	// const formatted = {
-	// 	auction: rows.map((r: any) => ({
-	// 		id: r.id,
-	// 		product_id: r.product_id,
-	// 		title: r.title,
-	// 		startingBid: parseFloat(r.startingBid),
-	// 		originalPrice: parseFloat(r.original_price),
-	// 		buyNowPrice: parseFloat(r.buyNowPrice),
-	// 		deposit: parseFloat(r.deposit),
-	// 		topBid: parseFloat(r.topBid),
-	// 		bidIncrement: parseFloat(r.bidIncrement),
-	// 		note: r.note,
-	// 		startAt: r.start_at,
-	// 		endAt: r.end_at,
-	// 		status: r.result,
-	// 		currentPrice: parseFloat(r.currentPrice),
-	// 	})),
+	//  auction: rows.map((r: any) => ({
+	//      id: r.id,
+	//      product_id: r.product_id,
+	//      title: r.title,
+	//      startingBid: parseFloat(r.startingBid),
+	//      originalPrice: parseFloat(r.original_price),
+	//      buyNowPrice: parseFloat(r.buyNowPrice),
+	//      deposit: parseFloat(r.deposit),
+	//      topBid: parseFloat(r.topBid),
+	//      bidIncrement: parseFloat(r.bidIncrement),
+	//      note: r.note,
+	//      startAt: r.start_at,
+	//      endAt: r.end_at,
+	//      status: r.result,
+	//      currentPrice: parseFloat(r.currentPrice),
+	//  })),
 	// };
 	const formatted = rows.map((r: any) => ({
 		auction: {
@@ -194,8 +196,8 @@ export async function getParticipatedAuction(
 
 	const [[{ total }]]: any = await pool.query(
 		`SELECT COUNT(*) as total
-	  FROM auction_members m
-	  WHERE m.user_id = ?`,
+      FROM auction_members m
+      WHERE m.user_id = ?`,
 		[user_id],
 	);
 	const summary = {
@@ -276,7 +278,9 @@ export async function getActiveAuction(
 	return rows[0] as Auction;
 }
 
-export async function getAuctionExisting(auctionId: number): Promise<Auction | null> {
+export async function getAuctionExisting(
+	auctionId: number,
+): Promise<Auction | null> {
 	const [rows]: any = await pool.query(
 		`SELECT * FROM auctions WHERE id = ?`,
 		[auctionId],
@@ -286,14 +290,16 @@ export async function getAuctionExisting(auctionId: number): Promise<Auction | n
 	return rows[0] as Auction;
 }
 
-export async function getAuctionStatus(auctionId: number): Promise<string | null> {
+export async function getAuctionStatus(
+	auctionId: number,
+): Promise<string | null> {
 	const [rows]: any = await pool.query(
-		`SELECT result FROM auctions WHERE id = ?`,
+		`SELECT status FROM auctions WHERE id = ?`,
 		[auctionId],
 	);
 
 	if (rows.length === 0) return null;
-	return rows[0].result;
+	return rows[0].status;
 }
 
 /**
@@ -376,8 +382,8 @@ export async function placeBid(
 
 		// ✅ Update auction_members với bid_price mới nhất của user
 		await connection.query(
-			`UPDATE auction_members 
-       SET bid_price = ?, updated_at = ? 
+			`UPDATE auction_members
+       SET bid_price = ?, updated_at = ?
        WHERE user_id = ? AND auction_id = ?`,
 			[bidAmount, getVietnamTime(), userId, auctionId],
 		);
@@ -501,8 +507,8 @@ export async function closeAuction(
 		if (hasBidder) {
 			// AUCTION_SUCCESS: Có người thắng
 			await conn.query(
-				`UPDATE orders SET tracking = 'AUCTION_SUCCESS' 
-				WHERE status = 'PAID' AND type = 'deposit' AND product_id = ? AND buyer_id = ?`,
+				`UPDATE orders SET tracking = 'AUCTION_SUCCESS'
+                WHERE status = 'PAID' AND type = 'deposit' AND product_id = ? AND buyer_id = ?`,
 				[rows[0].product_id, findWinner[0].winner_id],
 			);
 
@@ -539,8 +545,8 @@ export async function closeAuction(
 		} else {
 			// AUCTION_FAIL: Không có ai bid
 			await conn.query(
-				`UPDATE orders SET tracking = 'AUCTION_FAIL' 
-				WHERE status = 'PAID' AND type = 'auction_fee' AND product_id = ?`,
+				`UPDATE orders SET tracking = 'AUCTION_FAIL'
+                WHERE status = 'PAID' AND type = 'auction_fee' AND product_id = ?`,
 				[rows[0].product_id],
 			);
 
@@ -598,8 +604,8 @@ export async function closeAuction(
 			);
 			// update tracking to REFUND
 			await conn.query(
-				`UPDATE orders SET tracking = 'REFUND' 
-			WHERE id = ?`,
+				`UPDATE orders SET tracking = 'REFUND'
+            WHERE id = ?`,
 				[selectOrder_id[0].id],
 			);
 
@@ -676,16 +682,12 @@ export async function closeAuction(
 		if (!connection) {
 			await conn.commit();
 		}
-
 		// Broadcast closure via Socket.IO
-		const io = getIO();
-		io.of('/auction')
-			.to(`auction_${auctionId}`)
-			.emit('auction:closed', {
-				auctionId,
-				winner_id: winner_id || null,
-				winning_price: winning_price || null,
-			});
+		broadcastAuctionClosed(
+			auctionId,
+			winner_id || null,
+			winning_price || null,
+		);
 	} catch (error) {
 		if (!connection) {
 			await conn.rollback();
@@ -731,19 +733,10 @@ export async function startAuctionTimer(
 		auctionRemainingTime.set(auctionId, remainingSeconds);
 
 		// 🔔 Emit remainingTime to FE mỗi 10 giây
+		// Emit mỗi 10 giây
 		if (remainingSeconds % 10 === 0 && remainingSeconds > 0) {
 			try {
-				const io = getIO();
-				const auctionNamespace = io.of('/auction');
-				auctionNamespace
-					.to(`auction_${auctionId}`)
-					.emit('auction:time_update', {
-						auctionId,
-						remainingTime: remainingSeconds,
-					});
-				console.log(
-					`📡 [Auction ${auctionId}] Broadcast remainingTime: ${remainingSeconds}s`,
-				);
+				broadcastAuctionTimeUpdate(auctionId, remainingSeconds);
 			} catch (error) {
 				console.error(
 					`❌ Error broadcasting time update for auction ${auctionId}:`,
@@ -770,6 +763,7 @@ export async function startAuctionTimer(
 				);
 			}
 		}
+
 		// Clear interval when time is up
 		if (remainingSeconds <= 0) {
 			clearInterval(countdownInterval);
@@ -897,25 +891,18 @@ export async function initializeActiveAuctions(): Promise<void> {
 		);
 
 		console.log(`🔄 Initializing ${auctions.length} active auctions...`);
-
 		for (const auction of auctions) {
 			const remainingTime = await getAuctionRemainingTime(auction.id);
-
 			if (remainingTime > 0) {
-				// Import dynamically to avoid circular dependency
-				const { broadcastAuctionClosed } = await import(
-					'../config/socket'
-				);
-
 				await startAuctionTimer(auction.id, remainingTime, () => {
 					// Callback when auction expires
-					broadcastAuctionClosed(
-						auction.id,
-						auction.winner_id,
-						auction.winning_price,
-					);
+					// broadcastAuctionClosed(
+					//  auction.id,
+					//  auction.winner_id,
+					//  auction.winning_price,
+					// );
+					console.log('Auction Ended');
 				});
-
 				console.log(
 					`✅ Timer initialized for auction ${
 						auction.id
@@ -927,7 +914,6 @@ export async function initializeActiveAuctions(): Promise<void> {
 				console.log(`✅ Closed expired auction ${auction.id}`);
 			}
 		}
-
 		console.log(`✅ All active auction timers initialized`);
 	} catch (error) {
 		console.error('Error initializing active auctions:', error);
@@ -954,21 +940,21 @@ export async function getAuctionsForAdmin() {
  */
 export async function getAuctionLeaderboard(auctionId: number) {
 	const [rows]: any = await pool.query(
-		`SELECT 
-			am.user_id,
-			u.full_name,
-			u.email,
-			am.bid_price,
-			am.updated_at as last_bid_time,
-			CASE 
-				WHEN a.winner_id = am.user_id THEN 1 
-				ELSE 0 
-			END as is_current_winner
-		FROM auction_members am
-		JOIN users u ON u.id = am.user_id
-		JOIN auctions a ON a.id = am.auction_id
-		WHERE am.auction_id = ?
-		ORDER BY am.bid_price DESC`,
+		`SELECT
+            am.user_id,
+            u.full_name,
+            u.email,
+            am.bid_price,
+            am.updated_at as last_bid_time,
+            CASE
+                WHEN a.winner_id = am.user_id THEN 1
+                ELSE 0
+            END as is_current_winner
+        FROM auction_members am
+        JOIN users u ON u.id = am.user_id
+        JOIN auctions a ON a.id = am.auction_id
+        WHERE am.auction_id = ?
+        ORDER BY am.bid_price DESC`,
 		[auctionId],
 	);
 	return rows;
@@ -993,9 +979,9 @@ export async function verifyAuctionByAdmin(
 		// 1. Kiểm tra auction tồn tại
 		const [auctionRows]: any = await connection.query(
 			`SELECT a.*, p.status as product_status, p.id as product_id
-			 FROM auctions a
-			 JOIN products p ON a.product_id = p.id
-			 WHERE a.id = ?`,
+             FROM auctions a
+             JOIN products p ON a.product_id = p.id
+             WHERE a.id = ?`,
 			[auctionId],
 		);
 
@@ -1037,9 +1023,9 @@ export async function verifyAuctionByAdmin(
 			['SUCCESS', auction.product_id],
 		);
 		await connection.query(
-			`UPDATE auctions 
-			 SET duration = ?, status = 'verified' 
-			 WHERE id = ?`,
+			`UPDATE auctions
+             SET duration = ?, status = 'verified'
+             WHERE id = ?`,
 			[duration, auctionId],
 		);
 
@@ -1075,9 +1061,9 @@ export async function verifyAuctionByAdmin(
 		// 5. Lấy thông tin auction sau khi update
 		const [updatedAuction]: any = await pool.query(
 			`SELECT a.*, p.title, p.status as product_status
-			 FROM auctions a
-			 JOIN products p ON a.product_id = p.id
-			 WHERE a.id = ?`,
+             FROM auctions a
+             JOIN products p ON a.product_id = p.id
+             WHERE a.id = ?`,
 			[auctionId],
 		);
 
@@ -1123,10 +1109,10 @@ export async function startAuctionByAdmin(auctionId: number) {
 
 	// ✅ Kiểm tra status phải là 'verified'
 	// if (auction.status !== 'verified') {
-	// 	return {
-	// 		success: false,
-	// 		message: `Cannot start auction with status '${auction.status}'. Auction must be verified first.`,
-	// 	};
+	//  return {
+	//      success: false,
+	//      message: `Cannot start auction with status '${auction.status}'. Auction must be verified first.`,
+	//  };
 	// }
 
 	// ✅ Kiểm tra product phải có status_verify = 'verified'
@@ -1152,11 +1138,11 @@ export async function startAuctionByAdmin(auctionId: number) {
 		// ✅ Update order tracking thành AUCTION_PROCESSING khi admin duyệt
 		await pool.query(
 			`UPDATE orders
-		SET tracking = 'AUCTION_PROCESSING'
-		WHERE status = 'PAID'
-		AND type = 'auction'
-		AND product_id = ?
-		AND buyer_id = ?`,
+        SET tracking = 'AUCTION_PROCESSING'
+        WHERE status = 'PAID'
+        AND type = 'auction'
+        AND product_id = ?
+        AND buyer_id = ?`,
 			[auction.product_id, auction.seller_id],
 		);
 		const currentTime = getVietnamTime();
@@ -1174,9 +1160,9 @@ export async function startAuctionByAdmin(auctionId: number) {
 		// 🔔 Gửi notification cho seller: Phiên đấu giá đã được mở
 		try {
 			const [auctionInfo]: any = await pool.query(
-				`SELECT a.seller_id, p.title, p.id as product_id 
-       FROM auctions a 
-       INNER JOIN products p ON a.product_id = p.id 
+				`SELECT a.seller_id, p.title, p.id as product_id
+       FROM auctions a
+       INNER JOIN products p ON a.product_id = p.id
        WHERE a.id = ?`,
 				[auctionId],
 			);
@@ -1318,8 +1304,8 @@ export async function buyNowAuction(
 
 		// 6. Update auction_members với target_price
 		await connection.query(
-			`UPDATE auction_members 
-       SET bid_price = ?, updated_at = ? 
+			`UPDATE auction_members
+       SET bid_price = ?, updated_at = ?
        WHERE user_id = ? AND auction_id = ?`,
 			[auction.target_price, getVietnamTime(), userId, auctionId],
 		);
@@ -1352,98 +1338,9 @@ export async function buyNowAuction(
 	}
 }
 
-/**
- * Hủy các auction có status='draft' sau 20 ngày
- * Logic:
- * - Tìm tất cả auction có status = 'draft' và created_at < NOW() - 20 ngày
- * - Cập nhật status = 'cancelled'
- * - Cập nhật order status = 'CANCELLED', tracking = 'CANCELLED'
- * - Cập nhật product status = 'approved' (trả về trạng thái ban đầu)
- * - Gửi notification cho seller
- *
- * @returns Số lượng auctions đã được hủy
- */
-export async function cancelExpiredDraftAuctions(): Promise<number> {
-	const conn = await pool.getConnection();
-	try {
-		await conn.beginTransaction();
-
-		console.log(`⏰ Checking draft auctions older than 20 days...`);
-
-		// Tìm các auction draft quá 20 ngày
-		// Dùng TIMESTAMPDIFF để tính chênh lệch ngày
-		const [expiredAuctions]: any = await conn.query(
-			`SELECT a.id, a.product_id, a.seller_id, p.title,
-			       TIMESTAMPDIFF(DAY, CONVERT_TZ(a.created_at, '+07:00', '+00:00'), NOW()) as days_elapsed
-			FROM auctions a
-			INNER JOIN products p ON a.product_id = p.id
-			WHERE a.status = 'draft' 
-			AND TIMESTAMPDIFF(DAY, CONVERT_TZ(a.created_at, '+07:00', '+00:00'), NOW()) > 20`,
-		);
-
-		if (expiredAuctions.length === 0) {
-			await conn.commit();
-			return 0;
-		}
-
-		console.log(
-			`🕐 Found ${expiredAuctions.length} expired draft auctions`,
-		);
-
-		for (const auction of expiredAuctions) {
-			try {
-				// Cập nhật auction status = 'cancelled'
-				await conn.query(
-					`UPDATE auctions SET status = 'cancelled' WHERE id = ?`,
-					[auction.id],
-				);
-
-				// Cập nhật order status = 'CANCELLED', tracking = 'CANCELLED'
-				await conn.query(
-					`UPDATE orders 
-					SET status = 'CANCELLED', tracking = 'CANCELLED', updated_at = ?
-					WHERE product_id = ? AND type = 'auction' AND status = 'PENDING'`,
-					[getVietnamTime(), auction.product_id],
-				);
-
-				// Cập nhật product status về 'approved'
-				await conn.query(
-					`UPDATE products SET status = 'approved' WHERE id = ?`,
-					[auction.product_id],
-				);
-
-				// Gửi notification cho seller
-				const notification =
-					await notificationService.createNotification({
-						user_id: auction.seller_id,
-						post_id: auction.product_id,
-						type: 'auction_expired',
-						title: 'Phiên đấu giá đã hủy',
-						message: `Phiên đấu giá cho "${auction.title}" đã bị hủy do không được kích hoạt sau 20 ngày.`,
-					});
-				sendNotificationToUser(auction.seller_id, notification);
-
-				console.log(
-					`✅ Cancelled draft auction ${auction.id} (${auction.days_elapsed} days old)`,
-				);
-			} catch (notifError: any) {
-				console.error(
-					`⚠️ Error processing auction ${auction.id}:`,
-					notifError.message,
-				);
-			}
-		}
-
-		await conn.commit();
-		console.log(
-			`⏰ Cancelled ${expiredAuctions.length} expired draft auctions`,
-		);
-		return expiredAuctions.length;
-	} catch (error) {
-		await conn.rollback();
-		console.error('❌ Error cancelling expired draft auctions:', error);
-		throw error;
-	} finally {
-		conn.release();
-	}
+export async function getLiveAuctions() {
+	const [rows]: any = await pool.query(
+		`SELECT id FROM auctions WHERE status = 'live'`,
+	);
+	return rows;
 }

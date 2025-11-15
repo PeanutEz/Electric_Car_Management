@@ -20,6 +20,8 @@ const app = express();
 const server = http.createServer(app);
 
 initializeSocket(server);
+// Setup auction socket namespace
+setupAuctionSocket();
 
 app.use(bodyParser.json());
 const PORT = process.env.PORT || 3000;
@@ -37,9 +39,6 @@ app.use(
 app.use(routes);
 
 setupSwagger(app);
-
-// Setup auction socket namespace
-setupAuctionSocket();
 
 server.listen(PORT, async () => {
 	await testConnection();

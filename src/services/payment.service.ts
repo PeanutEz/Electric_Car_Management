@@ -1,12 +1,16 @@
 import axios from 'axios';
-import { Payment } from '../models/payment.model';
-import payos from '../config/payos';
 import pool from '../config/db';
-import { detectPaymentMethod } from '../utils/parser';
-import { title } from 'process';
-import * as notificationService from './notification.service';
-import { sendNotificationToUser } from '../config/socket';
+import payos from '../config/payos';
+import {
+	broadcastAuctionClosed,
+	sendNotificationToUser,
+} from '../config/socket';
+import { Payment } from '../models/payment.model';
 import { getVietnamTime, toMySQLDateTime } from '../utils/datetime';
+import { startAuctionTimer } from './auction.service';
+import * as notificationService from './notification.service';
+import { buildUrl } from '../utils/url';
+import { generateNameId } from '../utils/util';
 
 export async function createPayosPayment(payload: Payment) {
 	try {
@@ -107,7 +111,7 @@ export async function processAuctionFeePayment(
 
 		// Lấy thông tin product
 		const [productRows]: any = await connection.query(
-			'SELECT price, status, created_by FROM products WHERE id = ?',
+			'SELECT price, status, created_by, title FROM products WHERE id = ?',
 			[productId],
 		);
 
@@ -160,8 +164,8 @@ export async function processAuctionFeePayment(
 
 			// Insert vào bảng orders với type = 'auction_fee'
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				[
 					'auction',
 					'PAID',
@@ -179,8 +183,8 @@ export async function processAuctionFeePayment(
 
 			// Insert transaction_detail (Decrease credit)
 			await connection.query(
-				`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) 
-				 VALUES (?, ?, ?, ?, ?)`,
+				`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits)
+                 VALUES (?, ?, ?, ?, ?)`,
 				[
 					orderResult.insertId,
 					sellerId,
@@ -190,16 +194,10 @@ export async function processAuctionFeePayment(
 				],
 			);
 
-			// Cập nhật status của product thành "auctioning"
-			// await connection.query(
-			// 	'UPDATE products SET status = ? WHERE id = ?',
-			// 	['auctioning', productId],
-			// );
-
 			// Insert vào bảng auctions
 			const [auctionResult]: any = await connection.query(
-				`INSERT INTO auctions (product_id, seller_id, starting_price, original_price, target_price, deposit, duration, step, note) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO auctions (product_id, seller_id, starting_price, original_price, target_price, deposit, duration, step, note)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				[
 					productId,
 					sellerId,
@@ -244,8 +242,8 @@ export async function processAuctionFeePayment(
 
 			// Tạo order với status PENDING
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				[
 					'auction',
 					'PENDING',
@@ -261,14 +259,24 @@ export async function processAuctionFeePayment(
 			);
 
 			await connection.commit();
-
+			const envAppUrl =
+					process.env.APP_URL || 'http://localhost:8080';
 			// Tạo payment link PayOS với số tiền thiếu
+			const nextUrl = `/post/${generateNameId({ name: productRows[0].title, id: productId })}`;
 			const paymentResponse = await payos.paymentRequests.create({
 				orderCode,
 				amount: Math.ceil(shortfallAmount),
 				description: `${productId}`,
-				returnUrl: `http://localhost:4001/payment-success?orderId=${orderResult.insertId}&type=auction`,
-				cancelUrl: 'http://localhost:4001/payment-cancel',
+				returnUrl: buildUrl(envAppUrl, '/payment/result', {
+						provider: 'payos',
+						nextUrl: nextUrl,
+					}),
+					cancelUrl: buildUrl(envAppUrl, '/payment/result', {
+						provider: 'payos',
+						nextUrl: '/',
+					}),
+				// returnUrl: `http://localhost:4001/payment-success?orderId=${orderResult.insertId}&type=auction`,
+				// cancelUrl: 'http://localhost:4001/payment-cancel',
 			});
 
 			return {
@@ -369,15 +377,15 @@ export async function confirmAuctionFeePayment(
 		);
 
 		// Cập nhật status của product thành "auctioning"
-		// await connection.query('UPDATE products SET status = ? WHERE id = ?', [
-		// 	'auctioning',
-		// 	auctionData.product_id,
-		// ]);
+		await connection.query('UPDATE products SET status = ? WHERE id = ?', [
+			'auctioning',
+			auctionData.product_id,
+		]);
 
 		// Insert vào bảng auctions
 		const [auctionResult]: any = await connection.query(
-			`INSERT INTO auctions (product_id, seller_id, starting_price, original_price, target_price, deposit, duration) 
-			 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO auctions (product_id, seller_id, starting_price, original_price, target_price, deposit, duration)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			[
 				auctionData.product_id,
 				auctionData.seller_id,
@@ -392,10 +400,6 @@ export async function confirmAuctionFeePayment(
 		await connection.commit();
 
 		const auctionId = auctionResult.insertId;
-
-		// Start auction timer after successful auction creation
-		const { startAuctionTimer } = await import('./auction.service');
-		const { broadcastAuctionClosed } = await import('../config/socket');
 
 		await startAuctionTimer(auctionId, auctionData.duration, () => {
 			// Callback when auction expires
@@ -474,15 +478,12 @@ export async function processDepositPayment(
 
 		// Kiểm tra xem buyer có phải là seller không
 		if (auction.seller_id === buyerId) {
-			throw new Error(
-				'Bạn không thể tham gia đấu giá sản phẩm của chính mình',
-			);
+			throw {
+				statusCode: 403,
+				message:
+					'Bạn không thể tham gia đấu giá sản phẩm của chính mình',
+			};
 		}
-
-		// Kiểm tra xem đấu giá đã kết thúc chưa
-		// if (auction.winner_id !== null) {
-		// 	throw new Error('Đấu giá đã kết thúc');
-		// }
 
 		// Kiểm tra xem buyer đã tham gia đấu giá này chưa
 		const [existingMemberRows]: any = await connection.query(
@@ -520,8 +521,8 @@ export async function processDepositPayment(
 
 			// Insert vào bảng orders với type = 'deposit'
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				[
 					'deposit',
 					'PAID',
@@ -538,8 +539,8 @@ export async function processDepositPayment(
 
 			// Insert transaction_detail (Decrease credit)
 			await connection.query(
-				`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits) 
-				 VALUES (?, ?, ?, ?, ?)`,
+				`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits)
+                 VALUES (?, ?, ?, ?, ?)`,
 				[
 					orderResult.insertId,
 					buyerId,
@@ -551,8 +552,8 @@ export async function processDepositPayment(
 
 			// Insert vào bảng auction_members
 			const [memberResult]: any = await connection.query(
-				`INSERT INTO auction_members (user_id, auction_id) 
-				 VALUES (?, ?)`,
+				`INSERT INTO auction_members (user_id, auction_id)
+                 VALUES (?, ?)`,
 				[buyerId, auctionId],
 			);
 
@@ -600,8 +601,8 @@ export async function processDepositPayment(
 
 			// Tạo order với status PENDING
 			const [orderResult]: any = await connection.query(
-				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking) 
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO orders (type, status, price, buyer_id, code, payment_method, product_id, created_at, service_id, tracking)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				[
 					'deposit',
 					'PENDING',
@@ -702,8 +703,8 @@ export async function confirmAuctionDepositPayment(
 
 		// Insert vào bảng auction_members
 		const [memberResult]: any = await connection.query(
-			`INSERT INTO auction_members (user_id, auction_id) 
-			 VALUES (?, ?, NOW())`,
+			`INSERT INTO auction_members (user_id, auction_id)
+             VALUES (?, ?, NOW())`,
 			[auctionData.buyer_id, auctionData.auction_id],
 		);
 
@@ -830,8 +831,8 @@ export async function repaymentPost(orderId: number) {
 
 		await connection.query(
 			`INSERT INTO transaction_detail
-		  (user_id, order_id, credits,unit, type)
-		  VALUES (?, ?, ?, ?, ?)`,
+          (user_id, order_id, credits,unit, type)
+          VALUES (?, ?, ?, ?, ?)`,
 			[order.buyer_id, orderId, orderPrice, 'CREDIT', 'Decrease'],
 		);
 

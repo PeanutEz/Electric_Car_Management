@@ -7,7 +7,7 @@ import {
 	getParticipatedAuctionController,
 	buyNowController,
 } from '../controllers/auction.controller';
-import { getAuctionStats, listAuctions } from '../controllers/auc.controller';
+import { getAuctionStats, listAuctions, listAuctions2 } from '../controllers/auc.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 const router = Router();
 /**
@@ -61,6 +61,8 @@ const router = Router();
  *         description: Lỗi server
  */
 router.get('/get-all', listAuctions);
+
+router.get('/get-all-active', listAuctions2);
 
 /**
  * @swagger
