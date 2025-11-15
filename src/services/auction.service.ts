@@ -1344,3 +1344,99 @@ export async function getLiveAuctions() {
 	);
 	return rows;
 }
+
+/**
+ * Hủy các auction có status='draft' sau 20 ngày
+ * Logic:
+ * - Tìm tất cả auction có status = 'draft' và created_at < NOW() - 20 ngày
+ * - Cập nhật status = 'cancelled'
+ * - Cập nhật order status = 'CANCELLED', tracking = 'CANCELLED'
+ * - Cập nhật product status = 'approved' (trả về trạng thái ban đầu)
+ * - Gửi notification cho seller
+ *
+ * @returns Số lượng auctions đã được hủy
+ */
+export async function cancelExpiredDraftAuctions(): Promise<number> {
+	const conn = await pool.getConnection();
+	try {
+		await conn.beginTransaction();
+
+		console.log(`⏰ Checking draft auctions older than 20 days...`);
+
+		// Tìm các auction draft quá 20 ngày
+		// Dùng TIMESTAMPDIFF để tính chênh lệch ngày
+		const [expiredAuctions]: any = await conn.query(
+			`SELECT a.id, a.product_id, a.seller_id, p.title,
+			       TIMESTAMPDIFF(DAY, CONVERT_TZ(a.created_at, '+07:00', '+00:00'), NOW()) as days_elapsed
+			FROM auctions a
+			INNER JOIN products p ON a.product_id = p.id
+			WHERE a.status = 'draft' 
+			AND TIMESTAMPDIFF(DAY, CONVERT_TZ(a.created_at, '+07:00', '+00:00'), NOW()) > 20`,
+		);
+
+		if (expiredAuctions.length === 0) {
+			await conn.commit();
+			return 0;
+		}
+
+		console.log(
+			`🕐 Found ${expiredAuctions.length} expired draft auctions`,
+		);
+
+		for (const auction of expiredAuctions) {
+			try {
+				// Cập nhật auction status = 'cancelled'
+				await conn.query(
+					`UPDATE auctions SET status = 'cancelled' WHERE id = ?`,
+					[auction.id],
+				);
+
+				// Cập nhật order status = 'CANCELLED', tracking = 'CANCELLED'
+				await conn.query(
+					`UPDATE orders 
+					SET status = 'CANCELLED', tracking = 'CANCELLED', updated_at = ?
+					WHERE product_id = ? AND type = 'auction' AND status = 'PENDING'`,
+					[getVietnamTime(), auction.product_id],
+				);
+
+				// Cập nhật product status về 'approved'
+				await conn.query(
+					`UPDATE products SET status = 'approved' WHERE id = ?`,
+					[auction.product_id],
+				);
+
+				// Gửi notification cho seller
+				const notification =
+					await notificationService.createNotification({
+						user_id: auction.seller_id,
+						post_id: auction.product_id,
+						type: 'auction_expired',
+						title: 'Phiên đấu giá đã hủy',
+						message: `Phiên đấu giá cho "${auction.title}" đã bị hủy do không được kích hoạt sau 20 ngày.`,
+					});
+				sendNotificationToUser(auction.seller_id, notification);
+
+				console.log(
+					`✅ Cancelled draft auction ${auction.id} (${auction.days_elapsed} days old)`,
+				);
+			} catch (notifError: any) {
+				console.error(
+					`⚠️ Error processing auction ${auction.id}:`,
+					notifError.message,
+				);
+			}
+		}
+
+		await conn.commit();
+		console.log(
+			`⏰ Cancelled ${expiredAuctions.length} expired draft auctions`,
+		);
+		return expiredAuctions.length;
+	} catch (error) {
+		await conn.rollback();
+		console.error('❌ Error cancelling expired draft auctions:', error);
+		throw error;
+	} finally {
+		conn.release();
+	}
+}
