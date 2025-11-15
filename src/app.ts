@@ -8,7 +8,10 @@ import { testConnection } from './config/db';
 import routes from './routes/index.route';
 import { setupSwagger } from './utils/swagger';
 import { initializeSocket, setupAuctionSocket } from './config/socket';
-import { initializeActiveAuctions } from './services/auction.service';
+import {
+	initializeActiveAuctions,
+	cancelExpiredDraftAuctions,
+} from './services/auction.service';
 import { cancelExpiredPendingOrders } from './services/service.service';
 
 dotenv.config();
@@ -55,7 +58,21 @@ server.listen(PORT, async () => {
 				);
 			}
 		} catch (error) {
-			console.error('❌ Cron error:', error);
+			console.error('❌ Cron error (pending orders):', error);
+		}
+	});
+
+	// ⏰ Cron job: Hủy các auction draft quá 20 ngày (chạy mỗi ngày lúc 00:00)
+	cron.schedule('0 0 * * *', async () => {
+		try {
+			const cancelledCount = await cancelExpiredDraftAuctions();
+			if (cancelledCount > 0) {
+				console.log(
+					`⏰ Cron: Cancelled ${cancelledCount} expired draft auctions`,
+				);
+			}
+		} catch (error) {
+			console.error('❌ Cron error (draft auctions):', error);
 		}
 	});
 
@@ -64,5 +81,8 @@ server.listen(PORT, async () => {
 	console.log(`🔌 Socket.IO initialized for auction`);
 	console.log(
 		`⏰ Cron job started: Cancel expired pending orders every minute`,
+	);
+	console.log(
+		`⏰ Cron job started: Cancel expired draft auctions daily at 00:00`,
 	);
 });

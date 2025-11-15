@@ -242,6 +242,7 @@ export async function registerUser(userData: User) {
     id: result.insertId,
     status: status,
     full_name: full_name,
+    avatar: defaultAvatar,
     email: email,
     phone: user.phone,
     gender: user.gender,

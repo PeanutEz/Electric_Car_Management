@@ -15,6 +15,7 @@ export type NotificationType =
 	| 'auction_processing' // Phiên đấu giá đã mở (AUCTION_PROCESSING)
 	| 'auction_success' // Đấu giá thành công, có người thắng
 	| 'auction_fail' // Đấu giá thất bại, không có ai bid
+	| 'auction_expired' // Phiên đấu giá đã bị hủy do không được kích hoạt sau 20 ngày
 	| 'dealing_success' // Giao dịch thành công, đã ký hợp đồng
 	| 'dealing_fail' // Giao dịch thất bại
 	| 'payment_expired' // Đơn hàng bị hủy do quá thời gian thanh toán

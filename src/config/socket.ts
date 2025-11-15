@@ -177,7 +177,7 @@ export function initializeSocket(server: HttpServer): SocketServer {
 						limit,
 						offset,
 					);
-				callback({ success: true, notifications });  
+				callback({ success: true, notifications });
 			} catch (error: any) {
 				callback({ success: false, error: error.message });
 			}
@@ -322,6 +322,16 @@ export function setupAuctionSocket() {
 			try {
 				const { auctionId } = data;
 
+				// Check if already in this auction room (prevent duplicate joins)
+				const rooms = Array.from(socket.rooms);
+				const auctionRoom = `auction_${auctionId}`;
+				if (rooms.includes(auctionRoom)) {
+					console.log(
+						`⚠️ User ${userId} already in auction room ${auctionId}`,
+					);
+					return; // Silently ignore duplicate join attempts
+				}
+
 				// Verify auction exists and is active
 				const auction = await auctionService.getActiveAuction(
 					auctionId,
@@ -346,7 +356,7 @@ export function setupAuctionSocket() {
 				}
 
 				// Join the auction room
-				socket.join(`auction_${auctionId}`);
+				socket.join(auctionRoom);
 
 				// Get remaining time
 				const remainingTime =
@@ -362,7 +372,7 @@ export function setupAuctionSocket() {
 				});
 
 				// Notify others in the room
-				socket.to(`auction_${auctionId}`).emit('auction:user_joined', {
+				socket.to(auctionRoom).emit('auction:user_joined', {
 					userId,
 					message: `User ${userId} joined the auction`,
 					remainingTime,

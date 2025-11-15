@@ -3,28 +3,8 @@ import axios from 'axios';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_URL = process.env.GEMINI_URL || '';
 
-// Rate limiting: 1 request per 15 seconds
-let lastRequestTime = 0;
-const REQUEST_INTERVAL = 15000; // 15 seconds in milliseconds
-
 export async function generateText(prompt: string): Promise<string> {
 	try {
-		// Check rate limit
-		const now = Date.now();
-		const timeSinceLastRequest = now - lastRequestTime;
-
-		if (timeSinceLastRequest < REQUEST_INTERVAL) {
-			const waitTime = REQUEST_INTERVAL - timeSinceLastRequest;
-			throw new Error(
-				`Vui lòng đợi ${Math.ceil(
-					waitTime / 1000,
-				)} giây trước khi gửi yêu cầu tiếp theo.`,
-			);
-		}
-
-		// Update last request time
-		lastRequestTime = now;
-
 		const systemPrompt = `Bạn là một chuyên gia về xe điện và pin xe điện tại Việt Nam với nhiều năm kinh nghiệm.
 
 NHIỆM VỤ CỦA BẠN:
