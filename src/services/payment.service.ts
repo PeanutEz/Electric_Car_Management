@@ -275,8 +275,6 @@ export async function processAuctionFeePayment(
 						provider: 'payos',
 						nextUrl: '/',
 					}),
-				// returnUrl: `http://localhost:4001/payment-success?orderId=${orderResult.insertId}&type=auction`,
-				// cancelUrl: 'http://localhost:4001/payment-cancel',
 			});
 
 			return {
@@ -620,12 +618,21 @@ export async function processDepositPayment(
 			await connection.commit();
 			// Tạo payment link PayOS với số tiền thiếu
 			// Tạo PayOS payment link
+			const envAppUrl =
+					process.env.APP_URL || 'http://localhost:8080';
+			const nextUrl = `/post/${generateNameId({ name: productRows[0].title, id: auction.product_id })}`;
 			const paymentLink = await payos.paymentRequests.create({
 				orderCode: orderCode,
 				amount: Math.round(shortfallAmount),
 				description: `Đặt cọc tham gia đấu giá`,
-				returnUrl: `http://localhost:4001/payment-success?type=deposit&orderId=${orderResult.insertId}&auctionId=${auctionId}`,
-				cancelUrl: `http://localhost:4001/payment-cancel?type=deposit`,
+				returnUrl: buildUrl(envAppUrl, '/payment/result', {
+						provider: 'payos',
+						nextUrl: nextUrl,
+					}),
+					cancelUrl: buildUrl(envAppUrl, '/payment/result', {
+						provider: 'payos',
+						nextUrl: '/',
+					}),
 			});
 
 			return {

@@ -1198,11 +1198,18 @@ export async function startAuctionByAdmin(auctionId: number) {
 				'SELECT winner_id, winning_price, product_id FROM auctions WHERE id = ?',
 				[auctionId],
 			);
+			const [product]: any = await pool.query(
+				'SELECT end_date FROM products WHERE id = ?',
+				[auct[0].product_id],
+			);
 			if (auct.length === 0) return;
 			const { winner_id, winning_price, product_id } = auct[0];
-			let newStatus = 'not auctioned';
+			let newStatus = 'approved'; // Mặc định nếu không có ai thắng
 			if (winner_id && winning_price) {
 				newStatus = 'auctioned';
+			} else {
+				if (new Date(product[0].end_date) < getVietnamTime())
+				newStatus = 'expired';
 			}
 			await pool.query('UPDATE products SET status = ? WHERE id = ?', [
 				newStatus,

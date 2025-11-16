@@ -938,7 +938,7 @@ export async function processTopUpPayment(
 				description: paymentDescription.substring(0, 25), // PayOS limit 25 chars
 				returnUrl: buildUrl(envAppUrl, '/payment/result', {
 					provider: 'payos',
-					next: '/profile?tab=wallet',
+					next: '/account/transaction',
 				}),
 				cancelUrl: buildUrl(envAppUrl, '/payment/result', {
 					provider: 'payos',
