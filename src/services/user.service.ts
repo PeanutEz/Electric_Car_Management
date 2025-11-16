@@ -129,7 +129,7 @@ export async function loginUser(email: string, password: string) {
 
   if (user.status === "blocked") {
     const error = new Error("Tài khoản của bạn đã bị khóa");
-    (error as any).data = { status: "Tài khoản của bạn đã bị khóa" };
+    (error as any).data = { status: "Tài khoản của bạn đã bị khóa", reason: user.reason };
     throw error;
   }
 
