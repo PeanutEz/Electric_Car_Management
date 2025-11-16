@@ -163,11 +163,20 @@ export async function getAuctionByProductIdController(
 		}
 		const auction = await getAuctionByProductId(Number(productId));
 		if (!auction) {
-			return res.status(404).json({ message: 'Auction not found' });
+			return res.status(200).json({ 
+				message: 'Auction not found' ,
+				data: {
+					hasAuction: false,
+					auction: {},
+				}
+			});
 		}
 		res.status(200).json({
 			message: 'Lấy thông tin phiên đấu giá thành công',
-			data: auction,
+			data: {
+				hasAuction: true,
+				auction: auction
+			},
 		});
 	} catch (error: any) {
 		res.status(500).json({
