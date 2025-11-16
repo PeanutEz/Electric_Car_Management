@@ -105,6 +105,7 @@ export async function register(req: Request, res: Response) {
 					gender: user.gender,
 					address: user.address,
 					rating: user.rating,
+					avatar: user.avatar,
 					total_credit: user.total_credit,
 					role: user.role,
 				},
@@ -132,6 +133,7 @@ export async function login(req: Request, res: Response) {
 				user: {
 					id: user.id,
 					status: user.status,
+					reason: user.reason,
 					full_name: user.full_name,
 					email: user.email,
 					phone: user.phone,

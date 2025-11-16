@@ -109,7 +109,7 @@ export async function getAllUsers(searchName?: string) {
 
 export async function loginUser(email: string, password: string) {
   const [rows]: any = await pool.query(
-    "select u.id,u.status,u.full_name,u.avatar,u.email,u.phone,u.rating,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?",
+    "select u.id,u.status,u.full_name,u.avatar,u.reason,u.email,u.phone,u.rating,u.total_credit,u.password,u.expired_refresh_token,r.name as role from users u inner join roles r on u.role_id = r.id WHERE u.email = ?",
     [email]
   );
 
@@ -127,6 +127,12 @@ export async function loginUser(email: string, password: string) {
     throw error;
   }
 
+  if (user.status === "blocked") {
+    const error = new Error("Tài khoản của bạn đã bị khóa");
+    (error as any).data = { status: "Tài khoản của bạn đã bị khóa" };
+    throw error;
+  }
+
   const tokens = getTokenById(user);
 
   // Lưu refresh token vào database
@@ -135,6 +141,7 @@ export async function loginUser(email: string, password: string) {
     return {
       id: user.id,
       status: user.status,
+      reason: user.reason,
       full_name: user.full_name,
       email: user.email,
       rating: user.rating,
@@ -150,6 +157,7 @@ export async function loginUser(email: string, password: string) {
     return {
       id: user.id,
       status: user.status,
+      reason: user.reason,
       full_name: user.full_name,
       email: user.email,
       phone: user.phone,

@@ -618,7 +618,7 @@ export async function processDepositPayment(
 			);
 
 			await connection.commit();
-
+			// Tạo payment link PayOS với số tiền thiếu
 			// Tạo PayOS payment link
 			const paymentLink = await payos.paymentRequests.create({
 				orderCode: orderCode,
