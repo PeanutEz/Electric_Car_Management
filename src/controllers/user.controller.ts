@@ -149,7 +149,7 @@ export async function login(req: Request, res: Response) {
 			},
 		});
 	} catch (error: any) {
-		res.status(422).json({
+		res.status(403).json({
 			message: error.message,
 			data: error.data,
 		});
