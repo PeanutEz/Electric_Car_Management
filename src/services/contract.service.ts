@@ -130,8 +130,16 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 
 export async function getAllContracts(): Promise<Contract[]> {
 	const [rows]: any = await pool.query(
-		'SELECT * FROM contracts ORDER BY created_at DESC',
+		`SELECT 
+            c.*,
+            s.full_name AS seller_name,
+            b.full_name AS buyer_name
+        FROM contracts c
+        LEFT JOIN users s ON s.id = c.seller_id
+        LEFT JOIN users b ON b.id = c.buyer_id
+        ORDER BY c.created_at DESC`,
 	);
+
 	return rows;
 }
 
@@ -139,7 +147,15 @@ export async function getContractByUserId(
 	user_id: number,
 ): Promise<Contract[]> {
 	const [rows]: any = await pool.query(
-		`SELECT * FROM contracts WHERE buyer_id = ? OR seller_id = ? ORDER BY created_at DESC`,
+		`SELECT 
+            c.*,
+            s.full_name AS seller_name,
+            b.full_name AS buyer_name
+        FROM contracts c
+		LEFT JOIN users s ON s.id = c.seller_id
+        LEFT JOIN users b ON b.id = c.buyer_id
+		WHERE c.buyer_id = ? OR c.seller_id = ?
+		ORDER BY c.created_at DESC`,
 		[user_id, user_id],
 	);
 	return rows;
