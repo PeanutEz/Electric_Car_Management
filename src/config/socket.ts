@@ -361,6 +361,7 @@ export function setupAuctionSocket() {
 
 				socket.to(privateRoom).emit('auction:user_joined', {
 					userId,
+					remainingTime,
 					message: `User ${userId} đã tham gia`,
 				});
 			} catch (error) {
@@ -403,25 +404,14 @@ export function setupAuctionSocket() {
 						message: result.message,
 						timestamp: getVietnamISOString(),
 					};
-					auctionNamespace
-						.to(`auction_public_${auctionId}`)
-						.emit('auction:bid_update', payload);
+
+					// Chỉ emit vào private room (người đã deposit)
 					auctionNamespace
 						.to(`auction_${auctionId}`)
 						.emit('auction:bid_update', payload);
 
 					if (result.message.includes('Target price reached')) {
-						auctionNamespace
-							.to(`auction_public_${auctionId}`)
-							.emit('auction:closed', {
-								auctionId,
-								reason: 'target_price_reached',
-								winnerId: userId,
-								winningPrice: bidAmount,
-								message:
-									'Auction closed - Target price reached!',
-							});
-
+						// Chỉ emit vào private room (người đã deposit)
 						auctionNamespace
 							.to(`auction_${auctionId}`)
 							.emit('auction:closed', {
@@ -474,11 +464,7 @@ export function broadcastAuctionTimeUpdate(
 
 	const ns = io.of('/auction');
 
-	ns.to(`auction_public_${auctionId}`).emit('auction:time_update', {
-		auctionId,
-		remainingTime,
-	});
-
+	// Chỉ emit vào private room (người đã deposit)
 	ns.to(`auction_${auctionId}`).emit('auction:time_update', {
 		auctionId,
 		remainingTime,
@@ -502,14 +488,7 @@ export function broadcastAuctionClosed(
 
 	const ns = io.of('/auction');
 
-	ns.to(`auction_public_${auctionId}`).emit('auction:closed', {
-		auctionId,
-		winnerId,
-		winningPrice,
-		message: message || 'Phiên đấu giá đã kết thúc',
-		reason: reason || 'duration_expired',
-	});
-
+	// Chỉ emit vào private room (người đã deposit)
 	ns.to(`auction_${auctionId}`).emit('auction:closed', {
 		auctionId,
 		winnerId,

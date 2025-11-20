@@ -21,7 +21,6 @@ const server = http.createServer(app);
 
 initializeSocket(server);
 // Setup auction socket namespace
-setupAuctionSocket();
 
 app.use(bodyParser.json());
 const PORT = process.env.PORT || 3000;
@@ -39,6 +38,7 @@ app.use(
 app.use(routes);
 
 setupSwagger(app);
+setupAuctionSocket();
 
 server.listen(PORT, async () => {
 	await testConnection();

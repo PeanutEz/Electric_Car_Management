@@ -867,13 +867,19 @@ export async function getAuctionRemainingTime(
 	}
 
 	// Tính thời gian thực tế còn lại cho auction đang live
+	// start_at từ DB là UTC time, cần convert sang milliseconds
 	const startTime = new Date(start_at).getTime();
-	const currentTime = getVietnamTime().getTime();
+
+	// Get current UTC time (not Vietnam time!)
+	const currentTime = Date.now();
+
 	const elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
 	const remainingTime = Math.max(0, duration - elapsedSeconds);
 
 	console.log(
-		`📊 [Auction ${auctionId}] Calculated from DB: start_at=${start_at}, elapsed=${elapsedSeconds}s, remaining=${remainingTime}s`,
+		`📊 [Auction ${auctionId}] Calculated from DB: start_at=${start_at}, currentTime=${new Date(
+			currentTime,
+		).toISOString()}, elapsed=${elapsedSeconds}s, remaining=${remainingTime}s`,
 	);
 	return remainingTime;
 }
@@ -1209,7 +1215,7 @@ export async function startAuctionByAdmin(auctionId: number) {
 				newStatus = 'auctioned';
 			} else {
 				if (new Date(product[0].end_date) < getVietnamTime())
-				newStatus = 'expired';
+					newStatus = 'expired';
 			}
 			await pool.query('UPDATE products SET status = ? WHERE id = ?', [
 				newStatus,

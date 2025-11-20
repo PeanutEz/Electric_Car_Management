@@ -5,12 +5,22 @@
 
 /**
  * Get current datetime in Vietnam timezone
- * @returns Date object with Vietnam timezone
+ * @returns Date object with Vietnam timezone (UTC time + 7 hours)
  */
 export function getVietnamTime(): Date {
 	const now = new Date();
-	// Vietnam is GMT+7, so add 7 hours to UTC
-	const vietnamTime = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+	// Get UTC timestamp and add 7 hours for Vietnam (GMT+7)
+	// Use UTC methods to avoid timezone confusion
+	const utcTime = Date.UTC(
+		now.getUTCFullYear(),
+		now.getUTCMonth(),
+		now.getUTCDate(),
+		now.getUTCHours(),
+		now.getUTCMinutes(),
+		now.getUTCSeconds(),
+		now.getUTCMilliseconds(),
+	);
+	const vietnamTime = new Date(utcTime + 7 * 60 * 60 * 1000);
 	return vietnamTime;
 }
 
