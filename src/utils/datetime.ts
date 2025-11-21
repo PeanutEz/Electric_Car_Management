@@ -5,23 +5,23 @@
 
 /**
  * Get current datetime in Vietnam timezone
- * @returns Date object with Vietnam timezone (UTC time + 7 hours)
+ * @returns Date object with Vietnam timezone
  */
 export function getVietnamTime(): Date {
-	const now = new Date();
-	// Get UTC timestamp and add 7 hours for Vietnam (GMT+7)
-	// Use UTC methods to avoid timezone confusion
-	const utcTime = Date.UTC(
-		now.getUTCFullYear(),
-		now.getUTCMonth(),
-		now.getUTCDate(),
-		now.getUTCHours(),
-		now.getUTCMinutes(),
-		now.getUTCSeconds(),
-		now.getUTCMilliseconds(),
-	);
-	const vietnamTime = new Date(utcTime + 7 * 60 * 60 * 1000);
-	return vietnamTime;
+  const now = new Date();
+  // Get UTC timestamp and add 7 hours for Vietnam (GMT+7)
+  // Use UTC methods to avoid timezone confusion
+  const utcTime = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+    now.getUTCHours(),
+    now.getUTCMinutes(),
+    now.getUTCSeconds(),
+    now.getUTCMilliseconds()
+  );
+  const vietnamTime = new Date(utcTime + 7 * 60 * 60 * 1000);
+  return vietnamTime;
 }
 
 /**
@@ -33,28 +33,28 @@ export function getVietnamTime(): Date {
  * toMySQLDateTime(new Date()) // '2025-10-26 21:30:45'
  */
 export function toMySQLDateTime(date?: Date | number): string {
-	let targetDate: Date;
+  let targetDate: Date;
 
-	if (!date) {
-		// No date provided, use current Vietnam time
-		targetDate = getVietnamTime();
-	} else if (typeof date === 'number') {
-		// Timestamp provided, convert to Vietnam time
-		targetDate = new Date(date + 7 * 60 * 60 * 1000);
-	} else {
-		// Date object provided, convert to Vietnam time
-		targetDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
-	}
+  if (!date) {
+    // No date provided, use current Vietnam time
+    targetDate = getVietnamTime();
+  } else if (typeof date === "number") {
+    // Timestamp provided, convert to Vietnam time
+    targetDate = new Date(date + 7 * 60 * 60 * 1000);
+  } else {
+    // Date object provided, convert to Vietnam time
+    targetDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+  }
 
-	// Format to MySQL DATETIME format
-	const year = targetDate.getUTCFullYear();
-	const month = String(targetDate.getUTCMonth() + 1).padStart(2, '0');
-	const day = String(targetDate.getUTCDate()).padStart(2, '0');
-	const hours = String(targetDate.getUTCHours()).padStart(2, '0');
-	const minutes = String(targetDate.getUTCMinutes()).padStart(2, '0');
-	const seconds = String(targetDate.getUTCSeconds()).padStart(2, '0');
+  // Format to MySQL DATETIME format
+  const year = targetDate.getUTCFullYear();
+  const month = String(targetDate.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(targetDate.getUTCDate()).padStart(2, "0");
+  const hours = String(targetDate.getUTCHours()).padStart(2, "0");
+  const minutes = String(targetDate.getUTCMinutes()).padStart(2, "0");
+  const seconds = String(targetDate.getUTCSeconds()).padStart(2, "0");
 
-	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 /**
@@ -64,7 +64,7 @@ export function toMySQLDateTime(date?: Date | number): string {
  * getVietnamISOString() // '2025-10-26T14:30:45.000Z'
  */
 export function getVietnamISOString(): string {
-	return getVietnamTime().toISOString();
+  return getVietnamTime().toISOString();
 }
 
 /**
@@ -75,8 +75,8 @@ export function getVietnamISOString(): string {
  * addHoursToVietnamTime(2) // Current time + 2 hours in Vietnam timezone
  */
 export function addHoursToVietnamTime(hours: number): Date {
-	const vietnamTime = getVietnamTime();
-	return new Date(vietnamTime.getTime() + hours * 60 * 60 * 1000);
+  const vietnamTime = getVietnamTime();
+  return new Date(vietnamTime.getTime() + hours * 60 * 60 * 1000);
 }
 
 /**
@@ -85,8 +85,8 @@ export function addHoursToVietnamTime(hours: number): Date {
  * @returns ISO string in Vietnam timezone
  */
 export function formatVietnamTime(timestamp: number): string {
-	const vietnamTime = new Date(timestamp + 7 * 60 * 60 * 1000);
-	return vietnamTime.toISOString();
+  const vietnamTime = new Date(timestamp + 7 * 60 * 60 * 1000);
+  return vietnamTime.toISOString();
 }
 
 /**
@@ -94,7 +94,7 @@ export function formatVietnamTime(timestamp: number): string {
  * @returns '+07:00'
  */
 export function getVietnamTimezoneOffset(): string {
-	return '+07:00';
+  return "+07:00";
 }
 
 /**
@@ -103,8 +103,8 @@ export function getVietnamTimezoneOffset(): string {
  * @returns Date object in Vietnam timezone
  */
 export function toVietnamTime(date: Date | string | number): Date {
-	const d = new Date(date);
-	return new Date(d.getTime() + 7 * 60 * 60 * 1000);
+  const d = new Date(date);
+  return new Date(d.getTime() + 7 * 60 * 60 * 1000);
 }
 
 /**
@@ -112,11 +112,11 @@ export function toVietnamTime(date: Date | string | number): Date {
  * @returns Date string in format 'YYYY-MM-DD'
  */
 export function getVietnamDate(): string {
-	const vietnamTime = getVietnamTime();
-	const year = vietnamTime.getUTCFullYear();
-	const month = String(vietnamTime.getUTCMonth() + 1).padStart(2, '0');
-	const day = String(vietnamTime.getUTCDate()).padStart(2, '0');
-	return `${year}-${month}-${day}`;
+  const vietnamTime = getVietnamTime();
+  const year = vietnamTime.getUTCFullYear();
+  const month = String(vietnamTime.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(vietnamTime.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -133,3 +133,21 @@ export function getVietnamDate(): string {
  * const now = getVietnamTime()
  * const mysqlFormat = toMySQLDateTime()
  */
+
+/**
+ * Parse MySQL DATETIME (no timezone) as Vietnam time (GMT+7)
+ * Fix countdown lệch giờ
+ */
+export function parseVietnamDatetime(dateStr: any): number {
+    if (!dateStr) return 0;
+
+    // ⭐ Giữ nguyên logic của bạn
+    // Chỉ thêm ép kiểu cho chắc chắn để .replace không bị lỗi
+    const s = String(dateStr);
+
+    const isoLike = s.replace(" ", "T");
+
+    const d = new Date(isoLike);
+
+    return d.getTime() - (d.getTimezoneOffset() * 60000);
+}

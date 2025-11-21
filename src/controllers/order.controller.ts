@@ -5,19 +5,18 @@ import {
 	getAllOrderByUserId,
 	getOrderDetail,
 	getAllOrders,
-	getRevenue
+	getRevenue,
 } from '../services/order.service';
 import jwt from 'jsonwebtoken';
 
-export async function getRevenueController(req: Request,res: Response,){
+export async function getRevenueController(req: Request, res: Response) {
 	try {
 		const revenue = await getRevenue();
 
-      res.status(200).json({
-			message: "Lấy revenue thành công!",
+		res.status(200).json({
+			message: 'Lấy revenue thành công!',
 			data: revenue,
-		})
-
+		});
 	} catch (error: any) {
 		res.status(500).json({
 			message: error.message,
@@ -77,7 +76,11 @@ export async function getOrderTransactionDetail(req: Request, res: Response) {
 		const page = req.query.page ? Number(req.query.page) : 1;
 		const limit = req.query.limit ? Number(req.query.limit) : 10;
 
-		const transactionDetail = await getTransactionDetail(userId, page, limit);
+		const transactionDetail = await getTransactionDetail(
+			userId,
+			page,
+			limit,
+		);
 		res.status(200).json({
 			message: 'Lấy danh sách chi tiết hóa đơn thành công thành công',
 			data: transactionDetail,
@@ -88,34 +91,6 @@ export async function getOrderTransactionDetail(req: Request, res: Response) {
 		});
 	}
 }
-
-// export async function getAllOrderByUserIdController(
-// 	req: Request,
-// 	res: Response,
-// ) {
-// 	try {
-// 		const authHeader = req.headers.authorization;
-// 		if (!authHeader) {
-// 			return res.status(401).json({ message: 'Unauthorized' });
-// 		}
-// 		const token = authHeader.split(' ')[1];
-// 		const id = (jwt.decode(token) as any).id;
-// 		const userId = id;
-// 		const { status, type, orderId } = req.query;
-// 		const orders = await getAllOrderByUserId(
-// 			userId,
-// 			status ? String(status) : undefined,
-// 			type ? String(type) : undefined,
-// 			orderId ? Number(orderId) : undefined,
-// 		);
-// 		res.status(200).json({
-// 			message: 'Lấy tất cả đơn hàng của user thành công',
-// 			data: orders,
-// 		});
-// 	} catch (error: any) {
-// 		res.status(500).json({ message: error.message });
-// 	}
-// }
 
 export async function getAllOrderByUserIdController(
 	req: Request,

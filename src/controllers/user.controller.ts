@@ -1,19 +1,19 @@
 import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import * as uploadService from '../services/upload.service';
 import {
-	loginUser,
+	changeAndConfirmPassword,
 	getAllUsers,
+	getOrderByUserId,
+	getPostByUserId,
 	getUserById,
+	loginUser,
 	logoutUser,
 	refreshToken as refreshUserToken,
 	registerUser,
-	updateUser,
 	updatePhoneUser,
-	getPostByUserId,
-	getOrderByUserId,
-	changeAndConfirmPassword,
+	updateUser,
 } from '../services/user.service';
-import jwt from 'jsonwebtoken';
-import * as uploadService from '../services/upload.service';
 
 export async function userDetail(req: Request, res: Response) {
 	try {
@@ -149,7 +149,7 @@ export async function login(req: Request, res: Response) {
 			},
 		});
 	} catch (error: any) {
-		res.status(403).json({
+		res.status(error.statusCode || 422).json({
 			message: error.message,
 			data: error.data,
 		});

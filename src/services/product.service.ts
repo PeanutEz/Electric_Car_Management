@@ -70,7 +70,7 @@ export async function getAllProducts(): Promise<(Vehicle | Battery)[]> {
 	});
 }
 
-export async function createProduct(product: Vehicle | Battery) {
-	const [result] = await pool.query('INSERT INTO products SET ?', product);
-	return null; // Cần trả về sản phẩm đã tạo với ID mới (nếu cần)
-}
+// export async function createProduct(product: Vehicle | Battery) {
+// 	const [result] = await pool.query('INSERT INTO products SET ?', product);
+// 	return null; // Cần trả về sản phẩm đã tạo với ID mới (nếu cần)
+// }

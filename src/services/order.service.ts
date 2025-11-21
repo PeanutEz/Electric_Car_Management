@@ -64,11 +64,10 @@ export async function getTransactionDetail(
       s.description, s.cost, d.credits, d.type as changing,d.unit,o.status,o.created_at  from transaction_detail d
                                     inner join orders o on o.id = d.order_id
 		 left join services s on s.id = o.service_id
-                                    inner join users u on u.id = d.user_id where d.user_id = ? order by o.created_at desc
+                                    inner join users u on u.id = d.user_id where d.user_id = ? order by d.id desc
 		 LIMIT ? OFFSET ?`,
 		[userId, limit, (page - 1) * limit],
 	);
-	
 
 	const [totalTransactions]: any = await pool.query(
 		`select count(*) as total_records from transaction_detail where user_id = ?`,

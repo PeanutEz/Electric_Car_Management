@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import {
+	buyNowAuction,
 	createAuctionByAdmin,
-	getAuctionsForAdmin,
-	startAuctionByAdmin,
 	getAuctionByProductId,
+	getAuctionsForAdmin,
 	getOwnAuction,
 	getParticipatedAuction,
-	buyNowAuction,
+	startAuctionByAdmin,
 } from '../services/auction.service';
-import jwt from 'jsonwebtoken';
 
 export async function createAuction(req: Request, res: Response) {
 	try {
@@ -51,32 +51,32 @@ export async function createAuction(req: Request, res: Response) {
 		res.status(500).json({ message: 'Server error', error: error.message });
 	}
 
-	try {
-		const {
-			product_id,
-			seller_id,
-			starting_price,
-			original_price,
-			target_price,
-			deposit,
-		} = req.body;
-		const auctionId = await createAuctionByAdmin(
-			product_id,
-			seller_id,
-			starting_price,
-			original_price,
-			target_price,
-			deposit,
-		);
-		res.status(201).json({
-			message: 'Tạo phiên đấu giá thành công',
-			auctionId: auctionId,
-		});
-	} catch (error: any) {
-		res.status(500).json({
-			message: error.message,
-		});
-	}
+	// try {
+	// 	const {
+	// 		product_id,
+	// 		seller_id,
+	// 		starting_price,
+	// 		original_price,
+	// 		target_price,
+	// 		deposit,
+	// 	} = req.body;
+	// 	const auctionId = await createAuctionByAdmin(
+	// 		product_id,
+	// 		seller_id,
+	// 		starting_price,
+	// 		original_price,
+	// 		target_price,
+	// 		deposit,
+	// 	);
+	// 	res.status(201).json({
+	// 		message: 'Tạo phiên đấu giá thành công',
+	// 		auctionId: auctionId,
+	// 	});
+	// } catch (error: any) {
+	// 	res.status(500).json({
+	// 		message: error.message,
+	// 	});
+	// }
 }
 
 export async function getOwnAuctionController(req: Request, res: Response) {
@@ -163,19 +163,20 @@ export async function getAuctionByProductIdController(
 		}
 		const auction = await getAuctionByProductId(Number(productId));
 		if (!auction) {
-			return res.status(200).json({ 
-				message: 'Auction not found' ,
+			return res.status(200).json({
+				message: 'Lấy thông tin phiên đấu giá thành công',
 				data: {
 					hasAuction: false,
-					auction: {},
-				}
+					auction: auction,
+				},
 			});
 		}
+
 		res.status(200).json({
 			message: 'Lấy thông tin phiên đấu giá thành công',
 			data: {
-				hasAuction: true,
-				auction: auction
+				hasAuction: auction.status !== 'draft',
+				auction: auction,
 			},
 		});
 	} catch (error: any) {

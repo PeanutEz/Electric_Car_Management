@@ -10,14 +10,14 @@ export interface Auction {
 	note?: string;
 	winner_id?: number;
 	winning_price?: number;
-   duration?: number;
-
+	duration?: number;
+	status?: 'draft' | 'live' | 'ended' | 'verified';
 }
 
 export interface Auction_member {
-   id?: number;
-   user_id: number;
-   auction_id: number;
-   desire_price?: number;
-   updated_at?: number;
+	id?: number;
+	user_id: number;
+	auction_id: number;
+	desire_price?: number;
+	updated_at?: number;
 }

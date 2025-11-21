@@ -128,9 +128,14 @@ export async function loginUser(email: string, password: string) {
   }
 
   if (user.status === "blocked") {
-    const error = new Error("Tài khoản của bạn đã bị khóa");
-    (error as any).data = { status: "Tài khoản của bạn đã bị khóa", reason: user.reason };
-    throw error;
+    throw {
+      statusCode: 403,
+      message: "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.",
+      data:{
+        status: "Tài khoản của bạn đã bị khóa",
+        reason: user.reason
+      }
+    };
   }
 
   const tokens = getTokenById(user);
@@ -219,8 +224,8 @@ export async function registerUser(userData: User) {
   );
 
   const [result]: any = await pool.query(
-    `insert into users (full_name, email, password, avatar, created_at) VALUES (?, ?, ?, ?, ?)`,
-    [full_name, email, hashedPassword, defaultAvatar, getVietnamTime()]
+    `insert into users (full_name, email, password, avatar, created_at) VALUES (?, ?, ?, ?, ?, now())`,
+    [full_name, email, hashedPassword, defaultAvatar]
   );
   const insertedId = result.insertId;
 

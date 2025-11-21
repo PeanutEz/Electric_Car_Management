@@ -251,12 +251,14 @@ export async function getOrder(page: number, limit: number, status: string) {
 	let rows;
 	if (status === undefined) {
 		[rows] = await pool.query(
-			`SELECT * FROM orders ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+			`SELECT o.*,u.full_name FROM orders o inner join users u on o.buyer_id = u.id
+			ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
 			[limit, offset],
 		);
 	} else {
 		[rows] = await pool.query(
-			`SELECT * FROM orders WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+			`SELECT o.*,u.full_name FROM orders o inner join users u on o.buyer_id = u.id
+			WHERE status = ? ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
 			[status, limit, offset],
 		);
 	}

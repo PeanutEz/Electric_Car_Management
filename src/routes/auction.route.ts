@@ -7,7 +7,7 @@ import {
 	getParticipatedAuctionController,
 	buyNowController,
 } from '../controllers/auction.controller';
-import { getAuctionStats, listAuctions, listAuctions2 } from '../controllers/auc.controller';
+import { getAuctionStats, listAuctions, listAuctions2 } from '../controllers/auctionV2.controller';
 import { authenticateToken } from '../middleware/AuthMiddleware';
 const router = Router();
 /**

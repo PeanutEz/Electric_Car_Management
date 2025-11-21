@@ -1,18 +1,18 @@
-import express from 'express';
+import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import bodyParser from 'body-parser';
+import express from 'express';
 import http from 'http';
 import cron from 'node-cron';
 import { testConnection } from './config/db';
-import routes from './routes/index.route';
-import { setupSwagger } from './utils/swagger';
 import { initializeSocket, setupAuctionSocket } from './config/socket';
+import routes from './routes/index.route';
 import {
-	initializeActiveAuctions,
 	cancelExpiredDraftAuctions,
+	initializeActiveAuctions,
 } from './services/auction.service';
 import { cancelExpiredPendingOrders } from './services/service.service';
+import { setupSwagger } from './utils/swagger';
 
 dotenv.config();
 
@@ -21,6 +21,7 @@ const server = http.createServer(app);
 
 initializeSocket(server);
 // Setup auction socket namespace
+setupAuctionSocket();
 
 app.use(bodyParser.json());
 const PORT = process.env.PORT || 3000;
@@ -30,15 +31,16 @@ app.use(express.json());
 // Cấu hình CORS cho phép truy cập từ frontend
 app.use(
 	cors({
-		origin: '*',
+		origin: ['https://eviest.top', 'http://localhost:8080'],
 		credentials: true,
+		methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+		allowedHeaders: ['Content-Type', 'Authorization'],
 	}),
 );
 
 app.use(routes);
 
 setupSwagger(app);
-setupAuctionSocket();
 
 server.listen(PORT, async () => {
 	await testConnection();

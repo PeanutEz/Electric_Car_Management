@@ -20,6 +20,7 @@ export type NotificationType =
 	| 'dealing_fail' // Giao dịch thất bại
 	| 'payment_expired' // Đơn hàng bị hủy do quá thời gian thanh toán
 	| 'message'
+	| 'refund_failed'
 	| 'system';
 
 export interface Notification {

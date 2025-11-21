@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import {
 	getAllAuctions, getNumOfAuctionForAdmin, getAllAuctions2
-} from '../services/auc.service';
+} from '../services/auctionV2.service';
 
 export async function listAuctions(req: Request, res: Response) {
    try {

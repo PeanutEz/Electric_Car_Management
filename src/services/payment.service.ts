@@ -7,10 +7,10 @@ import {
 } from '../config/socket';
 import { Payment } from '../models/payment.model';
 import { getVietnamTime, toMySQLDateTime } from '../utils/datetime';
-import { startAuctionTimer } from './auction.service';
-import * as notificationService from './notification.service';
 import { buildUrl } from '../utils/url';
 import { generateNameId } from '../utils/util';
+import { startAuctionTimer } from './auction.service';
+import * as notificationService from './notification.service';
 
 export async function createPayosPayment(payload: Payment) {
 	try {
@@ -259,22 +259,24 @@ export async function processAuctionFeePayment(
 			);
 
 			await connection.commit();
-			const envAppUrl =
-					process.env.APP_URL || 'http://localhost:8080';
+			const envAppUrl = process.env.APP_URL || 'http://localhost:8080';
 			// Tạo payment link PayOS với số tiền thiếu
-			const nextUrl = `/post/${generateNameId({ name: productRows[0].title, id: productId })}`;
+			const nextUrl = `/post/${generateNameId({
+				name: productRows[0].title,
+				id: productId,
+			})}`;
 			const paymentResponse = await payos.paymentRequests.create({
 				orderCode,
 				amount: Math.ceil(shortfallAmount),
 				description: `${productId}`,
 				returnUrl: buildUrl(envAppUrl, '/payment/result', {
-						provider: 'payos',
-						nextUrl: nextUrl,
-					}),
-					cancelUrl: buildUrl(envAppUrl, '/payment/result', {
-						provider: 'payos',
-						nextUrl: '/',
-					}),
+					provider: 'payos',
+					nextUrl: nextUrl,
+				}),
+				cancelUrl: buildUrl(envAppUrl, '/payment/result', {
+					provider: 'payos',
+					nextUrl: '/',
+				}),
 			});
 
 			return {
@@ -618,21 +620,23 @@ export async function processDepositPayment(
 			await connection.commit();
 			// Tạo payment link PayOS với số tiền thiếu
 			// Tạo PayOS payment link
-			const envAppUrl =
-					process.env.APP_URL || 'http://localhost:8080';
-			const nextUrl = `/post/${generateNameId({ name: productRows[0].title, id: auction.product_id })}`;
+			const envAppUrl = process.env.APP_URL || 'http://localhost:8080';
+			const nextUrl = `/post/${generateNameId({
+				name: productRows[0].title,
+				id: auction.product_id,
+			})}`;
 			const paymentLink = await payos.paymentRequests.create({
 				orderCode: orderCode,
 				amount: Math.round(shortfallAmount),
 				description: `Đặt cọc tham gia đấu giá`,
 				returnUrl: buildUrl(envAppUrl, '/payment/result', {
-						provider: 'payos',
-						nextUrl: nextUrl,
-					}),
-					cancelUrl: buildUrl(envAppUrl, '/payment/result', {
-						provider: 'payos',
-						nextUrl: '/',
-					}),
+					provider: 'payos',
+					nextUrl: nextUrl,
+				}),
+				cancelUrl: buildUrl(envAppUrl, '/payment/result', {
+					provider: 'payos',
+					nextUrl: '/',
+				}),
 			});
 
 			return {
@@ -655,6 +659,7 @@ export async function processDepositPayment(
 		}
 	} catch (error: any) {
 		await connection.rollback();
+		if (error?.statusCode) throw error;
 		throw new Error(error.message || 'Lỗi khi đặt cọc tham gia đấu giá');
 	} finally {
 		connection.release();

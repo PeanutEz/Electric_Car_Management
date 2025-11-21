@@ -2,9 +2,9 @@ import { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { Server as SocketServer } from 'socket.io';
 import * as auctionService from '../services/auction.service';
+import * as chatService from '../services/chat.service';
 import * as notificationService from '../services/notification.service';
 import { getVietnamISOString } from '../utils/datetime';
-import * as chatService from '../services/chat.service';
 
 let io: SocketServer;
 
@@ -242,7 +242,6 @@ export function sendNotificationToUser(
 		console.log(`⚠️ User ${userId} not online (saved only)`);
 	}
 }
-
 /* ============================================================
  *  SETUP AUCTION SOCKET
  * ============================================================
@@ -284,10 +283,8 @@ export function setupAuctionSocket() {
 		 *  JOIN AUCTION
 		 * ============================================================
 		 */
-		socket.on('auction:join', async (data: { auctionId: number }) => {
+		socket.on('auction:join', async ({ auctionId }) => {
 			try {
-				const { auctionId } = data;
-
 				const auction = await auctionService.getAuctionExisting(
 					auctionId,
 				);
@@ -297,75 +294,81 @@ export function setupAuctionSocket() {
 					});
 				}
 
-				/* ---- ALWAYS JOIN PUBLIC ROOM ---- */
 				const publicRoom = `auction_public_${auctionId}`;
-				socket.join(publicRoom);
-				console.log(
-					`👁 User ${userId} joined PUBLIC room ${publicRoom}`,
-				);
+				const privateRoom = `auction_${auctionId}`;
 
-				/* ---- FETCH STATE ---- */
+				socket.join(publicRoom);
+
 				const auctionStatus = await auctionService.getAuctionStatus(
 					auctionId,
 				);
 				const remainingTime =
 					await auctionService.getAuctionRemainingTime(auctionId);
 
+				/* ========== VERIFIED ========== */
+				if (auctionStatus === 'verified') {
+					return socket.emit('auction:info', {
+						auctionId,
+						auction,
+						remainingTime,
+						status: 'verified',
+						message: 'Phiên đấu giá sắp diễn ra',
+					});
+				}
+
+				/* ========== ENDED ========== */
 				if (auctionStatus === 'ended') {
 					return socket.emit('auction:closed', {
 						auctionId,
 						winnerId: auction.winner_id,
 						winningPrice: auction.winning_price,
-						reason: 'duration_expired',
 						message: 'Phiên đấu giá đã kết thúc',
 					});
 				}
 
+				/* ========== LIVE ========== */
 				if (auctionStatus === 'live') {
+					// Báo FE rằng phiên đang live
 					socket.emit('auction:live', {
 						auctionId,
 						auction,
 						remainingTime,
 						message: 'Phiên đấu giá đang diễn ra',
 					});
-				}
 
-				/* ---- CHECK DEPOSIT ---- */
-				const hasJoined = await auctionService.hasUserJoinedAuction(
-					userId,
-					auctionId,
-				);
+					// 🔥🔥 CHỈ CHECK DEPOSIT TẠI ĐÂY 🔥🔥
+					const hasJoined = await auctionService.hasUserJoinedAuction(
+						userId,
+						auctionId,
+					);
 
-				if (!hasJoined) {
-					return socket.emit('auction:needDeposit', {
+					if (!hasJoined) {
+						return socket.emit('auction:needDeposit', {
+							auctionId,
+							auction,
+							remainingTime,
+							message: 'Bạn phải đặt cọc để tham gia đấu giá',
+						});
+					}
+
+					// Nếu đã đặt cọc → chuyển vào phòng private
+					socket.leave(publicRoom);
+					socket.join(privateRoom);
+
+					socket.emit('auction:joined', {
 						auctionId,
 						auction,
 						remainingTime,
-						message: 'Bạn phải đặt cọc để tham gia đấu giá',
+						message: 'Tham gia đấu giá thành công',
+					});
+
+					socket.to(privateRoom).emit('auction:user_joined', {
+						userId,
+						message: `User ${userId} đã tham gia`,
 					});
 				}
-
-				/* ---- JOIN PRIVATE ROOM ---- */
-				const privateRoom = `auction_${auctionId}`;
-				socket.join(privateRoom);
-				console.log(
-					`🔐 User ${userId} joined PRIVATE room ${privateRoom}`,
-				);
-
-				socket.emit('auction:joined', {
-					auctionId,
-					auction,
-					remainingTime,
-					message: 'Tham gia đấu giá thành công',
-				});
-
-				socket.to(privateRoom).emit('auction:user_joined', {
-					userId,
-					remainingTime,
-					message: `User ${userId} đã tham gia`,
-				});
-			} catch (error) {
-				console.error('❌ Unexpected join error:', error);
+			} catch (err) {
+				console.error('❌ join error:', err);
 			}
 		});
 
@@ -397,32 +400,48 @@ export function setupAuctionSocket() {
 						});
 					}
 
-					const payload = {
+					const privateRoom = `auction_${auctionId}`;
+					const publicRoom = `auction_public_${auctionId}`;
+
+					const remainingTime =
+						await auctionService.getAuctionRemainingTime(auctionId);
+					// PUBLIC: Không gửi winnerId
+					auctionNamespace.to(publicRoom).emit('auction:bid_update', {
 						auctionId,
-						winnerId: userId,
 						winningPrice: bidAmount,
-						message: result.message,
-						timestamp: getVietnamISOString(),
-					};
+						remainingTime,
+						message: 'New bid placed',
+					});
 
-					// Chỉ emit vào private room (người đã deposit)
+					// PRIVATE: Gửi đầy đủ thông tin
 					auctionNamespace
-						.to(`auction_${auctionId}`)
-						.emit('auction:bid_update', payload);
+						.to(privateRoom)
+						.emit('auction:bid_update', {
+							auctionId,
+							winnerId: userId,
+							winningPrice: bidAmount,
+							message: result.message,
+							remainingTime,
+							timestamp: getVietnamISOString(),
+						});
 
-					if (result.message.includes('Target price reached')) {
-						// Chỉ emit vào private room (người đã deposit)
-						auctionNamespace
-							.to(`auction_${auctionId}`)
-							.emit('auction:closed', {
-								auctionId,
-								reason: 'target_price_reached',
-								winnerId: userId,
-								winningPrice: bidAmount,
-								message:
-									'Auction closed - Target price reached!',
-							});
-					}
+					/* ---- TARGET PRICE REACHED ---- */
+					// if (result.message.includes('Target price reached')) {
+					// 	auctionNamespace.to(publicRoom).emit('auction:closed', {
+					// 		auctionId,
+					// 		winningPrice: bidAmount,
+					// 		message: 'Auction closed - Target price reached!',
+					// 		reason: 'target_price_reached',
+					// 	});
+
+					// 	auctionNamespace.to(privateRoom).emit('auction:closed', {
+					// 		auctionId,
+					// 		winnerId: userId,
+					// 		winningPrice: bidAmount,
+					// 		message: 'Auction closed - Target price reached!',
+					// 		reason: 'target_price_reached',
+					// 	});
+					// }
 				} catch (error) {
 					console.error('❌ Error placing bid:', error);
 					socket.emit('auction:error', {
@@ -433,12 +452,13 @@ export function setupAuctionSocket() {
 		);
 
 		/* ============================================================
-		 *  LEAVE ROOM
+		 *  LEAVE AUCTION
 		 * ============================================================
 		 */
 		socket.on('auction:leave', (data: { auctionId: number }) => {
 			const { auctionId } = data;
 			socket.leave(`auction_${auctionId}`);
+			socket.leave(`auction_public_${auctionId}`);
 			console.log(`👋 User ${userId} left auction room ${auctionId}`);
 		});
 
@@ -453,7 +473,7 @@ export function setupAuctionSocket() {
 }
 
 /* ============================================================
- *  BROADCAST TIME UPDATE (PUBLIC + PRIVATE)
+ *  BROADCAST: TIME UPDATE (PUBLIC + PRIVATE)
  * ============================================================
  */
 export function broadcastAuctionTimeUpdate(
@@ -464,7 +484,11 @@ export function broadcastAuctionTimeUpdate(
 
 	const ns = io.of('/auction');
 
-	// Chỉ emit vào private room (người đã deposit)
+	ns.to(`auction_public_${auctionId}`).emit('auction:time_update', {
+		auctionId,
+		remainingTime,
+	});
+
 	ns.to(`auction_${auctionId}`).emit('auction:time_update', {
 		auctionId,
 		remainingTime,
@@ -474,7 +498,7 @@ export function broadcastAuctionTimeUpdate(
 }
 
 /* ============================================================
- *  BROADCAST CLOSED (PUBLIC + PRIVATE)
+ *  BROADCAST: CLOSED (PUBLIC + PRIVATE)
  * ============================================================
  */
 export function broadcastAuctionClosed(
@@ -488,7 +512,15 @@ export function broadcastAuctionClosed(
 
 	const ns = io.of('/auction');
 
-	// Chỉ emit vào private room (người đã deposit)
+	// PUBLIC: không gửi winnerId
+	ns.to(`auction_public_${auctionId}`).emit('auction:closed', {
+		auctionId,
+		winningPrice,
+		message: message || 'Phiên đấu giá đã kết thúc',
+		reason: reason || 'duration_expired',
+	});
+
+	// PRIVATE: đầy đủ thông tin
 	ns.to(`auction_${auctionId}`).emit('auction:closed', {
 		auctionId,
 		winnerId,
