@@ -3,6 +3,7 @@ import { Report, CreateReportDTO } from '../models/report.model';
 import { getVietnamTime } from '../utils/datetime';
 import * as notificationService from './notification.service';
 import { sendNotificationToUser } from '../config/socket';
+import { connect } from 'http2';
 
 /**
  * Tạo report khi có lỗi trong giao dịch auction
@@ -49,7 +50,7 @@ export async function createAuctionReport(
 			[
 				reportData.auction_id,
 				reportData.user_id,
-				"admin",
+				'admin',
 				reportData.reason,
 				reportData.fault_type,
 				getVietnamTime(),
@@ -90,15 +91,14 @@ export async function createAuctionReport(
 					[
 						winnerOrderRows[0].id,
 						winner_id,
-						deposit,
-						getVietnamTime(),
+						deposit
 					],
 				);
 
 				// Update order tracking to REFUND
 				await connection.query(
-					`UPDATE orders SET tracking = 'REFUND' WHERE id = ?`,
-					[winnerOrderRows[0].id],
+`UPDATE orders SET tracking = 'REFUND', updated_at = ? WHERE id = ?`,
+					[getVietnamTime(), winnerOrderRows[0].id],
 				);
 			}
 
@@ -111,11 +111,11 @@ export async function createAuctionReport(
 			// 3.4. Update order tracking của seller → DEALING_FAIL
 			await connection.query(
 				`UPDATE orders 
-         SET tracking = 'DEALING_FAIL' 
+         SET tracking = 'DEALING_FAIL', updated_at = ?
          WHERE product_id = ? 
          AND type IN ('auction_fee', 'auction')
          AND status = 'PAID'`,
-				[product_id],
+[getVietnamTime(), product_id],
 			);
 
 			console.log(
@@ -173,6 +173,12 @@ export async function createAuctionReport(
 			};
 		} else {
 			// ❌ WINNER CÓ LỖI
+
+			const [orderRows]: any = await connection.query(
+				`SELECT id FROM orders 
+	       WHERE product_id = ? AND type = 'auction' AND status = 'PAID' and buyer_id = ?`,
+				[product_id, seller_id],
+			);
 			console.log(
 				`❌ Winner ${winner_id} has fault - Deposit forfeited, product back to approved...`,
 			);
@@ -181,30 +187,51 @@ export async function createAuctionReport(
 			// Tiền cọc đã bị trừ khi join auction, giờ không refund
 
 			// 3.2. Product về trạng thái approved (seller có thể đăng lại)
+
+			const [[prod]]: any = await connection.query(
+`SELECT end_date FROM products WHERE id=?`,
+				[product_id],
+			);
+
+			const nowVN = new Date(getVietnamTime());
+			const endDateVN = new Date(prod.end_date);
+			const resultStatus = endDateVN > nowVN ? 'approved' : 'expired';
+			await connection.query(`UPDATE products SET status=? WHERE id=?`, [
+				resultStatus,
+				product_id,
+			]);
+			
+			// nếu winner sai thì đưa tiền cọc về cho seller
 			await connection.query(
-				`UPDATE products SET status = 'approved', updated_at = ? WHERE id = ?`,
-				[getVietnamTime(), product_id],
+				`UPDATE users SET total_credit = total_credit + ? WHERE id = ?`,
+				[deposit, seller_id],
+			);
+
+			await connection.query(
+`INSERT INTO transaction_detail (order_id, user_id, unit, type, credits)
+			VALUES (?, ?, 'CREDIT', 'Increase', ?)`,
+				[orderRows[0].id, seller_id, deposit],
 			);
 
 			// 3.3. Update order tracking của winner → DEALING_FAIL
 			await connection.query(
 				`UPDATE orders 
-         SET tracking = 'DEALING_FAIL' 
+         SET tracking = 'DEALING_FAIL', updated_at = ?
          WHERE product_id = ? 
          AND buyer_id = ?
          AND type = 'deposit' 
          AND status = 'PAID'`,
-				[product_id, winner_id],
+				[getVietnamTime(), product_id, winner_id],
 			);
 
 			// 3.4. Update auction order của seller → AUCTION_FAIL (cho phép đăng lại)
 			await connection.query(
 				`UPDATE orders 
-         SET tracking = 'AUCTION_FAIL' 
+         SET tracking = 'DEALING_FAIL', updated_at = ?
          WHERE product_id = ? 
          AND type IN ('auction_fee', 'auction')
          AND status = 'PAID'`,
-				[product_id],
+				[getVietnamTime(), product_id],
 			);
 
 			console.log(
@@ -244,7 +271,7 @@ export async function createAuctionReport(
 						post_id: product_id,
 						type: 'auction_fail',
 						title: 'Giao dịch bị hủy - Có thể đăng lại',
-						message: `Giao dịch cho "${productTitle}" đã bị hủy do lỗi từ người mua. Sản phẩm của bạn đã được đưa về trạng thái "Đã duyệt" và bạn có thể đăng bán lại.`,
+						message: `Giao dịch cho "${productTitle}" đã bị hủy do lỗi từ người mua. Sản phẩm của bạn đã được đưa về trạng thái "${resultStatus === 'approved' ? 'Đã duyệt' : 'Hết hạn'}" và bạn có thể đăng bán lại. Tiền cọc của người mua đã được chuyển vào tài khoản của bạn.`,
 					});
 				sendNotificationToUser(seller_id, notification);
 				console.log(
@@ -254,7 +281,7 @@ export async function createAuctionReport(
 				console.error(
 					'⚠️ Failed to send re-list notification to seller:',
 					notifError.message,
-				);
+);
 			}
 
 			await connection.commit();

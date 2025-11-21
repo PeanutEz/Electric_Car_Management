@@ -25,10 +25,11 @@ const auctionRemainingTime = new Map<number, number>();
 export async function getAuctionByProductId(productId: number) {
 	const [rows]: any = await pool.query(
 		`SELECT a.*, p.title, p.description FROM auctions a INNER JOIN products p ON a.product_id = p.id
-        WHERE a.product_id = ?
+        WHERE a.product_id = ? and p.status IN ('auctioning', 'auctioned')
         `,
 		[productId],
 	);
+	
 	if (rows.length === 0) return null;
 	return rows[0] as Auction;
 }

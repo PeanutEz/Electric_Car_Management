@@ -69,6 +69,8 @@ export async function getTransactionDetail(
 		[userId, limit, (page - 1) * limit],
 	);
 
+	const [rows1]: any = await pool.query(`select u.total_credit from users u where u.id = ?`, [userId]);
+
 	const [totalTransactions]: any = await pool.query(
 		`select count(*) as total_records from transaction_detail where user_id = ?`,
 		[userId],
@@ -92,14 +94,14 @@ export async function getTransactionDetail(
 
 	const transactions = rows.map((row: any) => ({
 		...row,
-		service_type: row.changing === 'Increase' ? 'top up' : row.service_type,
+		service_type: row.changing === 'Increase' && row.service_type !== 'topup' ? 'refund' : row.service_type,
 		service_name:
-			row.changing === 'Increase' ? 'Nạp tiền' : row.service_name,
+			row.changing === 'Increase' && row.service_type !== 'topup' ? 'Hoàn tiền' : row.service_name,		
 	}));
 
 	return {
 		data: transactions,
-		total_credit: Number(rows[0]?.total_credit) || 0,
+		total_credit: Number(rows1[0]?.total_credit) || 0,
 		total_topup: Number(totalTopup[0].total_credits) || 0,
 		total_spend: Number(totalSpend[0].total_credits) || 0,
 		length: totalTransactions[0].total_records,

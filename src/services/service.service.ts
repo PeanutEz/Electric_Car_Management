@@ -1,4 +1,3 @@
-import { get } from 'http';
 import pool from '../config/db';
 import payos from '../config/payos';
 import { sendNotificationToUser } from '../config/socket';
@@ -8,6 +7,7 @@ import { getVietnamTime, toMySQLDateTime } from '../utils/datetime';
 import { buildUrl } from '../utils/url';
 import * as notificationService from './notification.service';
 import { getPaymentStatus } from './payment.service';
+import axios from 'axios';
 
 /**
  * Lấy danh sách tất cả các dịch vụ
@@ -1252,6 +1252,8 @@ export async function cancelExpiredPendingOrders(): Promise<number> {
 
 		console.log(`🕐 Found ${expiredOrders.length} expired pending orders`);
 
+
+
 		// Cập nhật status và tracking thành CANCELLED/FAILED
 		const orderIds = expiredOrders.map((order: any) => order.id);
 		const updatedAtVN = toMySQLDateTime();
@@ -1261,7 +1263,15 @@ export async function cancelExpiredPendingOrders(): Promise<number> {
 			WHERE id IN (?)`,
 			[updatedAtVN, orderIds],
 		);
-
+		const orderCodes = expiredOrders.map((order: any) => order.code);
+		const response = await axios.post(`https://api-merchant.payos.vn/v2/payment-requests/${orderCodes}/cancel`,{},
+			{
+				headers: {
+					'x-client-id': '0b879c49-53cb-4ffa-9b0b-2b5ad6da6b81',
+					'x-api-key': '4d166c91-6b6c-43b8-bacb-59b6de3d8c46',
+				},
+			},
+		);
 		// Gửi notification cho từng user về việc order bị hủy
 		for (const order of expiredOrders) {
 			try {
