@@ -224,8 +224,8 @@ export async function registerUser(userData: User) {
   );
 
   const [result]: any = await pool.query(
-    `insert into users (full_name, email, password, avatar, created_at) VALUES (?, ?, ?, ?, ?, now())`,
-    [full_name, email, hashedPassword, defaultAvatar]
+    `insert into users (full_name, email, password, avatar, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+    [full_name, email, hashedPassword, defaultAvatar, getVietnamTime()]
   );
   const insertedId = result.insertId;
 
@@ -465,10 +465,10 @@ export async function getPostByUserId(
 			v.seats,
 			v.mileage_km,
 			v.power,
-			v.health,
+			v.health as vehicle_health,
 			bat.capacity,
 			bat.voltage,
-			bat.health
+			bat.health as battery_health
 		FROM products p 
 		INNER JOIN product_categories pc ON p.product_category_id = pc.id 
 		left JOIN vehicles v ON v.product_id = p.id 
@@ -552,7 +552,7 @@ export async function getPostByUserId(
             seats: post.seats,
             mileage: post.mileage_km,
             power: post.power,
-            health: post.health,
+            health: post.vehicle_health,
             previousOwners: post.previousOwners,
             image: post.image,
             images: imageMap.get(post.id) || [],
@@ -578,7 +578,7 @@ export async function getPostByUserId(
             address: post.address,
             capacity: post.capacity,
             voltage: post.voltage,
-            health: post.health,
+            health: post.battery_health,
             previousOwners: post.previousOwners,
             image: post.image,
             images: imageMap.get(post.id) || [],

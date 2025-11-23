@@ -61,7 +61,7 @@ export async function getOwnAuction(seller_id: number, page = 1, limit = 10) {
 		[seller_id],
 	);
 
-	const [[participationStats]]: any = await pool.query(
+	const [participationStats]: any = await pool.query(
 		`
     SELECT
       COUNT(DISTINCT a.id) AS participationAuctions,
